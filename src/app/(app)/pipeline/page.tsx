@@ -1,0 +1,49 @@
+import { prisma } from "@/lib/db";
+import { verifySession } from "@/lib/dal";
+import { PageHeader } from "@/components/page-header";
+import { PipelineBoard, type PipelineCard } from "@/components/pipeline-board";
+import { companyName } from "@/lib/display";
+import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
+
+export default async function PipelinePage() {
+  await verifySession();
+
+  const companies = await prisma.company.findMany({
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      nomSociete: true,
+      enseigne: true,
+      siret: true,
+      ville: true,
+      priorite: true,
+      potentiel: true,
+      stage: true,
+    },
+  });
+
+  const initial: Record<StageValue, PipelineCard[]> = Object.fromEntries(
+    PIPELINE_STAGES.map((s) => [s.value, [] as PipelineCard[]]),
+  ) as Record<StageValue, PipelineCard[]>;
+
+  for (const c of companies) {
+    const card: PipelineCard = {
+      id: c.id,
+      name: companyName(c),
+      ville: c.ville,
+      priorite: c.priorite,
+      potentiel: c.potentiel,
+    };
+    (initial[c.stage as StageValue] ?? initial.A_QUALIFIER).push(card);
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <PageHeader
+        title="Pipeline"
+        subtitle="Glissez-déposez les sociétés entre les étapes"
+      />
+      <PipelineBoard initial={initial} total={companies.length} />
+    </div>
+  );
+}

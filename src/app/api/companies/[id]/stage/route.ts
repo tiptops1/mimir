@@ -1,0 +1,47 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { getOptionalSession } from "@/lib/dal";
+import { stageSchema } from "@/lib/validations";
+import { STAGE_LABELS, type StageValue } from "@/lib/constants";
+
+export async function PATCH(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const session = await getOptionalSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const body = await req.json().catch(() => null);
+  const parsed = stageSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid stage" }, { status: 400 });
+  }
+
+  const stage = parsed.data.stage as StageValue;
+
+  try {
+    await prisma.company.update({
+      where: { id },
+      data: {
+        stage,
+        ...(stage === "DEMO_REALISEE" ? { demoRealisee: true } : {}),
+        ...(stage === "PROPOSITION_ENVOYEE" ? { propositionEnvoyee: true } : {}),
+      },
+    });
+    await prisma.activity.create({
+      data: {
+        companyId: id,
+        type: "STAGE_CHANGE",
+        note: `Étape déplacée vers « ${STAGE_LABELS[stage]} »`,
+        userId: session.userId,
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true, stage });
+}

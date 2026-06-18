@@ -1,0 +1,147 @@
+// Avelior Analytics — CRM schema (MongoDB)
+// Models map the "CRM Chris 0-200" prospecting spreadsheet (French insurance brokers).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+// Pipeline stages — mirror the reference tab in the source sheet.
+enum PipelineStage {
+  A_QUALIFIER
+  A_CONTACTER
+  CONTACTE
+  RDV_OBTENU
+  DEMO_REALISEE
+  PROPOSITION_ENVOYEE
+  GAGNE
+  PERDU
+}
+
+enum Priorite {
+  A
+  B
+  C
+}
+
+enum Potentiel {
+  FAIBLE
+  MOYEN
+  FORT
+}
+
+model User {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  email        String     @unique
+  name         String?
+  passwordHash String
+  role         Role       @default(USER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  activities   Activity[]
+}
+
+// Core prospect entity — one row per SIRET (establishment) in the source sheet.
+model Company {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  siren               String?
+  siret               String    @unique
+  nomSociete          String?
+  enseigne            String?
+  categorieEntreprise String?
+  formeJuridique      String?
+  dateCreation        DateTime?
+  codeNaf             String?
+  libelleNaf          String?
+  trancheEffectifs    String?
+  adresse             String?
+  codePostal          String?
+  ville               String?
+  siteWeb             String?
+  emailGenerique      String?
+  telephoneStandard   String?
+
+  // Specialties (booleans for easy filtering)
+  specialiteSante        Boolean @default(false)
+  specialitePrevoyance   Boolean @default(false)
+  specialiteIard         Boolean @default(false)
+  specialiteAuto         Boolean @default(false)
+  specialiteRcPro        Boolean @default(false)
+  specialiteEntreprises  Boolean @default(false)
+  specialiteCollectives  Boolean @default(false)
+  specialiteParticuliers Boolean @default(false)
+
+  // Scoring / qualification
+  nbCollaborateursEstime Int?
+  niveauDigitalisation   String?
+  icpScore               Int?
+  priorite               Priorite?
+  potentiel              Potentiel?
+
+  // Pipeline tracking
+  stage              PipelineStage @default(A_QUALIFIER)
+  canal              String?
+  datePremierContact DateTime?
+  dernierContact     DateTime?
+  relancePrevue      DateTime?
+  demoRealisee       Boolean       @default(false)
+  propositionEnvoyee Boolean       @default(false)
+  closingEstime      DateTime?
+  notes              String?
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  contacts   Contact[]
+  activities Activity[]
+
+  @@index([stage])
+  @@index([ville])
+  @@index([priorite])
+  @@index([codePostal])
+}
+
+// People attached to a company (dirigeants).
+model Contact {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  nom         String?
+  prenom      String?
+  fonction    String?
+  email       String?
+  telephone   String?
+  linkedinUrl String?
+  companyId   String     @db.ObjectId
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activities  Activity[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([companyId])
+}
+
+// Interaction log — calls, emails, meetings, notes, stage changes.
+model Activity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String // CALL | EMAIL | MEETING | NOTE | STAGE_CHANGE
+  note      String?
+  date      DateTime @default(now())
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId String?  @db.ObjectId
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  userId    String?  @db.ObjectId
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([date])
+}
