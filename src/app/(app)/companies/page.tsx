@@ -4,8 +4,29 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton, Card, EmptyState, Input, Select } from "@/components/ui";
 import { StageBadge, PrioriteBadge, PotentielBadge } from "@/components/badges";
-import { companyName } from "@/lib/display";
+import {
+  companyName,
+  contactName,
+  personLinkedInSearch,
+  companyLinkedInSearch,
+} from "@/lib/display";
 import { PIPELINE_STAGES, PRIORITE_OPTIONS } from "@/lib/constants";
+import { PreferredChannelSelect } from "@/components/preferred-channel-select";
+
+type DmContact = {
+  nom: string | null;
+  prenom: string | null;
+  email: string | null;
+  telephone: string | null;
+  linkedinUrl: string | null;
+  isDecisionMaker: boolean | null;
+};
+
+/** Pick the flagged decision-maker, else the first contact. */
+function decisionMaker(contacts: DmContact[]) {
+  if (contacts.length === 0) return null;
+  return contacts.find((c) => c.isDecisionMaker) ?? contacts[0];
+}
 
 const PAGE_SIZE = 20;
 
@@ -39,7 +60,20 @@ export default async function CompaniesPage({
       orderBy: [{ updatedAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { _count: { select: { contacts: true } } },
+      include: {
+        _count: { select: { contacts: true } },
+        contacts: {
+          select: {
+            nom: true,
+            prenom: true,
+            email: true,
+            telephone: true,
+            linkedinUrl: true,
+            isDecisionMaker: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
     }),
     prisma.company.count({ where }),
   ]);
@@ -117,7 +151,8 @@ export default async function CompaniesPage({
                 <thead>
                   <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-4 py-3 font-medium">Société</th>
-                    <th className="px-4 py-3 font-medium">Ville</th>
+                    <th className="px-4 py-3 font-medium">Décideur</th>
+                    <th className="px-4 py-3 font-medium">Communication préférée</th>
                     <th className="px-4 py-3 font-medium">Étape</th>
                     <th className="px-4 py-3 font-medium">Priorité</th>
                     <th className="px-4 py-3 font-medium">Potentiel</th>
@@ -140,13 +175,32 @@ export default async function CompaniesPage({
                         <div className="text-xs text-muted">{c.siret}</div>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {c.ville ?? "—"}
-                        {c.codePostal ? (
-                          <span className="text-xs text-muted">
-                            {" "}
-                            ({c.codePostal})
-                          </span>
-                        ) : null}
+                        {(() => {
+                          const dm = decisionMaker(c.contacts);
+                          return dm ? contactName(dm) : "—";
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const dm = decisionMaker(c.contacts);
+                          const linkedinHref =
+                            dm?.linkedinUrl ||
+                            (dm
+                              ? personLinkedInSearch(dm, c)
+                              : companyLinkedInSearch(c));
+                          return (
+                            <PreferredChannelSelect
+                              id={c.id}
+                              value={c.canalPrefere}
+                              phone={dm?.telephone ?? c.telephoneStandard}
+                              email={dm?.email ?? c.emailGenerique}
+                              linkedinHref={linkedinHref}
+                              linkedinLabel={
+                                dm?.linkedinUrl ? "Profil ↗" : "Rechercher ↗"
+                              }
+                            />
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         <StageBadge stage={c.stage} />

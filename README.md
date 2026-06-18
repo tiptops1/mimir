@@ -93,6 +93,38 @@ keeps every field, and `POST /api/enrich` is a stub ready to wire up enrichment 
 French open API (`https://recherche-entreprises.api.gouv.fr`, keyed by SIREN/SIRET) or a custom
 pipeline. Personal director contact data is left manual (GDPR).
 
+## Email sync (Gmail / Google Workspace)
+
+Logs Christopher's sent & received emails against the right contact, and queues unknown senders
+for review in the **Boîte de réception** page.
+
+**One-time setup (Google account for `Ctoppo@avelior.eu`):**
+1. Enable **2-Step Verification**.
+2. Create an **App Password** (type: Mail) — a 16-character code.
+3. Gmail → Settings → *Forwarding and POP/IMAP* → **enable IMAP**.
+4. Workspace admin console → ensure **IMAP** and **App Passwords** are allowed for the org.
+5. Set env vars (locally in `.env`, and in Railway):
+   ```
+   IMAP_HOST=imap.gmail.com
+   IMAP_PORT=993
+   IMAP_USER=Ctoppo@avelior.eu
+   IMAP_PASSWORD=<the App Password>
+   OWNER_EMAIL=Ctoppo@avelior.eu
+   ```
+
+**Run it:**
+```bash
+npm run sync:email              # incremental — only mail since the last run
+npm run sync:email -- --backfill=200   # also import the last 200 messages per folder
+npm run sync:email -- --dry     # connect + parse, write nothing
+```
+First run is **going-forward only** (it records the current mailbox position and imports nothing)
+unless you pass `--backfill`. Schedule it on Railway as a **cron service** every ~5 minutes.
+
+**Matching policy:** email matches an existing contact → logged as an activity. No contact but the
+domain matches a known company → a contact is auto-created under it. Otherwise the sender lands in
+the review queue, where you approve (attach to a company / create a new one) or ignore.
+
 ## Project structure
 
 ```

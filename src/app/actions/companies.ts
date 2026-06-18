@@ -57,6 +57,20 @@ export async function updateCompany(
   return { ok: true };
 }
 
+export async function setPreferredChannel(
+  id: string,
+  value: string,
+): Promise<void> {
+  await verifySession();
+  const allowed = ["PHONE", "EMAIL", "LINKEDIN"];
+  await prisma.company.update({
+    where: { id },
+    data: { canalPrefere: allowed.includes(value) ? value : null },
+  });
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${id}`);
+}
+
 export async function deleteCompany(id: string): Promise<void> {
   await requireRole(["ADMIN", "MANAGER"]);
   await prisma.activity.deleteMany({ where: { companyId: id } });

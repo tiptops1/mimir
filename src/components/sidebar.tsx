@@ -8,6 +8,7 @@ import {
   Users,
   KanbanSquare,
   BarChart3,
+  Inbox,
   LogOut,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
@@ -19,13 +20,16 @@ const NAV = [
   { href: "/companies", label: "Sociétés", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/inbox", label: "Boîte de réception", icon: Inbox },
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
 ];
 
 export function Sidebar({
   user,
+  pendingCount = 0,
 }: {
   user: { name: string; email: string; role: string };
+  pendingCount?: number;
 }) {
   const pathname = usePathname();
 
@@ -52,7 +56,12 @@ export function Sidebar({
               )}
             >
               <Icon className="h-[18px] w-[18px]" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/inbox" && pendingCount > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-semibold text-white">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

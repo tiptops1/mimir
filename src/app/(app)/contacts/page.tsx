@@ -3,9 +3,19 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { Card, EmptyState, Input } from "@/components/ui";
-import { companyName, contactName } from "@/lib/display";
+import {
+  companyName,
+  contactName,
+  personLinkedInSearch,
+} from "@/lib/display";
 
 const PAGE_SIZE = 25;
+
+const euro = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
 
 export default async function ContactsPage({
   searchParams,
@@ -33,7 +43,17 @@ export default async function ContactsPage({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
-        company: { select: { id: true, nomSociete: true, enseigne: true, siret: true } },
+        company: {
+          select: {
+            id: true,
+            nomSociete: true,
+            enseigne: true,
+            siret: true,
+            ville: true,
+            siteWeb: true,
+            chiffreAffaires: true,
+          },
+        },
       },
     }),
     prisma.contact.count({ where }),
@@ -71,42 +91,85 @@ export default async function ContactsPage({
           />
         ) : (
           <Card className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-3 font-medium">Nom</th>
-                  <th className="px-4 py-3 font-medium">Fonction</th>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Téléphone</th>
-                  <th className="px-4 py-3 font-medium">Société</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-border last:border-0 hover:bg-slate-50/60"
-                  >
-                    <td className="px-4 py-3 font-medium">{contactName(c)}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {c.fonction ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{c.email ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {c.telephone ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/companies/${c.company.id}`}
-                        className="text-brand hover:underline"
-                      >
-                        {companyName(c.company)}
-                      </Link>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3 font-medium">Société</th>
+                    <th className="px-4 py-3 font-medium">Chiffre d&apos;affaires</th>
+                    <th className="px-4 py-3 font-medium">Site web</th>
+                    <th className="px-4 py-3 font-medium">Décideur</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">LinkedIn</th>
+                    <th className="px-4 py-3 font-medium">Téléphone</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {contacts.map((c) => {
+                    const site = c.company.siteWeb;
+                    const siteHref = site
+                      ? site.startsWith("http")
+                        ? site
+                        : `https://${site}`
+                      : null;
+                    return (
+                      <tr
+                        key={c.id}
+                        className="border-b border-border last:border-0 hover:bg-slate-50/60"
+                      >
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/companies/${c.company.id}`}
+                            className="font-medium text-brand hover:underline"
+                          >
+                            {companyName(c.company)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {c.company.chiffreAffaires != null
+                            ? euro.format(c.company.chiffreAffaires)
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {siteHref ? (
+                            <a
+                              href={siteHref}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-brand hover:underline"
+                            >
+                              {site!.replace(/^https?:\/\//, "").replace(/^www\./, "")}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-medium">{contactName(c)}</td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {c.email ?? "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <a
+                            href={
+                              c.linkedinUrl ||
+                              personLinkedInSearch(c, c.company)
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand hover:underline"
+                          >
+                            {c.linkedinUrl ? "Profil" : "Rechercher ↗"}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {c.telephone ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 

@@ -54,6 +54,14 @@ export const POTENTIEL_OPTIONS: { value: PotentielValue; label: string }[] = [
   { value: "FORT", label: "Fort" },
 ];
 
+// Preferred communication channel for reaching a prospect.
+export type CanalValue = "PHONE" | "EMAIL" | "LINKEDIN";
+export const CANAL_PREFERE_OPTIONS: { value: CanalValue; label: string }[] = [
+  { value: "PHONE", label: "Téléphone" },
+  { value: "EMAIL", label: "Email" },
+  { value: "LINKEDIN", label: "LinkedIn" },
+];
+
 export type RoleValue = "ADMIN" | "MANAGER" | "USER";
 export const ROLE_OPTIONS: { value: RoleValue; label: string }[] = [
   { value: "ADMIN", label: "Administrateur" },

@@ -13,6 +13,7 @@ import {
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   SPECIALTY_FIELDS,
+  CANAL_PREFERE_OPTIONS,
 } from "@/lib/constants";
 
 type CompanyLike = {
@@ -29,6 +30,8 @@ type CompanyLike = {
   siteWeb?: string | null;
   emailGenerique?: string | null;
   telephoneStandard?: string | null;
+  chiffreAffaires?: number | null;
+  canalPrefere?: string | null;
   codeNaf?: string | null;
   libelleNaf?: string | null;
   trancheEffectifs?: string | null;
@@ -209,6 +212,30 @@ export function CompanyForm({
             name="telephoneStandard"
             defaultValue={company?.telephoneStandard ?? ""}
           />
+        </div>
+        <div>
+          <Label htmlFor="chiffreAffaires">Chiffre d&apos;affaires (€)</Label>
+          <Input
+            id="chiffreAffaires"
+            name="chiffreAffaires"
+            type="number"
+            defaultValue={company?.chiffreAffaires ?? ""}
+          />
+        </div>
+        <div>
+          <Label htmlFor="canalPrefere">Communication préférée</Label>
+          <Select
+            id="canalPrefere"
+            name="canalPrefere"
+            defaultValue={company?.canalPrefere ?? ""}
+          >
+            <option value="">—</option>
+            {CANAL_PREFERE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
         </div>
       </Section>
 

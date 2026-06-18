@@ -60,6 +60,12 @@ export const companySchema = z.object({
   siteWeb: optionalString,
   emailGenerique: optionalString,
   telephoneStandard: optionalString,
+  chiffreAffaires: optionalInt,
+  canalPrefere: z
+    .enum(["PHONE", "EMAIL", "LINKEDIN"])
+    .nullable()
+    .optional()
+    .catch(null),
   dateCreation: optionalDate,
   nbCollaborateursEstime: optionalInt,
   niveauDigitalisation: optionalString,

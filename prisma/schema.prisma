@@ -70,6 +70,8 @@ model Company {
   siteWeb             String?
   emailGenerique      String?
   telephoneStandard   String?
+  chiffreAffaires     Int?
+  canalPrefere        String? // PHONE | EMAIL | LINKEDIN — preferred way to reach the prospect
 
   // Specialties (booleans for easy filtering)
   specialiteSante        Boolean @default(false)
@@ -135,6 +137,12 @@ model Activity {
   type      String // CALL | EMAIL | MEETING | NOTE | STAGE_CHANGE
   note      String?
   date      DateTime @default(now())
+  // Email-sync fields (populated when type == EMAIL)
+  direction String? // INBOUND | OUTBOUND
+  subject   String?
+  fromEmail String?
+  toEmail   String?
+  messageId String? // RFC Message-ID — dedupe key for imported emails
   companyId String?  @db.ObjectId
   company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contactId String?  @db.ObjectId
@@ -145,4 +153,31 @@ model Activity {
 
   @@index([companyId])
   @@index([date])
+  @@index([messageId])
+}
+
+// Review queue for email addresses seen in synced mail that don't match a
+// known contact and can't be auto-attached to a company by domain.
+model PendingContact {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  email         String   @unique
+  name          String?
+  direction     String? // last seen direction
+  sampleSubject String?
+  messageCount  Int      @default(1)
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @default(now())
+  status        String   @default("PENDING") // PENDING | APPROVED | DISMISSED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Incremental sync checkpoint, one row per IMAP mailbox path.
+model EmailSyncState {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  mailbox   String   @unique // e.g. "INBOX" or "[Gmail]/Sent Mail"
+  lastUid   Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
