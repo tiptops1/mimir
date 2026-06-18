@@ -5,6 +5,7 @@ import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
+import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { PIPELINE_STAGES, ACTIVITY_TYPES } from "@/lib/constants";
@@ -15,7 +16,14 @@ const activityLabel = (t: string) =>
 export default async function DashboardPage() {
   const session = await verifySession();
 
-  const [total, contactsCount, companies, recentCompanies, recentActivities] =
+  const [
+    total,
+    contactsCount,
+    companies,
+    recentCompanies,
+    recentActivities,
+    syncState,
+  ] =
     await Promise.all([
       prisma.company.count(),
       prisma.contact.count(),
@@ -39,6 +47,10 @@ export default async function DashboardPage() {
           company: { select: { id: true, nomSociete: true, enseigne: true, siret: true } },
           user: { select: { name: true } },
         },
+      }),
+      prisma.emailSyncState.findFirst({
+        orderBy: { updatedAt: "desc" },
+        select: { updatedAt: true },
       }),
     ]);
 
@@ -72,6 +84,11 @@ export default async function DashboardPage() {
       </PageHeader>
 
       <div className="space-y-6 p-6">
+        <ConnectGmailCta
+          connected={Boolean(syncState)}
+          lastSyncLabel={syncState ? formatDate(syncState.updatedAt) : null}
+        />
+
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map((k) => {
             const Icon = k.icon;
