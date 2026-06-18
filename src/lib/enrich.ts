@@ -66,6 +66,91 @@ export async function discoverWebsite(siren: string): Promise<string | null> {
   }
 }
 
+// --- Free, keyless website discovery via DuckDuckGo HTML (best-effort) ---
+// Aggregators / directories / social we never want to mistake for the site.
+const BLOCK_DOMAIN =
+  /(duckduckgo|google|bing\.|facebook|linkedin|instagram|twitter|x\.com|youtube|societe\.com|pappers|verif\.|infogreffe|pagesjaunes|wikipedia|score3|manageo|bodacc|annuaire|kompass|dnb\.com|leboncoin|indeed|trustpilot|mappy|yelp|figaro|usine-digitale)/i;
+
+async function ddgSearch(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          accept: "text/html",
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) return [];
+    const html = await res.text();
+    const urls: string[] = [];
+    for (const m of html.matchAll(/uddg=([^&"']+)/g)) {
+      try {
+        urls.push(decodeURIComponent(m[1]));
+      } catch {
+        /* ignore bad encodings */
+      }
+    }
+    return urls;
+  } catch {
+    return [];
+  }
+}
+
+function pickWebsite(urls: string[]): string | null {
+  for (const u of urls) {
+    try {
+      const host = new URL(u).hostname.replace(/^www\./, "");
+      if (host.includes(".") && !BLOCK_DOMAIN.test(host)) {
+        return `https://${host}`;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return null;
+}
+
+// Brave Search API — free tier (2k/month) with a key. Reliable JSON results.
+async function braveSearch(query: string): Promise<string[]> {
+  const key = process.env.BRAVE_API_KEY;
+  if (!key) return [];
+  try {
+    const res = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&country=fr`,
+      {
+        headers: {
+          accept: "application/json",
+          "Accept-Encoding": "gzip",
+          "X-Subscription-Token": key,
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      web?: { results?: { url?: string }[] };
+    };
+    return (data.web?.results ?? [])
+      .map((r) => r.url)
+      .filter((u): u is string => Boolean(u));
+  } catch {
+    return [];
+  }
+}
+
+export async function discoverWebsiteFree(
+  name: string,
+  ville?: string | null,
+): Promise<string | null> {
+  const query = `${name} ${ville ?? ""} assurance courtage`.trim();
+  // Prefer Brave (keyed, reliable); fall back to keyless DuckDuckGo.
+  return pickWebsite(await braveSearch(query)) ?? pickWebsite(await ddgSearch(query));
+}
+
 // --- Site scraping for generic email / phone (free, best-effort) ---
 const BAD_EMAIL =
   /(example|sentry|wixpress|cloudflare|\.png|\.jpg|\.gif|@2x|sentry\.io|votre@|nom@|email@|@domaine)/i;
@@ -213,7 +298,17 @@ export async function enrichCompany(
     let siteWeb = company.siteWeb;
     const webUpdate: Prisma.CompanyUpdateInput = {};
     if (!siteWeb) {
-      const found = await discoverWebsite(company.siren);
+      // 1) Pappers (if a key is configured), else 2) free DuckDuckGo lookup.
+      let found = await discoverWebsite(company.siren);
+      if (!found) {
+        const name =
+          (update.nomSociete as string | undefined) ??
+          company.nomSociete ??
+          r.nom_complet ??
+          null;
+        const ville = company.ville ?? r.siege?.libelle_commune ?? null;
+        if (name) found = await discoverWebsiteFree(name, ville);
+      }
       if (found) {
         siteWeb = found;
         webUpdate.siteWeb = found;

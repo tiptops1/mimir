@@ -52,7 +52,7 @@ async function main() {
     } catch (e) {
       console.warn(`${i}/${companies.length} ${c.siren} -> error: ${(e as Error).message}`);
     }
-    await sleep(180); // stay under the API rate limit (~7 req/s)
+    await sleep(1500); // gentle: web discovery hits DuckDuckGo per company
   }
 
   console.log(
