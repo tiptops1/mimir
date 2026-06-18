@@ -180,6 +180,7 @@ export function PipelineBoard({
     <div className="flex-1 overflow-hidden p-6">
       <p className="mb-3 text-sm text-muted">{total} sociétés au total</p>
       <DndContext
+        id="avelior-pipeline"
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={onDragStart}
