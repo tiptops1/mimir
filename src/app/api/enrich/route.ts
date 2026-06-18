@@ -1,26 +1,35 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
 import { getOptionalSession } from "@/lib/dal";
+import { enrichCompany } from "@/lib/enrich";
 
 /**
- * Enrichment endpoint (placeholder).
+ * Enrich a single company from the official French open company API
+ * (recherche-entreprises.api.gouv.fr). Body: { companyId }.
  *
- * The CRM imports the source spreadsheet "as-is". Data enrichment (filling in
- * company names, websites, director details, etc.) is intended to be wired up
- * later — e.g. via the official French open API
- * (https://recherche-entreprises.api.gouv.fr) keyed by SIREN/SIRET, or a custom
- * scraping pipeline. Plug that logic in here.
+ * Bulk enrichment of all companies is done with `npm run enrich:all`
+ * (avoids long-running serverless requests).
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getOptionalSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(
-    {
-      error: "not_configured",
-      message:
-        "L'enrichissement automatique n'est pas encore configuré. Branchez ici l'API recherche-entreprises.api.gouv.fr ou votre pipeline de scraping.",
-    },
-    { status: 501 },
-  );
+
+  const body = (await req.json().catch(() => null)) as {
+    companyId?: string;
+  } | null;
+  if (!body?.companyId) {
+    return NextResponse.json({ error: "companyId required" }, { status: 400 });
+  }
+
+  try {
+    const result = await enrichCompany(prisma, body.companyId);
+    return NextResponse.json(result);
+  } catch (e) {
+    return NextResponse.json(
+      { error: "enrichment_failed", message: (e as Error).message },
+      { status: 502 },
+    );
+  }
 }

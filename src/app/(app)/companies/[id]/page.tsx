@@ -12,6 +12,7 @@ import {
   ContactDeleteButton,
   DeleteCompanyButton,
 } from "@/components/company-detail-actions";
+import { EnrichButton } from "@/components/enrich-button";
 import { companyName, contactName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { SPECIALTY_FIELDS, ACTIVITY_TYPES } from "@/lib/constants";
@@ -54,6 +55,7 @@ export default async function CompanyDetailPage({
   return (
     <div>
       <PageHeader title={companyName(company)} subtitle={company.siret}>
+        <EnrichButton companyId={company.id} />
         <Link
           href={`/companies/${company.id}/edit`}
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-medium hover:bg-slate-50"
