@@ -2,8 +2,13 @@
 
 import { useActionState, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
+import { Star } from "lucide-react";
 import { addActivity, deleteCompany } from "@/app/actions/companies";
-import { createContact, deleteContact } from "@/app/actions/contacts";
+import {
+  createContact,
+  deleteContact,
+  toggleDecisionMaker,
+} from "@/app/actions/contacts";
 import type { FormResult } from "@/app/actions/companies";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { ACTIVITY_TYPES } from "@/lib/constants";
@@ -131,6 +136,37 @@ export function AddContactForm({ companyId }: { companyId: string }) {
           Annuler
         </Button>
       </div>
+    </form>
+  );
+}
+
+export function DecisionMakerToggle({
+  id,
+  companyId,
+  active,
+}: {
+  id: string;
+  companyId: string;
+  active: boolean;
+}) {
+  const action = toggleDecisionMaker.bind(null, id, companyId, !active);
+  return (
+    <form action={action}>
+      <button
+        type="submit"
+        title={active ? "Décideur — cliquer pour retirer" : "Marquer comme décideur"}
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+          active
+            ? "bg-amber-100 text-amber-700"
+            : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        }`}
+      >
+        <Star
+          className="h-3.5 w-3.5"
+          fill={active ? "currentColor" : "none"}
+        />
+        Décideur
+      </button>
     </form>
   );
 }

@@ -119,6 +119,7 @@ model Contact {
   email       String?
   telephone   String?
   linkedinUrl String?
+  isDecisionMaker Boolean? @default(false)
   companyId   String     @db.ObjectId
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activities  Activity[]

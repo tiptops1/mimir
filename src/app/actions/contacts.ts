@@ -46,6 +46,20 @@ export async function updateContact(
   return { ok: true };
 }
 
+export async function toggleDecisionMaker(
+  id: string,
+  companyId: string,
+  value: boolean,
+): Promise<void> {
+  await verifySession();
+  await prisma.contact.update({
+    where: { id },
+    data: { isDecisionMaker: value },
+  });
+  revalidatePath(`/companies/${companyId}`);
+  revalidatePath("/contacts");
+}
+
 export async function deleteContact(
   id: string,
   companyId: string,

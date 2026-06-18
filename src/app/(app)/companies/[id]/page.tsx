@@ -6,14 +6,23 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, Badge } from "@/components/ui";
 import { StageBadge, PrioriteBadge, PotentielBadge } from "@/components/badges";
+import { Search, ExternalLink } from "lucide-react";
 import {
   AddActivityForm,
   AddContactForm,
   ContactDeleteButton,
+  DecisionMakerToggle,
   DeleteCompanyButton,
 } from "@/components/company-detail-actions";
 import { EnrichButton } from "@/components/enrich-button";
-import { companyName, contactName } from "@/lib/display";
+import {
+  companyName,
+  contactName,
+  personLinkedInSearch,
+  companyLinkedInSearch,
+  domainFromWebsite,
+  suggestedEmail,
+} from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { SPECIALTY_FIELDS, ACTIVITY_TYPES } from "@/lib/constants";
 
@@ -55,6 +64,15 @@ export default async function CompanyDetailPage({
   return (
     <div>
       <PageHeader title={companyName(company)} subtitle={company.siret}>
+        <a
+          href={company.siteWeb || companyLinkedInSearch(company)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-medium hover:bg-slate-50"
+        >
+          <ExternalLink className="h-4 w-4 text-brand" />
+          {company.siteWeb ? "Site web" : "LinkedIn"}
+        </a>
         <EnrichButton companyId={company.id} />
         <Link
           href={`/companies/${company.id}/edit`}
@@ -125,32 +143,51 @@ export default async function CompanyDetailPage({
                   enrichies plus tard.
                 </p>
               ) : (
-                company.contacts.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-border p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{contactName(c)}</p>
-                      <p className="text-xs text-muted">{c.fonction || "—"}</p>
-                      <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-slate-600">
-                        {c.email && <span>{c.email}</span>}
-                        {c.telephone && <span>{c.telephone}</span>}
-                        {c.linkedinUrl && (
+                company.contacts.map((c) => {
+                  const guess = !c.email
+                    ? suggestedEmail(c, domainFromWebsite(company.siteWeb))
+                    : null;
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-start justify-between gap-3 rounded-lg border border-border p-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{contactName(c)}</p>
+                          <DecisionMakerToggle
+                            id={c.id}
+                            companyId={company.id}
+                            active={Boolean(c.isDecisionMaker)}
+                          />
+                        </div>
+                        <p className="text-xs text-muted">{c.fonction || "—"}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                          {c.email && <span>{c.email}</span>}
+                          {!c.email && guess && (
+                            <span className="text-slate-400" title="Email probable (à vérifier)">
+                              ✉ {guess} <em>(estimé)</em>
+                            </span>
+                          )}
+                          {c.telephone && <span>{c.telephone}</span>}
                           <a
-                            href={c.linkedinUrl}
+                            href={
+                              c.linkedinUrl ||
+                              personLinkedInSearch(c, company)
+                            }
                             target="_blank"
                             rel="noreferrer"
-                            className="text-brand"
+                            className="inline-flex items-center gap-1 text-brand hover:underline"
                           >
-                            LinkedIn
+                            <Search className="h-3.5 w-3.5" />
+                            {c.linkedinUrl ? "LinkedIn" : "LinkedIn ↗"}
                           </a>
-                        )}
+                        </div>
                       </div>
+                      <ContactDeleteButton id={c.id} companyId={company.id} />
                     </div>
-                    <ContactDeleteButton id={c.id} companyId={company.id} />
-                  </div>
-                ))
+                  );
+                })
               )}
               <AddContactForm companyId={company.id} />
             </CardBody>
