@@ -37,20 +37,28 @@ export function SpecialtiesCell({
   }
 
   const activeFields = SPECIALTY_FIELDS.filter((f) => selected.includes(f.key));
+  // Show at most 4 badges per line so the cell stays compact.
+  const rows: (typeof activeFields)[] = [];
+  for (let i = 0; i < activeFields.length; i += 4)
+    rows.push(activeFields.slice(i, i + 4));
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex flex-wrap items-center gap-1 rounded-md px-1 py-0.5 text-left hover:bg-slate-100 disabled:opacity-50"
+        className="flex flex-col items-start gap-1 rounded-md px-1 py-0.5 text-left hover:bg-slate-100 disabled:opacity-50"
         disabled={pending}
       >
         {activeFields.length > 0 ? (
-          activeFields.map((f) => (
-            <Badge key={f.key} className={f.badge}>
-              {f.label}
-            </Badge>
+          rows.map((row, ri) => (
+            <span key={ri} className="flex items-center gap-1">
+              {row.map((f) => (
+                <Badge key={f.key} className={f.badge}>
+                  {f.label}
+                </Badge>
+              ))}
+            </span>
           ))
         ) : (
           <span className="text-xs text-slate-400">+ Spécialités</span>

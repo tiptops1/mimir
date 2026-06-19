@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,9 +18,20 @@ export interface ChartDatum {
   name: string;
   value: number;
   color?: string;
+  // When set, clicking the bar/slice navigates here (drill-down).
+  href?: string;
 }
 
 const AXIS = { fontSize: 12, fill: "#64748b" };
+
+/** Shared hook: navigate to a datum's href on click, if it has one. */
+function useDrill() {
+  const router = useRouter();
+  return (d?: { payload?: ChartDatum }) => {
+    const href = d?.payload?.href;
+    if (href) router.push(href);
+  };
+}
 
 export function VerticalBars({ data }: { data: ChartDatum[] }) {
   return (
@@ -53,7 +65,10 @@ export function VerticalBars({ data }: { data: ChartDatum[] }) {
 }
 
 export function HorizontalBars({ data }: { data: ChartDatum[] }) {
+  const drill = useDrill();
+  const clickable = data.some((d) => d.href);
   return (
+    <div>
     <ResponsiveContainer width="100%" height={Math.max(180, data.length * 38)}>
       <BarChart
         layout="vertical"
@@ -75,18 +90,32 @@ export function HorizontalBars({ data }: { data: ChartDatum[] }) {
             fontSize: 12,
           }}
         />
-        <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+        <Bar
+          dataKey="value"
+          radius={[0, 6, 6, 0]}
+          className={clickable ? "cursor-pointer" : undefined}
+          onClick={clickable ? drill : undefined}
+        >
           {data.map((d, i) => (
             <Cell key={i} fill={d.color ?? "#4f46e5"} />
           ))}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+    {clickable && (
+      <p className="mt-1 text-center text-xs text-muted">
+        Cliquez sur une barre pour filtrer les sociétés.
+      </p>
+    )}
+    </div>
   );
 }
 
 export function Donut({ data }: { data: ChartDatum[] }) {
+  const drill = useDrill();
+  const clickable = data.some((d) => d.href);
   return (
+    <div>
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>
         <Pie
@@ -96,6 +125,8 @@ export function Donut({ data }: { data: ChartDatum[] }) {
           innerRadius={55}
           outerRadius={90}
           paddingAngle={2}
+          className={clickable ? "cursor-pointer" : undefined}
+          onClick={clickable ? drill : undefined}
         >
           {data.map((d, i) => (
             <Cell key={i} fill={d.color ?? "#4f46e5"} />
@@ -114,5 +145,11 @@ export function Donut({ data }: { data: ChartDatum[] }) {
         />
       </PieChart>
     </ResponsiveContainer>
+    {clickable && (
+      <p className="mt-1 text-center text-xs text-muted">
+        Cliquez sur un segment pour filtrer les sociétés.
+      </p>
+    )}
+    </div>
   );
 }

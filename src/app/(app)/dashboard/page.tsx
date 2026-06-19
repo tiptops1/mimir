@@ -63,10 +63,10 @@ export default async function DashboardPage() {
   const firstName = session.name?.split(" ")[0] || "";
 
   const kpis = [
-    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-500" },
-    { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-500" },
-    { label: "À contacter", value: aContacter, icon: Flame, color: "text-orange-500" },
-    { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-500" },
+    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-500", href: "/companies" },
+    { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-500", href: "/contacts" },
+    { label: "À contacter", value: aContacter, icon: Flame, color: "text-orange-500", href: "/companies?stage=A_CONTACTER" },
+    { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-500", href: "/companies?stage=GAGNE" },
   ];
 
   const maxStage = Math.max(1, ...PIPELINE_STAGES.map((s) => stageCounts.get(s.value) ?? 0));
@@ -93,16 +93,21 @@ export default async function DashboardPage() {
           {kpis.map((k) => {
             const Icon = k.icon;
             return (
-              <Card key={k.label}>
-                <CardBody className="flex items-center gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50">
-                    <Icon className={`h-5 w-5 ${k.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold">{k.value}</p>
-                    <p className="text-xs text-muted">{k.label}</p>
-                  </div>
-                </CardBody>
+              <Card
+                key={k.label}
+                className="transition-colors hover:border-brand/40 hover:bg-slate-50/60"
+              >
+                <Link href={k.href}>
+                  <CardBody className="flex items-center gap-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50">
+                      <Icon className={`h-5 w-5 ${k.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold">{k.value}</p>
+                      <p className="text-xs text-muted">{k.label}</p>
+                    </div>
+                  </CardBody>
+                </Link>
               </Card>
             );
           })}
@@ -117,7 +122,11 @@ export default async function DashboardPage() {
               {PIPELINE_STAGES.map((s) => {
                 const count = stageCounts.get(s.value) ?? 0;
                 return (
-                  <div key={s.value} className="flex items-center gap-3">
+                  <Link
+                    key={s.value}
+                    href={`/pipeline?stage=${s.value}`}
+                    className="flex items-center gap-3 rounded-md px-1 py-0.5 hover:bg-slate-50"
+                  >
                     <span className="w-40 shrink-0 text-sm text-slate-600">
                       {s.label}
                     </span>
@@ -130,7 +139,7 @@ export default async function DashboardPage() {
                     <span className="w-8 text-right text-sm font-medium">
                       {count}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </CardBody>

@@ -61,6 +61,7 @@ export default async function CompaniesPage({
   const canal = typeof sp.canal === "string" ? sp.canal : "";
   const site = typeof sp.site === "string" ? sp.site : "";
   const specialite = typeof sp.specialite === "string" ? sp.specialite : "";
+  const dept = typeof sp.dept === "string" ? sp.dept : "";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
   const where: Prisma.CompanyWhereInput = {};
@@ -80,6 +81,7 @@ export default async function CompaniesPage({
   if (SPECIALTY_FIELDS.some((s) => s.key === specialite)) {
     (where as Record<string, unknown>)[specialite] = true;
   }
+  if (/^\d{2}$/.test(dept)) where.codePostal = { startsWith: dept };
   // "Avec / sans site web" — treat empty strings the same as null.
   if (site === "with") {
     where.AND = [{ siteWeb: { not: null } }, { siteWeb: { not: "" } }];
@@ -124,12 +126,13 @@ export default async function CompaniesPage({
     if (canal) params.set("canal", canal);
     if (site) params.set("site", site);
     if (specialite) params.set("specialite", specialite);
+    if (dept) params.set("dept", dept);
     for (const [k, v] of Object.entries(overrides)) params.set(k, String(v));
     return `?${params.toString()}`;
   };
 
   const hasFilters = Boolean(
-    q || stage || priorite || potentiel || canal || site || specialite,
+    q || stage || priorite || potentiel || canal || site || specialite || dept,
   );
 
   return (
@@ -251,7 +254,11 @@ export default async function CompaniesPage({
                             <span className="font-medium text-foreground hover:text-brand">
                               {hasContact ? contactName(dm!) : companyName(c)}
                             </span>
-                            <span className="mt-0.5 block text-xs text-muted">
+                            <span
+                              className={`mt-0.5 block text-xs ${
+                                hasContact ? "text-sky-500" : "text-muted"
+                              }`}
+                            >
                               {hasContact ? companyName(c) : c.siret}
                             </span>
                           </Link>

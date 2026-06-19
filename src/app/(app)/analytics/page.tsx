@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
@@ -37,22 +38,30 @@ function StatCard({
   label,
   value,
   sub,
+  href,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  href?: string;
 }) {
-  return (
-    <Card>
-      <CardBody>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          {label}
-        </p>
-        <p className="mt-1 text-2xl font-semibold">{value}</p>
-        {sub ? <p className="text-xs text-muted">{sub}</p> : null}
-      </CardBody>
-    </Card>
+  const inner = (
+    <CardBody>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-semibold">{value}</p>
+      {sub ? <p className="text-xs text-muted">{sub}</p> : null}
+    </CardBody>
   );
+  if (href) {
+    return (
+      <Card className="transition-colors hover:border-brand/40 hover:bg-slate-50/60">
+        <Link href={href}>{inner}</Link>
+      </Card>
+    );
+  }
+  return <Card>{inner}</Card>;
 }
 
 export default async function AnalyticsPage() {
@@ -94,6 +103,7 @@ export default async function AnalyticsPage() {
     name: `Priorité ${p.value}`,
     value: companies.filter((c) => c.priorite === p.value).length,
     color: p.value === "A" ? "#f43f5e" : p.value === "B" ? "#f59e0b" : "#94a3b8",
+    href: `/companies?priorite=${p.value}`,
   }));
   const prioriteData2 = [
     ...prioriteData,
@@ -109,6 +119,7 @@ export default async function AnalyticsPage() {
     name: p.label,
     value: companies.filter((c) => c.potentiel === p.value).length,
     color: ["#cbd5e1", "#818cf8", "#4f46e5"][i],
+    href: `/companies?potentiel=${p.value}`,
   }));
   const potentielData2 = [
     ...potentielData,
@@ -123,6 +134,7 @@ export default async function AnalyticsPage() {
   const specialtyData: ChartDatum[] = SPECIALTY_FIELDS.map((f) => ({
     name: f.label,
     value: companies.filter((c) => c[f.key as keyof typeof c]).length,
+    href: `/companies?specialite=${f.key}`,
   })).filter((d) => d.value > 0);
 
   // Departments (first 2 digits of code postal)
@@ -139,6 +151,7 @@ export default async function AnalyticsPage() {
       name: DEPT_NAMES[dep] ?? `Dép. ${dep}`,
       value,
       color: "#6366f1",
+      href: `/companies?dept=${dep}`,
     }));
 
   // KPIs
@@ -162,12 +175,18 @@ export default async function AnalyticsPage() {
       />
       <div className="space-y-6 p-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Sociétés" value={total} sub="dans le CRM" />
+          <StatCard
+            label="Sociétés"
+            value={total}
+            sub="dans le CRM"
+            href="/companies"
+          />
           <StatCard label="En cours" value={enCours} sub="hors gagné/perdu" />
           <StatCard
             label="Taux de conversion"
             value={`${conversion}%`}
             sub={`${gagne} gagné(s)`}
+            href="/companies?stage=GAGNE"
           />
           <StatCard
             label="Score ICP moyen"
