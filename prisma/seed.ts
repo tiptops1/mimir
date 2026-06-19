@@ -131,14 +131,26 @@ async function main() {
   });
   console.log(`✓ Admin ready: ${adminName} <${adminEmail}>`);
 
-  // 2) Import companies from the committed CSV
-  const csvPath = join(process.cwd(), "data", "crm-chris-0-200.csv");
-  const text = readFileSync(csvPath, "utf8");
-  const rows = parseCsv(text);
-  rows.shift(); // drop header
+  // 2) Import companies from both committed CSVs
+  const csvFiles = [
+    join(process.cwd(), "data", "crm-chris-0-200.csv"),
+    join(process.cwd(), "data", "crm-chris-200-1802.csv"),
+  ];
 
   let companies = 0;
   let contacts = 0;
+
+  for (const csvPath of csvFiles) {
+    let text: string;
+    try {
+      text = readFileSync(csvPath, "utf8");
+    } catch {
+      console.log(`  Skipping ${csvPath} (not found)`);
+      continue;
+    }
+    console.log(`  Importing ${csvPath}...`);
+    const rows = parseCsv(text);
+    rows.shift(); // drop header
 
   for (const r of rows) {
     if (r.length < 13) continue; // skip blank/short lines
@@ -220,6 +232,7 @@ async function main() {
       }
     }
   }
+  } // end csvFiles loop
 
   console.log(`✓ Imported ${companies} companies, ${contacts} contacts.`);
 }

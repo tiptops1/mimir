@@ -15,7 +15,9 @@
     "seed": "tsx prisma/seed.ts",
     "enrich:all": "tsx prisma/enrich-all.ts",
     "enrich:websites": "tsx scripts/enrich-websites.ts",
-    "sync:email": "tsx scripts/sync-email.ts"
+    "sync:email": "tsx scripts/sync-email.ts",
+    "import:200-1802": "tsx scripts/dedup-and-import.ts",
+    "dedup:names": "tsx scripts/dedup-by-name.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
