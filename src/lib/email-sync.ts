@@ -19,6 +19,7 @@ export interface ParsedEmail {
   to: Addr[];
   cc: Addr[];
   snippet: string | null;
+  body: string | null; // fuller plain-text body, for the AI insight pass
 }
 
 export interface SyncOutcome {
@@ -149,6 +150,7 @@ async function logEmailActivity(
       direction,
       subject: email.subject,
       note: email.snippet,
+      body: email.body,
       date: email.date,
       fromEmail: direction === "OUTBOUND" ? ownerEmail : counterparty,
       toEmail: direction === "OUTBOUND" ? counterparty : ownerEmail,

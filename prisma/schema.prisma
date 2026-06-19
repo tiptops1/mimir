@@ -136,13 +136,20 @@ model Activity {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   type      String // CALL | EMAIL | MEETING | NOTE | STAGE_CHANGE
   note      String?
+  body      String? // fuller raw text (email body, meeting/call summary) for AI
   date      DateTime @default(now())
   // Email-sync fields (populated when type == EMAIL)
   direction String? // INBOUND | OUTBOUND
   subject   String?
   fromEmail String?
   toEmail   String?
-  messageId String? // RFC Message-ID — dedupe key for imported emails
+  messageId String? // dedupe key: RFC Message-ID, cal:<uid>, or ff:<transcript>
+  // AI insight (filled by the Claude pass in lib/ai-extract)
+  aiSummary      String?
+  sentiment      String? // POSITIF | NEUTRE | NEGATIF
+  nextStep       String?
+  actionItems    String? // JSON array of strings
+  suggestedStage String? // a PipelineStage value, surfaced as a suggestion
   companyId String?  @db.ObjectId
   company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contactId String?  @db.ObjectId

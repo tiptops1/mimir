@@ -23,10 +23,27 @@ import {
   suggestedEmail,
 } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
-import { ACTIVITY_TYPES } from "@/lib/constants";
+import { ACTIVITY_TYPES, STAGE_LABELS, type StageValue } from "@/lib/constants";
+import { Sparkles } from "lucide-react";
 
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
+
+const SENTIMENT_STYLE: Record<string, string> = {
+  POSITIF: "bg-emerald-100 text-emerald-700",
+  NEUTRE: "bg-slate-100 text-slate-600",
+  NEGATIF: "bg-rose-100 text-rose-700",
+};
+
+function parseActionItems(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 export default async function CompanyDetailPage({
   params,
@@ -166,6 +183,54 @@ export default async function CompanyDetailPage({
                             {formatDate(a.date)}
                             {a.user?.name ? ` · ${a.user.name}` : ""}
                           </p>
+                          {a.aiSummary &&
+                            (() => {
+                              const actions = parseActionItems(a.actionItems);
+                              return (
+                                <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-2.5 text-xs">
+                                  <div className="mb-1 flex items-center gap-1.5 font-medium text-brand">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                    Analyse IA
+                                    {a.sentiment && (
+                                      <span
+                                        className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                          SENTIMENT_STYLE[a.sentiment] ??
+                                          "bg-slate-100 text-slate-600"
+                                        }`}
+                                      >
+                                        {a.sentiment}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-700">{a.aiSummary}</p>
+                                  {a.nextStep && (
+                                    <p className="mt-1.5 text-slate-700">
+                                      <span className="font-medium">
+                                        Prochaine étape :{" "}
+                                      </span>
+                                      {a.nextStep}
+                                    </p>
+                                  )}
+                                  {actions.length > 0 && (
+                                    <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-slate-600">
+                                      {actions.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {a.suggestedStage && (
+                                    <p className="mt-1.5 text-slate-500">
+                                      Étape suggérée :{" "}
+                                      <span className="font-medium text-slate-700">
+                                        {STAGE_LABELS[
+                                          a.suggestedStage as StageValue
+                                        ] ?? a.suggestedStage}
+                                      </span>
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                         </div>
                       </div>
                     );

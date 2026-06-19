@@ -3,7 +3,6 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton, Card, EmptyState, Input, Select } from "@/components/ui";
-import { StageBadge, PrioriteBadge, PotentielBadge } from "@/components/badges";
 import { companyName, contactName } from "@/lib/display";
 import {
   PIPELINE_STAGES,
@@ -14,6 +13,24 @@ import {
 } from "@/lib/constants";
 import { SpecialtiesCell } from "@/components/specialties-cell";
 import { NotesCell } from "@/components/notes-cell";
+import { EnumCell } from "@/components/enum-cell";
+
+const STAGE_OPTIONS = PIPELINE_STAGES.map((s) => ({
+  value: s.value,
+  label: s.label,
+  badge: s.badge,
+  dot: s.dot,
+}));
+const PRIORITE_CELL_OPTIONS = PRIORITE_OPTIONS.map((p) => ({
+  value: p.value,
+  label: p.label,
+  short: p.value,
+  badge: p.badge,
+}));
+const POTENTIEL_CELL_OPTIONS = POTENTIEL_OPTIONS.map((p) => ({
+  value: p.value,
+  label: p.label,
+}));
 
 type DmContact = {
   nom: string | null;
@@ -270,13 +287,30 @@ export default async function CompaniesPage({
                           <NotesCell id={c.id} value={c.notes} />
                         </td>
                         <td className="px-4 py-3">
-                          <StageBadge stage={c.stage} />
+                          <EnumCell
+                            id={c.id}
+                            field="stage"
+                            value={c.stage}
+                            options={STAGE_OPTIONS}
+                          />
                         </td>
                         <td className="px-4 py-3">
-                          <PrioriteBadge priorite={c.priorite} />
+                          <EnumCell
+                            id={c.id}
+                            field="priorite"
+                            value={c.priorite}
+                            options={PRIORITE_CELL_OPTIONS}
+                            nullable
+                          />
                         </td>
                         <td className="px-4 py-3">
-                          <PotentielBadge potentiel={c.potentiel} />
+                          <EnumCell
+                            id={c.id}
+                            field="potentiel"
+                            value={c.potentiel}
+                            options={POTENTIEL_CELL_OPTIONS}
+                            nullable
+                          />
                         </td>
                         <td className={`px-4 py-3 text-xs font-medium ${touch.cls}`}>
                           {touch.text}

@@ -96,6 +96,51 @@ export async function setCompanySpecialties(
   revalidatePath(`/companies/${id}`);
 }
 
+// Whitelist of inline-editable enum fields → their allowed values.
+// `nullable` fields accept "" to clear the value.
+const ENUM_FIELDS = {
+  stage: {
+    values: [
+      "A_QUALIFIER",
+      "A_CONTACTER",
+      "CONTACTE",
+      "RDV_OBTENU",
+      "DEMO_REALISEE",
+      "PROPOSITION_ENVOYEE",
+      "GAGNE",
+      "PERDU",
+    ],
+    nullable: false,
+  },
+  priorite: { values: ["A", "B", "C"], nullable: true },
+  potentiel: { values: ["FAIBLE", "MOYEN", "FORT"], nullable: true },
+} as const;
+
+export type EnumField = keyof typeof ENUM_FIELDS;
+
+/** Inline-edit a single enum column (stage / priorité / potentiel) from the table. */
+export async function setCompanyEnum(
+  id: string,
+  field: EnumField,
+  value: string,
+): Promise<void> {
+  await verifySession();
+  const def = ENUM_FIELDS[field];
+  if (!def) return;
+  let next: string | null;
+  if (def.values.includes(value as never)) {
+    next = value;
+  } else if (def.nullable && value === "") {
+    next = null;
+  } else {
+    return; // ignore invalid values rather than throwing
+  }
+  await prisma.company.update({ where: { id }, data: { [field]: next } });
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${id}`);
+  revalidatePath("/pipeline");
+}
+
 /** Inline-edit the free-text notes / next-steps field. */
 export async function setCompanyNotes(
   id: string,

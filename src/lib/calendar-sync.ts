@@ -1,0 +1,166 @@
+import type { PrismaClient } from "@prisma/client";
+import { parseIcs, type IcsAttendee, type IcsEvent } from "./ics";
+import { buildCaches, emailDomain, splitName, type Caches } from "./email-sync";
+
+// Google Calendar → CRM. Reads the calendar's read-only "secret iCal address"
+// (Settings → Integrate calendar → Secret address in iCal format), matches the
+// other attendees to known contacts/companies, and logs a MEETING activity per
+// event. Dedupe key is Activity.messageId = `cal:<event-uid>`.
+
+export interface CalendarOutcome {
+  events: number; // events considered (in window, not the owner's solo blocks)
+  logged: number; // new MEETING activities created
+  updated: number; // existing meetings whose time/subject changed
+  unmatched: number; // events with no attendee matching a known company/contact
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function peopleOf(ev: IcsEvent): IcsAttendee[] {
+  const all = [...ev.attendees];
+  if (ev.organizer) all.push(ev.organizer);
+  return all;
+}
+
+async function resolveTarget(
+  prisma: PrismaClient,
+  people: IcsAttendee[],
+  ownerEmail: string,
+  caches: Caches,
+): Promise<{ companyId: string; contactId: string | null } | null> {
+  const owner = ownerEmail.toLowerCase();
+  for (const p of people) {
+    if (!p.email || p.email === owner) continue;
+    const match = caches.contactByEmail.get(p.email);
+    if (match) return { companyId: match.companyId, contactId: match.contactId };
+  }
+  // No known contact — try to attach to a company by sender domain, creating the
+  // contact so future emails/meetings thread onto it.
+  for (const p of people) {
+    if (!p.email || p.email === owner) continue;
+    const domain = emailDomain(p.email);
+    const companyId = domain ? caches.companyByDomain.get(domain) : undefined;
+    if (companyId) {
+      const { prenom, nom } = splitName(p.name, p.email);
+      const contact = await prisma.contact.create({
+        data: { companyId, email: p.email, prenom, nom },
+      });
+      caches.contactByEmail.set(p.email, { contactId: contact.id, companyId });
+      return { companyId, contactId: contact.id };
+    }
+  }
+  return null;
+}
+
+export async function processCalendar(
+  prisma: PrismaClient,
+  icsText: string,
+  ownerEmail: string,
+  caches: Caches,
+  opts: { windowDays?: number; dry?: boolean } = {},
+): Promise<CalendarOutcome> {
+  const windowDays = opts.windowDays ?? 90;
+  const now = Date.now();
+  const out: CalendarOutcome = { events: 0, logged: 0, updated: 0, unmatched: 0 };
+
+  for (const ev of parseIcs(icsText)) {
+    if (!ev.start) continue;
+    if (ev.status === "CANCELLED") continue;
+    const age = now - ev.start.getTime();
+    // Recent past + near future only — keeps the model/db work bounded.
+    if (age > windowDays * DAY || age < -windowDays * DAY) continue;
+
+    const people = peopleOf(ev);
+    // Skip personal blocks with no external party.
+    const hasOther = people.some(
+      (p) => p.email && p.email !== ownerEmail.toLowerCase(),
+    );
+    if (!hasOther) continue;
+    out.events++;
+
+    const target = await resolveTarget(prisma, people, ownerEmail, caches);
+    if (!target) {
+      out.unmatched++;
+      continue;
+    }
+
+    const messageId = `cal:${ev.uid}`;
+    const note =
+      [ev.description, ev.location ? `Lieu : ${ev.location}` : null]
+        .filter(Boolean)
+        .join("\n\n") || null;
+
+    const existing = await prisma.activity.findFirst({
+      where: { messageId },
+      select: { id: true, subject: true, date: true },
+    });
+
+    if (existing) {
+      const changed =
+        existing.subject !== (ev.summary ?? null) ||
+        existing.date.getTime() !== ev.start.getTime();
+      if (changed && !opts.dry) {
+        await prisma.activity.update({
+          where: { id: existing.id },
+          data: { subject: ev.summary, date: ev.start, body: note },
+        });
+        out.updated++;
+      }
+      continue;
+    }
+
+    if (!opts.dry) {
+      await prisma.activity.create({
+        data: {
+          type: "MEETING",
+          subject: ev.summary,
+          note,
+          body: note,
+          date: ev.start,
+          messageId,
+          companyId: target.companyId,
+          contactId: target.contactId,
+        },
+      });
+      // A scheduled meeting is real engagement — advance last contact forward.
+      await prisma.company.updateMany({
+        where: {
+          id: target.companyId,
+          OR: [{ dernierContact: null }, { dernierContact: { lt: ev.start } }],
+        },
+        data: { dernierContact: ev.start },
+      });
+    }
+    out.logged++;
+  }
+  return out;
+}
+
+/** Fetch the iCal feed and process it. */
+export async function syncCalendar(
+  prisma: PrismaClient,
+  opts: { icsUrl?: string; ownerEmail?: string; windowDays?: number; dry?: boolean } = {},
+): Promise<CalendarOutcome> {
+  const icsUrl = opts.icsUrl || process.env.GOOGLE_CALENDAR_ICS_URL;
+  const ownerEmail = (
+    opts.ownerEmail ||
+    process.env.OWNER_EMAIL ||
+    process.env.IMAP_USER ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+  if (!icsUrl) {
+    throw new Error("GOOGLE_CALENDAR_ICS_URL is not set");
+  }
+  const res = await fetch(icsUrl, { headers: { "user-agent": "avelior-crm" } });
+  if (!res.ok) {
+    throw new Error(`Calendar feed ${res.status}`);
+  }
+  const text = await res.text();
+  const caches = await buildCaches(prisma);
+  return processCalendar(prisma, text, ownerEmail, caches, {
+    windowDays: opts.windowDays,
+    dry: opts.dry,
+  });
+}
