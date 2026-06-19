@@ -86,12 +86,30 @@ Log in with the `SEED_ADMIN_*` credentials, or register a new (`USER`) account a
 > The build command (`prisma generate && next build`) and `postinstall` (`prisma generate`) are
 > already configured in `package.json`.
 
-## Data enrichment (later)
+## Data enrichment
 
 The CRM imports the source spreadsheet **as-is** — many cells are intentionally empty. The schema
 keeps every field, and `POST /api/enrich` is a stub ready to wire up enrichment via the official
 French open API (`https://recherche-entreprises.api.gouv.fr`, keyed by SIREN/SIRET) or a custom
 pipeline. Personal director contact data is left manual (GDPR).
+
+### Free website discovery
+
+Fills each company's `siteWeb` for free — no API key needed — by searching **Bing** (and, as a
+bonus, **DuckDuckGo Lite**; plus **Brave** if you set `BRAVE_API_KEY`) and keeping only a domain
+whose name strongly matches the company. It errs on the side of leaving the field blank rather than
+saving a wrong URL (a wrong website is worse than none in a CRM).
+
+```bash
+npm run enrich:websites              # fill every empty siteWeb
+npm run enrich:websites -- --dry     # preview only, write nothing
+npm run enrich:websites -- --limit=20
+npm run enrich:websites -- --force   # also re-check companies that already have a site
+```
+
+> **Run this locally**, from a normal home/office connection. The search engines block datacenter
+> IPs, so running it on a server (or Railway) returns nothing. It only ever fills empty `siteWeb`
+> fields — it never overwrites a site you've entered.
 
 ## Email sync (Gmail / Google Workspace)
 

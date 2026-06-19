@@ -66,25 +66,110 @@ export async function discoverWebsite(siren: string): Promise<string | null> {
   }
 }
 
-// --- Free, keyless website discovery via DuckDuckGo HTML (best-effort) ---
-// Aggregators / directories / social we never want to mistake for the site.
-const BLOCK_DOMAIN =
-  /(duckduckgo|google|bing\.|facebook|linkedin|instagram|twitter|x\.com|youtube|societe\.com|pappers|verif\.|infogreffe|pagesjaunes|wikipedia|score3|manageo|bodacc|annuaire|kompass|dnb\.com|leboncoin|indeed|trustpilot|mappy|yelp|figaro|usine-digitale)/i;
+// --- Free, keyless website discovery ----------------------------------------
+// Strategy: query Bing HTML (reliable, residential-IP friendly) plus, as a
+// bonus, DuckDuckGo Lite (rate-limits hard, so we tolerate empty responses).
+// We then accept a candidate domain ONLY if its label strongly matches the
+// company name — this is what keeps us from saving a directory or an unrelated
+// firm that merely shares a common first name. A wrong website is worse than a
+// blank one in a CRM, so the matcher errs on the side of leaving it empty.
 
-async function ddgSearch(query: string): Promise<string[]> {
+const SEARCH_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+// Aggregators / directories / social / registry sites — never the real site.
+const BLOCK_DOMAIN =
+  /(duckduckgo|google|bing\.|facebook|fb\.com|instagram|twitter|x\.com|youtube|tiktok|linkedin|societe\.com|pappers|verif\.|infogreffe|pagesjaunes|wikipedia|score3|manageo|bodacc|annuaire|kompass|dnb\.com|leboncoin|indeed|trustpilot|mappy|yelp|justacote|cataloxy|cylex|baidu|zhihu|figaro|usine-digitale|b-reputation|ellisphere|france-entreprise|data\.gouv|sirene|insee|opendatasoft|linternaute|journaldunet|hoodspot|webentreprise|118000|118712|local\.fr|le-260|avis-?verifies|amazon|booking|tripadvisor|glassdoor|welcometothejungle|hellowork|banque-france|acpr|orias|verif-?siret|pole-?emploi|leparisien|ouest-france)/i;
+
+// Generic words that must not, on their own, drive a domain match.
+const NAME_STOP = new Set([
+  "sarl", "sas", "sasu", "sa", "eurl", "snc", "sci", "selarl", "scop", "scs",
+  "assurance", "assurances", "courtage", "cabinet", "groupe", "group", "agence",
+  "conseil", "conseils", "compagnie", "assur", "societe", "services", "service",
+  "france", "gestion", "et", "de", "des", "du", "la", "le", "les", "aux",
+  "mr", "mme", "saint", "st",
+]);
+
+function deburr(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+function nameTokens(name: string): string[] {
+  return [
+    ...new Set(
+      deburr(name)
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length >= 3 && !NAME_STOP.has(t)),
+    ),
+  ];
+}
+
+function domainLabel(host: string): string {
+  return host.replace(/^www\./, "").split(".").slice(0, -1).join("");
+}
+
+// Does this host's domain label match the company name strongly enough to keep?
+function hostMatchesName(host: string, name: string): boolean {
+  const label = deburr(domainLabel(host));
+  const toks = nameTokens(name);
+  if (toks.length === 0) return false;
+  const hits = toks.filter((t) => label.includes(t));
+  if (hits.length >= 2) return true; // two distinct name tokens in the domain
+  const concat = toks.join("");
+  if (concat.length >= 5 && label === concat) return true; // domain == name run together
+  // A single token can only validate a domain when the company name is itself a
+  // single word (e.g. "VERLINGUE", "SOGEGRI"). For multi-word names — typically a
+  // person, "Prénom NOM" — one token isn't enough: a common first name like
+  // "christian" must not validate christian.fr.
+  if (toks.length === 1) {
+    const t = toks[0];
+    return t.length >= 6 && (label === t || label.startsWith(t) || (t.startsWith(label) && label.length >= 5));
+  }
+  return false;
+}
+
+function hostsFromUrls(urls: string[]): string[] {
+  const out: string[] = [];
+  for (const u of urls) {
+    try {
+      const host = new URL(u).hostname.replace(/^www\./, "");
+      if (host.includes(".") && !BLOCK_DOMAIN.test(host)) out.push(host);
+    } catch {
+      /* skip */
+    }
+  }
+  return out;
+}
+
+async function bingSearch(query: string): Promise<string[]> {
   try {
     const res = await fetch(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          "user-agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          accept: "text/html",
-        },
-        signal: AbortSignal.timeout(8000),
-      },
+      `https://www.bing.com/search?q=${encodeURIComponent(query)}&mkt=fr-FR`,
+      { headers: { "user-agent": SEARCH_UA, accept: "text/html" }, signal: AbortSignal.timeout(10000) },
     );
     if (!res.ok) return [];
+    const html = await res.text();
+    const urls: string[] = [];
+    // Bing shows the result URL in <cite> (e.g. "https://www.example.fr › path")
+    for (const m of html.matchAll(/<cite>([^<]+)<\/cite>/g)) {
+      let c = m[1].replace(/\s*›.*$/, "").replace(/\s+/g, "");
+      if (!/^https?:\/\//.test(c)) c = "https://" + c;
+      urls.push(c);
+    }
+    return urls;
+  } catch {
+    return [];
+  }
+}
+
+async function ddgLiteSearch(query: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`,
+      { headers: { "user-agent": SEARCH_UA, accept: "text/html" }, signal: AbortSignal.timeout(10000) },
+    );
+    if (!res.ok) return []; // 202 = throttled; just skip this source
     const html = await res.text();
     const urls: string[] = [];
     for (const m of html.matchAll(/uddg=([^&"']+)/g)) {
@@ -100,21 +185,7 @@ async function ddgSearch(query: string): Promise<string[]> {
   }
 }
 
-function pickWebsite(urls: string[]): string | null {
-  for (const u of urls) {
-    try {
-      const host = new URL(u).hostname.replace(/^www\./, "");
-      if (host.includes(".") && !BLOCK_DOMAIN.test(host)) {
-        return `https://${host}`;
-      }
-    } catch {
-      /* skip */
-    }
-  }
-  return null;
-}
-
-// Brave Search API — free tier (2k/month) with a key. Reliable JSON results.
+// Brave Search API — free tier (2k/month) with a key. Best quality if present.
 async function braveSearch(query: string): Promise<string[]> {
   const key = process.env.BRAVE_API_KEY;
   if (!key) return [];
@@ -146,9 +217,21 @@ export async function discoverWebsiteFree(
   name: string,
   ville?: string | null,
 ): Promise<string | null> {
-  const query = `${name} ${ville ?? ""} assurance courtage`.trim();
-  // Prefer Brave (keyed, reliable); fall back to keyless DuckDuckGo.
-  return pickWebsite(await braveSearch(query)) ?? pickWebsite(await ddgSearch(query));
+  if (!name.trim()) return null;
+  const query = `${name} ${ville ?? ""} assurance`.trim();
+  // Gather candidates from all available sources (Brave only if keyed).
+  const hosts = [
+    ...hostsFromUrls(await braveSearch(query)),
+    ...hostsFromUrls(await bingSearch(query)),
+    ...hostsFromUrls(await ddgLiteSearch(query)),
+  ];
+  const seen = new Set<string>();
+  for (const host of hosts) {
+    if (seen.has(host)) continue;
+    seen.add(host);
+    if (hostMatchesName(host, name)) return `https://${host}`;
+  }
+  return null;
 }
 
 // --- Site scraping for generic email / phone (free, best-effort) ---

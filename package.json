@@ -14,6 +14,7 @@
     "db:push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
     "enrich:all": "tsx prisma/enrich-all.ts",
+    "enrich:websites": "tsx scripts/enrich-websites.ts",
     "sync:email": "tsx scripts/sync-email.ts"
   },
   "dependencies": {
