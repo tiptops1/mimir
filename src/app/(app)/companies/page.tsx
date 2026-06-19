@@ -10,7 +10,13 @@ import {
   personLinkedInSearch,
   companyLinkedInSearch,
 } from "@/lib/display";
-import { PIPELINE_STAGES, PRIORITE_OPTIONS } from "@/lib/constants";
+import {
+  PIPELINE_STAGES,
+  PRIORITE_OPTIONS,
+  POTENTIEL_OPTIONS,
+  CANAL_PREFERE_OPTIONS,
+  SPECIALTY_FIELDS,
+} from "@/lib/constants";
 import { PreferredChannelSelect } from "@/components/preferred-channel-select";
 
 type DmContact = {
@@ -39,6 +45,10 @@ export default async function CompaniesPage({
   const q = typeof sp.q === "string" ? sp.q : "";
   const stage = typeof sp.stage === "string" ? sp.stage : "";
   const priorite = typeof sp.priorite === "string" ? sp.priorite : "";
+  const potentiel = typeof sp.potentiel === "string" ? sp.potentiel : "";
+  const canal = typeof sp.canal === "string" ? sp.canal : "";
+  const site = typeof sp.site === "string" ? sp.site : "";
+  const specialite = typeof sp.specialite === "string" ? sp.specialite : "";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
   const where: Prisma.CompanyWhereInput = {};
@@ -53,6 +63,17 @@ export default async function CompaniesPage({
   }
   if (stage) where.stage = stage as Prisma.CompanyWhereInput["stage"];
   if (priorite) where.priorite = priorite as Prisma.CompanyWhereInput["priorite"];
+  if (potentiel) where.potentiel = potentiel as Prisma.CompanyWhereInput["potentiel"];
+  if (canal) where.canalPrefere = canal;
+  if (SPECIALTY_FIELDS.some((s) => s.key === specialite)) {
+    (where as Record<string, unknown>)[specialite] = true;
+  }
+  // "Avec / sans site web" — treat empty strings the same as null.
+  if (site === "with") {
+    where.AND = [{ siteWeb: { not: null } }, { siteWeb: { not: "" } }];
+  } else if (site === "without") {
+    where.AND = [{ OR: [{ siteWeb: null }, { siteWeb: "" }] }];
+  }
 
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
@@ -85,9 +106,17 @@ export default async function CompaniesPage({
     if (q) params.set("q", q);
     if (stage) params.set("stage", stage);
     if (priorite) params.set("priorite", priorite);
+    if (potentiel) params.set("potentiel", potentiel);
+    if (canal) params.set("canal", canal);
+    if (site) params.set("site", site);
+    if (specialite) params.set("specialite", specialite);
     for (const [k, v] of Object.entries(overrides)) params.set(k, String(v));
     return `?${params.toString()}`;
   };
+
+  const hasFilters = Boolean(
+    q || stage || priorite || potentiel || canal || site || specialite,
+  );
 
   return (
     <div>
@@ -123,13 +152,42 @@ export default async function CompaniesPage({
               </option>
             ))}
           </Select>
+          <Select name="potentiel" defaultValue={potentiel} className="w-40">
+            <option value="">Tout potentiel</option>
+            {POTENTIEL_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+          <Select name="canal" defaultValue={canal} className="w-44">
+            <option value="">Tout canal</option>
+            {CANAL_PREFERE_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          <Select name="specialite" defaultValue={specialite} className="w-44">
+            <option value="">Toutes spécialités</option>
+            {SPECIALTY_FIELDS.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+          <Select name="site" defaultValue={site} className="w-40">
+            <option value="">Site web : tous</option>
+            <option value="with">Avec site web</option>
+            <option value="without">Sans site web</option>
+          </Select>
           <button
             type="submit"
             className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             Filtrer
           </button>
-          {(q || stage || priorite) && (
+          {hasFilters && (
             <Link
               href="/companies"
               className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"

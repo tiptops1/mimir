@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
-import { Card, EmptyState, Input } from "@/components/ui";
+import { Card, EmptyState, Input, Select } from "@/components/ui";
 import {
   companyName,
   contactName,
@@ -24,17 +24,34 @@ export default async function ContactsPage({
 }) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
+  const role = typeof sp.role === "string" ? sp.role : "";
+  const has = typeof sp.has === "string" ? sp.has : "";
+  const site = typeof sp.site === "string" ? sp.site : "";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
-  const where: Prisma.ContactWhereInput = {};
+  // Each active filter is one AND clause — "present" means non-null and non-empty.
+  const and: Prisma.ContactWhereInput[] = [];
   if (q) {
-    where.OR = [
-      { nom: { contains: q, mode: "insensitive" } },
-      { prenom: { contains: q, mode: "insensitive" } },
-      { email: { contains: q, mode: "insensitive" } },
-      { fonction: { contains: q, mode: "insensitive" } },
-    ];
+    and.push({
+      OR: [
+        { nom: { contains: q, mode: "insensitive" } },
+        { prenom: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { fonction: { contains: q, mode: "insensitive" } },
+      ],
+    });
   }
+  if (role === "decideur") and.push({ isDecisionMaker: true });
+  if (has === "email") and.push({ email: { not: null } }, { email: { not: "" } });
+  if (has === "phone") and.push({ telephone: { not: null } }, { telephone: { not: "" } });
+  if (has === "linkedin")
+    and.push({ linkedinUrl: { not: null } }, { linkedinUrl: { not: "" } });
+  if (site === "with")
+    and.push({ company: { siteWeb: { not: null } } }, { company: { siteWeb: { not: "" } } });
+  if (site === "without")
+    and.push({ company: { OR: [{ siteWeb: null }, { siteWeb: "" }] } });
+
+  const where: Prisma.ContactWhereInput = and.length ? { AND: and } : {};
 
   const [contacts, total] = await Promise.all([
     prisma.contact.findMany({
@@ -61,6 +78,17 @@ export default async function ContactsPage({
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  const hasFilters = Boolean(q || role || has || site);
+  const qs = (overrides: Record<string, string | number>) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (role) params.set("role", role);
+    if (has) params.set("has", has);
+    if (site) params.set("site", site);
+    for (const [k, v] of Object.entries(overrides)) params.set(k, String(v));
+    return `?${params.toString()}`;
+  };
+
   return (
     <div>
       <PageHeader
@@ -68,26 +96,53 @@ export default async function ContactsPage({
         subtitle={`${total} contact${total > 1 ? "s" : ""}`}
       />
       <div className="p-6">
-        <form className="mb-4 flex gap-3">
-          <div className="max-w-sm flex-1">
+        <form className="mb-4 flex flex-wrap items-end gap-3">
+          <div className="min-w-56 flex-1">
             <Input
               name="q"
               defaultValue={q}
               placeholder="Rechercher un contact…"
             />
           </div>
+          <Select name="role" defaultValue={role} className="w-48">
+            <option value="">Tous les contacts</option>
+            <option value="decideur">Décideurs uniquement</option>
+          </Select>
+          <Select name="has" defaultValue={has} className="w-48">
+            <option value="">Toutes coordonnées</option>
+            <option value="email">Avec email</option>
+            <option value="phone">Avec téléphone</option>
+            <option value="linkedin">Avec LinkedIn</option>
+          </Select>
+          <Select name="site" defaultValue={site} className="w-48">
+            <option value="">Site web : tous</option>
+            <option value="with">Société avec site</option>
+            <option value="without">Société sans site</option>
+          </Select>
           <button
             type="submit"
             className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
-            Rechercher
+            Filtrer
           </button>
+          {hasFilters && (
+            <Link
+              href="/contacts"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
+            >
+              Réinitialiser
+            </Link>
+          )}
         </form>
 
         {contacts.length === 0 ? (
           <EmptyState
             title="Aucun contact"
-            hint="Les contacts (dirigeants) s'ajoutent depuis la fiche d'une société."
+            hint={
+              hasFilters
+                ? "Aucun contact ne correspond à ces filtres. Réinitialisez pour tout voir."
+                : "Les contacts (dirigeants) s'ajoutent depuis la fiche d'une société."
+            }
           />
         ) : (
           <Card className="overflow-hidden">
@@ -181,7 +236,7 @@ export default async function ContactsPage({
             <div className="flex gap-2">
               {page > 1 && (
                 <Link
-                  href={`?q=${encodeURIComponent(q)}&page=${page - 1}`}
+                  href={qs({ page: page - 1 })}
                   className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
                 >
                   Précédent
@@ -189,7 +244,7 @@ export default async function ContactsPage({
               )}
               {page < totalPages && (
                 <Link
-                  href={`?q=${encodeURIComponent(q)}&page=${page + 1}`}
+                  href={qs({ page: page + 1 })}
                   className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
                 >
                   Suivant
