@@ -4,12 +4,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton, Card, EmptyState, Input, Select } from "@/components/ui";
 import { StageBadge, PrioriteBadge, PotentielBadge } from "@/components/badges";
-import {
-  companyName,
-  contactName,
-  personLinkedInSearch,
-  companyLinkedInSearch,
-} from "@/lib/display";
+import { companyName, contactName } from "@/lib/display";
 import {
   PIPELINE_STAGES,
   PRIORITE_OPTIONS,
@@ -17,14 +12,12 @@ import {
   CANAL_PREFERE_OPTIONS,
   SPECIALTY_FIELDS,
 } from "@/lib/constants";
-import { PreferredChannelSelect } from "@/components/preferred-channel-select";
+import { SpecialtiesCell } from "@/components/specialties-cell";
+import { NotesCell } from "@/components/notes-cell";
 
 type DmContact = {
   nom: string | null;
   prenom: string | null;
-  email: string | null;
-  telephone: string | null;
-  linkedinUrl: string | null;
   isDecisionMaker: boolean | null;
 };
 
@@ -32,6 +25,25 @@ type DmContact = {
 function decisionMaker(contacts: DmContact[]) {
   if (contacts.length === 0) return null;
   return contacts.find((c) => c.isDecisionMaker) ?? contacts[0];
+}
+
+/** Days-since-last-touch label — only when there's a clear touchpoint. */
+function touchLabel(date: Date | null | undefined): {
+  text: string;
+  cls: string;
+} {
+  if (!date) return { text: "—", cls: "text-slate-300" };
+  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
+  const text =
+    days <= 0 ? "Aujourd'hui" : days === 1 ? "Hier" : `Il y a ${days} j`;
+  // Warm color as the touch goes stale.
+  const cls =
+    days <= 7
+      ? "text-emerald-600"
+      : days <= 30
+        ? "text-amber-600"
+        : "text-rose-600";
+  return { text, cls };
 }
 
 const PAGE_SIZE = 20;
@@ -87,12 +99,14 @@ export default async function CompaniesPage({
           select: {
             nom: true,
             prenom: true,
-            email: true,
-            telephone: true,
-            linkedinUrl: true,
             isDecisionMaker: true,
           },
           orderBy: { createdAt: "asc" },
+        },
+        activities: {
+          select: { date: true },
+          orderBy: { date: "desc" },
+          take: 1,
         },
       },
     }),
@@ -208,72 +222,61 @@ export default async function CompaniesPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3 font-medium">Société</th>
-                    <th className="px-4 py-3 font-medium">Décideur</th>
-                    <th className="px-4 py-3 font-medium">Communication préférée</th>
+                    <th className="px-4 py-3 font-medium">Contact</th>
+                    <th className="px-4 py-3 font-medium">Spécialités</th>
+                    <th className="px-4 py-3 font-medium">Notes / prochaines étapes</th>
                     <th className="px-4 py-3 font-medium">Étape</th>
                     <th className="px-4 py-3 font-medium">Priorité</th>
                     <th className="px-4 py-3 font-medium">Potentiel</th>
-                    <th className="px-4 py-3 font-medium">Contacts</th>
+                    <th className="px-4 py-3 font-medium">Dernier contact</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {companies.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="border-b border-border last:border-0 hover:bg-slate-50/60"
-                    >
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/companies/${c.id}`}
-                          className="font-medium text-foreground hover:text-brand"
-                        >
-                          {companyName(c)}
-                        </Link>
-                        <div className="text-xs text-muted">{c.siret}</div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {(() => {
-                          const dm = decisionMaker(c.contacts);
-                          return dm ? contactName(dm) : "—";
-                        })()}
-                      </td>
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const dm = decisionMaker(c.contacts);
-                          const linkedinHref =
-                            dm?.linkedinUrl ||
-                            (dm
-                              ? personLinkedInSearch(dm, c)
-                              : companyLinkedInSearch(c));
-                          return (
-                            <PreferredChannelSelect
-                              id={c.id}
-                              value={c.canalPrefere}
-                              phone={dm?.telephone ?? c.telephoneStandard}
-                              email={dm?.email ?? c.emailGenerique}
-                              linkedinHref={linkedinHref}
-                              linkedinLabel={
-                                dm?.linkedinUrl ? "Profil ↗" : "Rechercher ↗"
-                              }
-                            />
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StageBadge stage={c.stage} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <PrioriteBadge priorite={c.priorite} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <PotentielBadge potentiel={c.potentiel} />
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {c._count.contacts}
-                      </td>
-                    </tr>
-                  ))}
+                  {companies.map((c) => {
+                    const dm = decisionMaker(c.contacts);
+                    const hasContact = Boolean(dm && (dm.prenom || dm.nom));
+                    const activeSpec = SPECIALTY_FIELDS.filter(
+                      (f) => c[f.key as keyof typeof c],
+                    ).map((f) => f.key);
+                    const lastTouch =
+                      c.dernierContact ?? c.activities[0]?.date ?? null;
+                    const touch = touchLabel(lastTouch);
+                    return (
+                      <tr
+                        key={c.id}
+                        className="border-b border-border last:border-0 align-top hover:bg-slate-50/60"
+                      >
+                        <td className="px-4 py-3">
+                          <Link href={`/companies/${c.id}`} className="block">
+                            <span className="font-medium text-foreground hover:text-brand">
+                              {hasContact ? contactName(dm!) : companyName(c)}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted">
+                              {hasContact ? companyName(c) : c.siret}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <SpecialtiesCell id={c.id} active={activeSpec} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <NotesCell id={c.id} value={c.notes} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <StageBadge stage={c.stage} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <PrioriteBadge priorite={c.priorite} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <PotentielBadge potentiel={c.potentiel} />
+                        </td>
+                        <td className={`px-4 py-3 text-xs font-medium ${touch.cls}`}>
+                          {touch.text}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

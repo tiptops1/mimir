@@ -3,11 +3,11 @@ import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import {
-  VerticalBars,
   HorizontalBars,
   Donut,
   type ChartDatum,
 } from "@/components/charts";
+import { FunnelChart, type FunnelDatum } from "@/components/funnel-chart";
 import {
   PIPELINE_STAGES,
   PRIORITE_OPTIONS,
@@ -82,10 +82,11 @@ export default async function AnalyticsPage() {
   const stageCounts = new Map<string, number>();
   for (const c of companies)
     stageCounts.set(c.stage, (stageCounts.get(c.stage) ?? 0) + 1);
-  const stageData: ChartDatum[] = PIPELINE_STAGES.map((s) => ({
+  const stageData: FunnelDatum[] = PIPELINE_STAGES.map((s) => ({
     name: s.label,
     value: stageCounts.get(s.value) ?? 0,
     color: STAGE_HEX[s.value],
+    stage: s.value,
   }));
 
   // Priorité
@@ -180,7 +181,7 @@ export default async function AnalyticsPage() {
             <CardTitle>Entonnoir par étape</CardTitle>
           </CardHeader>
           <CardBody>
-            <VerticalBars data={stageData} />
+            <FunnelChart data={stageData} />
           </CardBody>
         </Card>
 

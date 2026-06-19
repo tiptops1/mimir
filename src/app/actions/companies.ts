@@ -71,6 +71,46 @@ export async function setPreferredChannel(
   revalidatePath(`/companies/${id}`);
 }
 
+const SPECIALTY_KEYS = [
+  "specialiteSante",
+  "specialitePrevoyance",
+  "specialiteIard",
+  "specialiteAuto",
+  "specialiteRcPro",
+  "specialiteEntreprises",
+  "specialiteCollectives",
+  "specialiteParticuliers",
+] as const;
+
+/** Replace the full set of specialty booleans from a list of active keys. */
+export async function setCompanySpecialties(
+  id: string,
+  activeKeys: string[],
+): Promise<void> {
+  await verifySession();
+  const data = Object.fromEntries(
+    SPECIALTY_KEYS.map((k) => [k, activeKeys.includes(k)]),
+  );
+  await prisma.company.update({ where: { id }, data });
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${id}`);
+}
+
+/** Inline-edit the free-text notes / next-steps field. */
+export async function setCompanyNotes(
+  id: string,
+  notes: string,
+): Promise<void> {
+  await verifySession();
+  const trimmed = notes.trim();
+  await prisma.company.update({
+    where: { id },
+    data: { notes: trimmed || null },
+  });
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${id}`);
+}
+
 export async function deleteCompany(id: string): Promise<void> {
   await requireRole(["ADMIN", "MANAGER"]);
   await prisma.activity.deleteMany({ where: { companyId: id } });

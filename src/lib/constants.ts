@@ -69,16 +69,16 @@ export const ROLE_OPTIONS: { value: RoleValue; label: string }[] = [
   { value: "USER", label: "Utilisateur" },
 ];
 
-// Specialty boolean columns on Company.
+// Specialty boolean columns on Company. `badge` colors the chip in the UI.
 export const SPECIALTY_FIELDS = [
-  { key: "specialiteSante", label: "Santé" },
-  { key: "specialitePrevoyance", label: "Prévoyance" },
-  { key: "specialiteIard", label: "IARD" },
-  { key: "specialiteAuto", label: "Auto" },
-  { key: "specialiteRcPro", label: "RC Pro" },
-  { key: "specialiteEntreprises", label: "Entreprises" },
-  { key: "specialiteCollectives", label: "Collectives" },
-  { key: "specialiteParticuliers", label: "Particuliers" },
+  { key: "specialiteSante", label: "Santé", badge: "bg-emerald-100 text-emerald-700" },
+  { key: "specialitePrevoyance", label: "Prévoyance", badge: "bg-sky-100 text-sky-700" },
+  { key: "specialiteIard", label: "IARD", badge: "bg-violet-100 text-violet-700" },
+  { key: "specialiteAuto", label: "Auto", badge: "bg-amber-100 text-amber-700" },
+  { key: "specialiteRcPro", label: "RC Pro", badge: "bg-rose-100 text-rose-700" },
+  { key: "specialiteEntreprises", label: "Entreprises", badge: "bg-indigo-100 text-indigo-700" },
+  { key: "specialiteCollectives", label: "Collectives", badge: "bg-teal-100 text-teal-700" },
+  { key: "specialiteParticuliers", label: "Particuliers", badge: "bg-fuchsia-100 text-fuchsia-700" },
 ] as const;
 
 export type SpecialtyKey = (typeof SPECIALTY_FIELDS)[number]["key"];

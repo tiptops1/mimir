@@ -5,8 +5,17 @@ import { PipelineBoard, type PipelineCard } from "@/components/pipeline-board";
 import { companyName } from "@/lib/display";
 import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
 
-export default async function PipelinePage() {
+export default async function PipelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await verifySession();
+  const sp = await searchParams;
+  const rawStage = typeof sp.stage === "string" ? sp.stage : "";
+  const highlight = PIPELINE_STAGES.some((s) => s.value === rawStage)
+    ? (rawStage as StageValue)
+    : null;
 
   const companies = await prisma.company.findMany({
     orderBy: { updatedAt: "desc" },
@@ -43,7 +52,11 @@ export default async function PipelinePage() {
         title="Pipeline"
         subtitle="Glissez-déposez les sociétés entre les étapes"
       />
-      <PipelineBoard initial={initial} total={companies.length} />
+      <PipelineBoard
+        initial={initial}
+        total={companies.length}
+        highlight={highlight}
+      />
     </div>
   );
 }

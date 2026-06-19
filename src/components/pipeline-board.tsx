@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -74,17 +74,36 @@ function DraggableCard({ card }: { card: PipelineCard }) {
 function Column({
   stage,
   cards,
+  highlighted,
 }: {
   stage: (typeof PIPELINE_STAGES)[number];
   cards: PipelineCard[];
+  highlighted?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.value });
+  const colRef = useRef<HTMLDivElement>(null);
+
+  // Scroll a deep-linked (highlighted) column into view on mount.
+  useEffect(() => {
+    if (highlighted)
+      colRef.current?.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+  }, [highlighted]);
+
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col">
+    <div ref={colRef} className="flex h-full w-72 shrink-0 flex-col">
       <div className="mb-2 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${stage.dot}`} />
           <span className="text-sm font-semibold">{stage.label}</span>
+          {highlighted && (
+            <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white">
+              Sélection
+            </span>
+          )}
         </div>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
           {cards.length}
@@ -93,7 +112,11 @@ function Column({
       <div
         ref={setNodeRef}
         className={`thin-scroll flex-1 space-y-2 overflow-y-auto rounded-xl border-2 border-t-4 ${stage.accent} p-2 transition-colors ${
-          isOver ? "border-brand bg-indigo-50/40" : "border-border bg-slate-50/60"
+          isOver
+            ? "border-brand bg-indigo-50/40"
+            : highlighted
+              ? "border-brand bg-indigo-50/40 ring-2 ring-brand/40"
+              : "border-border bg-slate-50/60"
         }`}
       >
         {cards.map((card) => (
@@ -112,9 +135,11 @@ function Column({
 export function PipelineBoard({
   initial,
   total,
+  highlight,
 }: {
   initial: Board;
   total: number;
+  highlight?: StageValue | null;
 }) {
   const [board, setBoard] = useState<Board>(initial);
   const [activeCard, setActiveCard] = useState<PipelineCard | null>(null);
@@ -188,7 +213,12 @@ export function PipelineBoard({
       >
         <div className="thin-scroll flex h-[calc(100vh-220px)] gap-4 overflow-x-auto pb-2">
           {PIPELINE_STAGES.map((stage) => (
-            <Column key={stage.value} stage={stage} cards={board[stage.value]} />
+            <Column
+              key={stage.value}
+              stage={stage}
+              cards={board[stage.value]}
+              highlighted={highlight === stage.value}
+            />
           ))}
         </div>
         <DragOverlay>
