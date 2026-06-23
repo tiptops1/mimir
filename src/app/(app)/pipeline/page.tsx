@@ -2,8 +2,9 @@ import { prisma } from "@/lib/db";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { PipelineBoard, type PipelineCard } from "@/components/pipeline-board";
-import { companyName } from "@/lib/display";
+import { companyName, contactName } from "@/lib/display";
 import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
+import { getTenantConfig } from "@/lib/tenant-config";
 
 export default async function PipelinePage({
   searchParams,
@@ -28,6 +29,9 @@ export default async function PipelinePage({
       priorite: true,
       potentiel: true,
       stage: true,
+      contacts: {
+        select: { prenom: true, nom: true, isDecisionMaker: true },
+      },
     },
   });
 
@@ -36,10 +40,16 @@ export default async function PipelinePage({
   ) as Record<StageValue, PipelineCard[]>;
 
   for (const c of companies) {
+    // Prefer the decision-maker, else the first contact, as the card's lead person.
+    const lead =
+      c.contacts.find((ct) => ct.isDecisionMaker) ?? c.contacts[0] ?? null;
     const card: PipelineCard = {
       id: c.id,
-      name: companyName(c),
-      ville: c.ville,
+      fields: {
+        contact: lead ? contactName(lead) : null,
+        company: companyName(c),
+        ville: c.ville,
+      },
       priorite: c.priorite,
       potentiel: c.potentiel,
     };
@@ -56,6 +66,7 @@ export default async function PipelinePage({
         initial={initial}
         total={companies.length}
         highlight={highlight}
+        cardConfig={getTenantConfig().pipelineCard}
       />
     </div>
   );

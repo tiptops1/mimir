@@ -16,11 +16,12 @@ import {
 } from "@dnd-kit/core";
 import { PrioriteBadge, PotentielBadge } from "@/components/badges";
 import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
+import type { CardFieldKey, PipelineCardConfig } from "@/lib/tenant-config";
 
 export interface PipelineCard {
   id: string;
-  name: string;
-  ville: string | null;
+  /** Values the card can surface; which ones show is driven by tenant config. */
+  fields: Partial<Record<CardFieldKey, string | null>>;
   priorite: string | null;
   potentiel: string | null;
 }
@@ -29,22 +30,38 @@ type Board = Record<StageValue, PipelineCard[]>;
 
 const STAGE_VALUES = PIPELINE_STAGES.map((s) => s.value);
 
-function CardView({ card }: { card: PipelineCard }) {
+function CardView({
+  card,
+  config,
+}: {
+  card: PipelineCard;
+  config: PipelineCardConfig;
+}) {
+  // Title falls back to the company name so a card is never blank (e.g. no contact yet).
+  const title =
+    card.fields[config.titleField] ?? card.fields.company ?? "—";
+  const subtitle = card.fields[config.subtitleField] ?? "—";
   return (
     <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium leading-tight">{card.name}</p>
+        <p className="text-sm font-medium leading-tight">{title}</p>
         <PrioriteBadge priorite={card.priorite} />
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-xs text-muted">{card.ville ?? "—"}</span>
+        <span className={`text-xs ${config.subtitleClass}`}>{subtitle}</span>
         <PotentielBadge potentiel={card.potentiel} />
       </div>
     </div>
   );
 }
 
-function DraggableCard({ card }: { card: PipelineCard }) {
+function DraggableCard({
+  card,
+  config,
+}: {
+  card: PipelineCard;
+  config: PipelineCardConfig;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
   });
@@ -58,7 +75,7 @@ function DraggableCard({ card }: { card: PipelineCard }) {
       }`}
     >
       <div className="relative">
-        <CardView card={card} />
+        <CardView card={card} config={config} />
         <Link
           href={`/companies/${card.id}`}
           onPointerDown={(e) => e.stopPropagation()}
@@ -75,10 +92,12 @@ function Column({
   stage,
   cards,
   highlighted,
+  config,
 }: {
   stage: (typeof PIPELINE_STAGES)[number];
   cards: PipelineCard[];
   highlighted?: boolean;
+  config: PipelineCardConfig;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.value });
   const colRef = useRef<HTMLDivElement>(null);
@@ -120,7 +139,7 @@ function Column({
         }`}
       >
         {cards.map((card) => (
-          <DraggableCard key={card.id} card={card} />
+          <DraggableCard key={card.id} card={card} config={config} />
         ))}
         {cards.length === 0 && (
           <p className="px-2 py-6 text-center text-xs text-slate-400">
@@ -136,10 +155,12 @@ export function PipelineBoard({
   initial,
   total,
   highlight,
+  cardConfig,
 }: {
   initial: Board;
   total: number;
   highlight?: StageValue | null;
+  cardConfig: PipelineCardConfig;
 }) {
   const [board, setBoard] = useState<Board>(initial);
   const [activeCard, setActiveCard] = useState<PipelineCard | null>(null);
@@ -218,13 +239,14 @@ export function PipelineBoard({
               stage={stage}
               cards={board[stage.value]}
               highlighted={highlight === stage.value}
+              config={cardConfig}
             />
           ))}
         </div>
         <DragOverlay>
           {activeCard ? (
             <div className="w-64 rotate-2">
-              <CardView card={activeCard} />
+              <CardView card={activeCard} config={cardConfig} />
             </div>
           ) : null}
         </DragOverlay>
