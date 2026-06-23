@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +25,8 @@ export interface PipelineCard {
   fields: Partial<Record<CardFieldKey, string | null>>;
   priorite: string | null;
   potentiel: string | null;
+  /** Lowercased haystacks for the board's client-side filters (all contacts). */
+  search: { societe: string; nom: string; contact: string };
 }
 
 type Board = Record<StageValue, PipelineCard[]>;
@@ -164,9 +167,31 @@ export function PipelineBoard({
 }) {
   const [board, setBoard] = useState<Board>(initial);
   const [activeCard, setActiveCard] = useState<PipelineCard | null>(null);
+  const [fSociete, setFSociete] = useState("");
+  const [fNom, setFNom] = useState("");
+  const [fContact, setFContact] = useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+  // Client-side filters — the cards are already loaded, so narrow by société /
+  // contact name / email-phone instantly, with no server round-trip. The three
+  // combine (AND). Drag-drop still operates on the full `board`.
+  const s = fSociete.trim().toLowerCase();
+  const n = fNom.trim().toLowerCase();
+  const c = fContact.trim().toLowerCase();
+  const filtering = Boolean(s || n || c);
+  const visible = useMemo<Board>(() => {
+    if (!filtering) return board;
+    const match = (card: PipelineCard) =>
+      (!s || card.search.societe.includes(s)) &&
+      (!n || card.search.nom.includes(n)) &&
+      (!c || card.search.contact.includes(c));
+    return Object.fromEntries(
+      STAGE_VALUES.map((st) => [st, board[st].filter(match)]),
+    ) as Board;
+  }, [board, filtering, s, n, c]);
+  const shownCount = STAGE_VALUES.reduce((acc, st) => acc + visible[st].length, 0);
 
   function stageOf(cardId: string): StageValue | null {
     for (const stage of STAGE_VALUES) {
@@ -224,7 +249,47 @@ export function PipelineBoard({
 
   return (
     <div className="flex-1 overflow-hidden p-6">
-      <p className="mb-3 text-sm text-muted">{total} sociétés au total</p>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <p className="mr-auto text-sm text-muted">
+          {filtering
+            ? `${shownCount} résultat${shownCount > 1 ? "s" : ""}`
+            : `${total} sociétés au total`}
+        </p>
+        <div className="relative w-44">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={fSociete}
+            onChange={(e) => setFSociete(e.target.value)}
+            placeholder="Société…"
+            className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+        <input
+          value={fNom}
+          onChange={(e) => setFNom(e.target.value)}
+          placeholder="Nom du contact…"
+          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        />
+        <input
+          value={fContact}
+          onChange={(e) => setFContact(e.target.value)}
+          placeholder="Email / téléphone…"
+          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        />
+        {filtering && (
+          <button
+            type="button"
+            onClick={() => {
+              setFSociete("");
+              setFNom("");
+              setFContact("");
+            }}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
+          >
+            Réinitialiser
+          </button>
+        )}
+      </div>
       <DndContext
         id="avelior-pipeline"
         sensors={sensors}
@@ -237,7 +302,7 @@ export function PipelineBoard({
             <Column
               key={stage.value}
               stage={stage}
-              cards={board[stage.value]}
+              cards={visible[stage.value]}
               highlighted={highlight === stage.value}
               config={cardConfig}
             />

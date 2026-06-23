@@ -43,6 +43,10 @@ export async function createContactWithCompany(
         siret: `MANUEL-${randomUUID()}`,
         nomSociete,
         siteWeb: str("siteWeb"),
+        // A hand-added prospect is, by definition, one Chris is now tracking —
+        // stamp datePremierContact so it shows up in Suivi immediately (Suivi
+        // only lists companies with an activity / premier / dernier contact).
+        datePremierContact: new Date(),
         ...Object.fromEntries(
           SPECIALTY_FIELDS.map((f) => [f.key, formData.get(f.key) === "on"]),
         ),
@@ -53,6 +57,12 @@ export async function createContactWithCompany(
     const existing = str("companyId");
     if (!existing) return { error: "Veuillez choisir une société." };
     companyId = existing;
+    // Adding a contact to an existing (e.g. imported) company means Chris is
+    // engaging it now — surface it in Suivi without clobbering an earlier date.
+    await prisma.company.updateMany({
+      where: { id: companyId, datePremierContact: null },
+      data: { datePremierContact: new Date() },
+    });
   }
 
   const parsed = contactSchema.safeParse({

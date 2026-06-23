@@ -1,6 +1,7 @@
 import { verifySession } from "@/lib/dal";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/sidebar";
+import { GlobalSearch } from "@/components/global-search";
 
 export default async function AppLayout({
   children,
@@ -22,7 +23,12 @@ export default async function AppLayout({
           role: session.role,
         }}
       />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto">
+        <header className="sticky top-0 z-40 flex items-center border-b border-border bg-card/95 px-6 py-3 backdrop-blur">
+          <GlobalSearch />
+        </header>
+        {children}
+      </main>
     </div>
   );
 }

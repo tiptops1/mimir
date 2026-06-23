@@ -12,6 +12,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "search:indexes": "tsx scripts/create-search-indexes.ts",
     "seed": "tsx prisma/seed.ts",
     "enrich:all": "tsx prisma/enrich-all.ts",
     "enrich:websites": "tsx scripts/enrich-websites.ts",

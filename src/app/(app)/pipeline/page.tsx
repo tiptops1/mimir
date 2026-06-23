@@ -31,7 +31,13 @@ export default async function PipelinePage({
       potentiel: true,
       stage: true,
       contacts: {
-        select: { prenom: true, nom: true, isDecisionMaker: true },
+        select: {
+          prenom: true,
+          nom: true,
+          email: true,
+          telephone: true,
+          isDecisionMaker: true,
+        },
       },
     },
   });
@@ -53,6 +59,21 @@ export default async function PipelinePage({
       },
       priorite: c.priorite,
       potentiel: c.potentiel,
+      // Haystacks across ALL contacts so the board's filters match any of them.
+      search: {
+        societe: [companyName(c), c.ville, c.siret]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+        nom: c.contacts
+          .map((ct) => `${ct.prenom ?? ""} ${ct.nom ?? ""}`)
+          .join(" ")
+          .toLowerCase(),
+        contact: c.contacts
+          .map((ct) => `${ct.email ?? ""} ${ct.telephone ?? ""}`)
+          .join(" ")
+          .toLowerCase(),
+      },
     };
     (initial[c.stage as StageValue] ?? initial.A_QUALIFIER).push(card);
   }

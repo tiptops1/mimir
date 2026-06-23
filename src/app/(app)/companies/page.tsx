@@ -2,13 +2,13 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
-import { LinkButton, Card, EmptyState, Input, Select } from "@/components/ui";
+import { LinkButton, Card, EmptyState } from "@/components/ui";
+import { CompaniesFilters } from "@/components/companies-filters";
 import { companyName, contactName } from "@/lib/display";
 import {
   PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
-  CANAL_PREFERE_OPTIONS,
   SPECIALTY_FIELDS,
 } from "@/lib/constants";
 import { SpecialtiesCell } from "@/components/specialties-cell";
@@ -71,7 +71,9 @@ export default async function CompaniesPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q : "";
+  const societe = typeof sp.societe === "string" ? sp.societe : "";
+  const nom = typeof sp.nom === "string" ? sp.nom : "";
+  const contact = typeof sp.contact === "string" ? sp.contact : "";
   const stage = typeof sp.stage === "string" ? sp.stage : "";
   const priorite = typeof sp.priorite === "string" ? sp.priorite : "";
   const potentiel = typeof sp.potentiel === "string" ? sp.potentiel : "";
@@ -93,15 +95,29 @@ export default async function CompaniesPage({
       ],
     },
   ];
-  if (q) {
-    where.OR = [
-      { nomSociete: { contains: q, mode: "insensitive" } },
-      { enseigne: { contains: q, mode: "insensitive" } },
-      { ville: { contains: q, mode: "insensitive" } },
-      { siret: { contains: q } },
-      { siren: { contains: q } },
-    ];
+  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
+  // Société: company identity (name / enseigne / ville / SIRET / SIREN).
+  if (societe) {
+    and.push({
+      OR: [
+        { nomSociete: ci(societe) },
+        { enseigne: ci(societe) },
+        { ville: ci(societe) },
+        { siret: { contains: societe } },
+        { siren: { contains: societe } },
+      ],
+    });
   }
+  // Nom + Contact match the SAME contact (one `some` with combined criteria),
+  // so "Nom: Dupont" + "Contact: @gmail" means a single contact matching both.
+  const contactAnd: Prisma.ContactWhereInput[] = [];
+  if (nom) contactAnd.push({ OR: [{ prenom: ci(nom) }, { nom: ci(nom) }] });
+  if (contact)
+    contactAnd.push({
+      OR: [{ email: ci(contact) }, { telephone: { contains: contact } }],
+    });
+  if (contactAnd.length) and.push({ contacts: { some: { AND: contactAnd } } });
+
   if (stage) where.stage = stage as Prisma.CompanyWhereInput["stage"];
   if (priorite) where.priorite = priorite as Prisma.CompanyWhereInput["priorite"];
   if (potentiel) where.potentiel = potentiel as Prisma.CompanyWhereInput["potentiel"];
@@ -148,7 +164,9 @@ export default async function CompaniesPage({
 
   const qs = (overrides: Record<string, string | number>) => {
     const params = new URLSearchParams();
-    if (q) params.set("q", q);
+    if (societe) params.set("societe", societe);
+    if (nom) params.set("nom", nom);
+    if (contact) params.set("contact", contact);
     if (stage) params.set("stage", stage);
     if (priorite) params.set("priorite", priorite);
     if (potentiel) params.set("potentiel", potentiel);
@@ -160,10 +178,6 @@ export default async function CompaniesPage({
     return `?${params.toString()}`;
   };
 
-  const hasFilters = Boolean(
-    q || stage || priorite || potentiel || canal || site || specialite || dept,
-  );
-
   return (
     <div>
       <PageHeader
@@ -174,74 +188,7 @@ export default async function CompaniesPage({
       </PageHeader>
 
       <div className="p-6">
-        <form className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="min-w-56 flex-1">
-            <Input
-              name="q"
-              defaultValue={q}
-              placeholder="Rechercher nom, ville, SIRET…"
-            />
-          </div>
-          <Select name="stage" defaultValue={stage} className="w-52">
-            <option value="">Toutes les étapes</option>
-            {PIPELINE_STAGES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="priorite" defaultValue={priorite} className="w-44">
-            <option value="">Toutes priorités</option>
-            {PRIORITE_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="potentiel" defaultValue={potentiel} className="w-40">
-            <option value="">Tout potentiel</option>
-            {POTENTIEL_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="canal" defaultValue={canal} className="w-44">
-            <option value="">Tout canal</option>
-            {CANAL_PREFERE_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="specialite" defaultValue={specialite} className="w-44">
-            <option value="">Toutes spécialités</option>
-            {SPECIALTY_FIELDS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="site" defaultValue={site} className="w-40">
-            <option value="">Site web : tous</option>
-            <option value="with">Avec site web</option>
-            <option value="without">Sans site web</option>
-          </Select>
-          <button
-            type="submit"
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            Filtrer
-          </button>
-          {hasFilters && (
-            <Link
-              href="/companies"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
-            >
-              Réinitialiser
-            </Link>
-          )}
-        </form>
+        <CompaniesFilters />
 
         {companies.length === 0 ? (
           <EmptyState

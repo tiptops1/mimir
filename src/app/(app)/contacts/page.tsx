@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
-import { Card, EmptyState, Input, Select } from "@/components/ui";
+import { Card, EmptyState } from "@/components/ui";
+import { ContactsFilters } from "@/components/contacts-filters";
 import {
   companyName,
   contactName,
@@ -23,24 +24,23 @@ export default async function ContactsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q : "";
+  const societe = typeof sp.societe === "string" ? sp.societe : "";
+  const nom = typeof sp.nom === "string" ? sp.nom : "";
+  const contact = typeof sp.contact === "string" ? sp.contact : "";
   const role = typeof sp.role === "string" ? sp.role : "";
   const has = typeof sp.has === "string" ? sp.has : "";
   const site = typeof sp.site === "string" ? sp.site : "";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
+  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
   // Each active filter is one AND clause — "present" means non-null and non-empty.
+  // The three text filters combine with each other and with the dropdowns.
   const and: Prisma.ContactWhereInput[] = [];
-  if (q) {
-    and.push({
-      OR: [
-        { nom: { contains: q, mode: "insensitive" } },
-        { prenom: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { fonction: { contains: q, mode: "insensitive" } },
-      ],
-    });
-  }
+  if (nom) and.push({ OR: [{ prenom: ci(nom) }, { nom: ci(nom) }, { fonction: ci(nom) }] });
+  if (contact)
+    and.push({ OR: [{ email: ci(contact) }, { telephone: { contains: contact } }] });
+  if (societe)
+    and.push({ company: { OR: [{ nomSociete: ci(societe) }, { enseigne: ci(societe) }] } });
   if (role === "decideur") and.push({ isDecisionMaker: true });
   if (has === "email") and.push({ email: { not: null } }, { email: { not: "" } });
   if (has === "phone") and.push({ telephone: { not: null } }, { telephone: { not: "" } });
@@ -78,10 +78,12 @@ export default async function ContactsPage({
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const hasFilters = Boolean(q || role || has || site);
+  const hasFilters = Boolean(societe || nom || contact || role || has || site);
   const qs = (overrides: Record<string, string | number>) => {
     const params = new URLSearchParams();
-    if (q) params.set("q", q);
+    if (societe) params.set("societe", societe);
+    if (nom) params.set("nom", nom);
+    if (contact) params.set("contact", contact);
     if (role) params.set("role", role);
     if (has) params.set("has", has);
     if (site) params.set("site", site);
@@ -96,44 +98,7 @@ export default async function ContactsPage({
         subtitle={`${total} contact${total > 1 ? "s" : ""}`}
       />
       <div className="p-6">
-        <form className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="min-w-56 flex-1">
-            <Input
-              name="q"
-              defaultValue={q}
-              placeholder="Rechercher un contact…"
-            />
-          </div>
-          <Select name="role" defaultValue={role} className="w-48">
-            <option value="">Tous les contacts</option>
-            <option value="decideur">Décideurs uniquement</option>
-          </Select>
-          <Select name="has" defaultValue={has} className="w-48">
-            <option value="">Toutes coordonnées</option>
-            <option value="email">Avec email</option>
-            <option value="phone">Avec téléphone</option>
-            <option value="linkedin">Avec LinkedIn</option>
-          </Select>
-          <Select name="site" defaultValue={site} className="w-48">
-            <option value="">Site web : tous</option>
-            <option value="with">Société avec site</option>
-            <option value="without">Société sans site</option>
-          </Select>
-          <button
-            type="submit"
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            Filtrer
-          </button>
-          {hasFilters && (
-            <Link
-              href="/contacts"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
-            >
-              Réinitialiser
-            </Link>
-          )}
-        </form>
+        <ContactsFilters />
 
         {contacts.length === 0 ? (
           <EmptyState
