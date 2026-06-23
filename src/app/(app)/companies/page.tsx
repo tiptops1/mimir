@@ -82,6 +82,17 @@ export default async function CompaniesPage({
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
   const where: Prisma.CompanyWhereInput = {};
+  // Suivi shows only "hot" prospects — those Chris has actually engaged with
+  // (a logged activity, or a recorded first/last contact). Always applied.
+  const and: Prisma.CompanyWhereInput[] = [
+    {
+      OR: [
+        { activities: { some: {} } },
+        { dernierContact: { not: null } },
+        { datePremierContact: { not: null } },
+      ],
+    },
+  ];
   if (q) {
     where.OR = [
       { nomSociete: { contains: q, mode: "insensitive" } },
@@ -101,10 +112,11 @@ export default async function CompaniesPage({
   if (/^\d{2}$/.test(dept)) where.codePostal = { startsWith: dept };
   // "Avec / sans site web" — treat empty strings the same as null.
   if (site === "with") {
-    where.AND = [{ siteWeb: { not: null } }, { siteWeb: { not: "" } }];
+    and.push({ siteWeb: { not: null } }, { siteWeb: { not: "" } });
   } else if (site === "without") {
-    where.AND = [{ OR: [{ siteWeb: null }, { siteWeb: "" }] }];
+    and.push({ OR: [{ siteWeb: null }, { siteWeb: "" }] });
   }
+  where.AND = and;
 
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
@@ -155,10 +167,10 @@ export default async function CompaniesPage({
   return (
     <div>
       <PageHeader
-        title="Sociétés"
-        subtitle={`${total} société${total > 1 ? "s" : ""} de courtage`}
+        title="Suivi"
+        subtitle={`${total} prospect${total > 1 ? "s" : ""} à suivre`}
       >
-        <LinkButton href="/companies/new">+ Nouvelle société</LinkButton>
+        <LinkButton href="/contacts/new">+ Nouveau contact</LinkButton>
       </PageHeader>
 
       <div className="p-6">

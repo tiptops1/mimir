@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Building2,
+  ClipboardList,
   Users,
   KanbanSquare,
   BarChart3,
@@ -17,7 +17,7 @@ import { cn, initialsFromName } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/companies", label: "Sociétés", icon: Building2 },
+  { href: "/companies", label: "Suivi", icon: ClipboardList },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/inbox", label: "Boîte de réception", icon: Inbox },

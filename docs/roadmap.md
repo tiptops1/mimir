@@ -22,6 +22,8 @@ Get tenancy right *before* features — retrofitting it later is the rebuild we'
 The product itself; Chris's CRM becomes one *config* of it.
 - [ ] Entity & field-definition model (config stored as data)
 - [ ] Dynamic form + table rendering from config
+  - ~ *Partial:* pipeline card render seam exists (`src/lib/tenant-config.ts` →
+    `getTenantConfig().pipelineCard`); still a hardcoded constant, not yet a stored config model.
 - [ ] Express Chris's current Company/Contact/Deal fields + 8 pipeline stages as seeded config
 - [ ] Custom-field read/write on flexible documents (no migration to add a field)
 
@@ -47,6 +49,23 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-06-23 — **Deployed to Railway** (push to `main`, auto-deploy): Suivi rework + Nouveau contact flow.
+  "Sociétés" tab renamed **Suivi** (sidebar + header; route stays `/companies`). Suivi now shows **only
+  engaged prospects** (≥1 activity, or a recorded premier/dernier contact) so it reads as a hot-prospect
+  list. New **/contacts/new** page + `createContactWithCompany` action: attach to an existing company OR
+  create one inline (hand-added company gets a `MANUEL-<uuid>` placeholder SIRET, since SIRET is
+  required+unique as the import dedupe key). Form fields trimmed to what matters: contact = prénom/nom/
+  téléphone/email/LinkedIn (+décideur); new-company also captures **site web + spécialités**; dropped
+  ville + fonction. "Nouvelle société" CTA → "Nouveau contact" on Suivi; same CTA on Pipeline header.
+  **Browser-verified** end-to-end against live Atlas (both branches create + persist correctly; test data
+  cleaned up). `tsc` clean.
+  - Note: a freshly hand-added contact won't show in Suivi until it has engagement (by design). If we want
+    manual adds to appear immediately, stamp `datePremierContact` on creation — open question for next session.
+- **DEFERRED (own task):** user-renamable/deletable **pipeline stages** = move `PipelineStage` from a Prisma
+  **enum → config/data** (Phase 1) + edit UI (Phase 2). Touches schema, `Company.stage` migration,
+  `lib/constants`, `validations`, `ai-extract` STAGES, funnel, filters. Plan in its own session.
+- 2026-06-23 — Deployed to Railway (push to `main`, auto-deploy): config-driven pipeline card
+  + architecture/guidance docs now live.
 - 2026-06-23 — Pipeline card made config-driven (small Phase-1 down-payment): title/subline
   fields + subline color now read from `src/lib/tenant-config.ts` (`getTenantConfig().pipelineCard`)
   instead of being hardcoded in `pipeline-board.tsx`. Seeded for Christopher = tenant #1

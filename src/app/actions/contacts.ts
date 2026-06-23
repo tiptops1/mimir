@@ -1,13 +1,80 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifySession, requireRole } from "@/lib/dal";
 import { contactSchema } from "@/lib/validations";
+import { SPECIALTY_FIELDS } from "@/lib/constants";
 
 export interface FormResult {
   error?: string;
   ok?: boolean;
+}
+
+/**
+ * Create a contact from the standalone "Nouveau contact" page. The contact
+ * either attaches to an existing company (companyMode=existing, companyId) or
+ * creates a brand-new company inline (companyMode=new, nomSociete).
+ *
+ * A hand-added company has no SIRET yet, but SIRET is required + unique (it's
+ * the dedupe key for registry imports). We mint a clearly-temporary placeholder
+ * (`MANUEL-<uuid>`) so the flow never asks Chris for a number he doesn't have;
+ * the real SIRET can be filled later from the company page / enrichment.
+ */
+export async function createContactWithCompany(
+  _prev: FormResult | undefined,
+  formData: FormData,
+): Promise<FormResult> {
+  await verifySession();
+
+  const str = (k: string) => {
+    const v = formData.get(k);
+    return typeof v === "string" && v.trim() ? v.trim() : null;
+  };
+
+  let companyId: string;
+  if (formData.get("companyMode") === "new") {
+    const nomSociete = str("nomSociete");
+    if (!nomSociete) return { error: "Le nom de la société est requis." };
+    const company = await prisma.company.create({
+      data: {
+        siret: `MANUEL-${randomUUID()}`,
+        nomSociete,
+        siteWeb: str("siteWeb"),
+        ...Object.fromEntries(
+          SPECIALTY_FIELDS.map((f) => [f.key, formData.get(f.key) === "on"]),
+        ),
+      },
+    });
+    companyId = company.id;
+  } else {
+    const existing = str("companyId");
+    if (!existing) return { error: "Veuillez choisir une société." };
+    companyId = existing;
+  }
+
+  const parsed = contactSchema.safeParse({
+    companyId,
+    nom: formData.get("nom"),
+    prenom: formData.get("prenom"),
+    email: formData.get("email"),
+    telephone: formData.get("telephone"),
+    linkedinUrl: formData.get("linkedinUrl"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
+  }
+
+  await prisma.contact.create({
+    data: { ...parsed.data, isDecisionMaker: formData.get("isDecisionMaker") === "on" },
+  });
+
+  revalidatePath("/companies");
+  revalidatePath("/contacts");
+  revalidatePath("/pipeline");
+  redirect(`/companies/${companyId}`);
 }
 
 export async function createContact(

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
+import { LinkButton } from "@/components/ui";
 import { PipelineBoard, type PipelineCard } from "@/components/pipeline-board";
 import { companyName, contactName } from "@/lib/display";
 import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
@@ -61,7 +62,9 @@ export default async function PipelinePage({
       <PageHeader
         title="Pipeline"
         subtitle="Glissez-déposez les sociétés entre les étapes"
-      />
+      >
+        <LinkButton href="/contacts/new">+ Nouveau contact</LinkButton>
+      </PageHeader>
       <PipelineBoard
         initial={initial}
         total={companies.length}
