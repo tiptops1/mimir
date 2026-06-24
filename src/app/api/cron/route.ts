@@ -68,7 +68,7 @@ async function handle(req: NextRequest) {
 
   const ai = aiEnabled()
     ? await settle("ai-insight", () => enrichActivities(prisma, { limit: 80 }))
-    : { source: "ai-insight", ok: false, error: "ANTHROPIC_API_KEY not set" };
+    : { source: "ai-insight", ok: false, error: "no GEMINI_API_KEY or ANTHROPIC_API_KEY" };
 
   return NextResponse.json({ ranAt: new Date().toISOString(), sources, ai });
 }

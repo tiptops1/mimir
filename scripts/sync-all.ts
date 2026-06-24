@@ -49,7 +49,7 @@ async function main() {
   if (!dry && aiEnabled()) {
     await run("ai-insight", () => enrichActivities(prisma, { limit: 80 }));
   } else if (!aiEnabled()) {
-    console.log("· ai-insight: skipped (ANTHROPIC_API_KEY not set)");
+    console.log("· ai-insight: skipped (no GEMINI_API_KEY or ANTHROPIC_API_KEY)");
   }
 }
 

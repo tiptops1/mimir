@@ -16,7 +16,7 @@ import { enrichActivities, aiEnabled } from "../src/lib/ai-extract";
 //   npm run sync:email -- --no-ai          -> skip the Claude insight pass
 //
 // Env: GOOGLE_* + CONTROL_DATABASE_URL (OAuth path) or IMAP_*/OWNER_EMAIL (legacy),
-//      ANTHROPIC_API_KEY (optional).
+//      GEMINI_API_KEY or ANTHROPIC_API_KEY (optional, for the AI pass).
 
 const prisma = new PrismaClient();
 

@@ -16,6 +16,7 @@
     "db:push:control": "prisma db push --schema=prisma/control/schema.prisma",
     "tenant:bootstrap": "tsx scripts/bootstrap-control-plane.ts",
     "tenant:provision": "tsx scripts/provision-tenant.ts",
+    "user:add": "tsx scripts/add-user.ts",
     "search:indexes": "tsx scripts/create-search-indexes.ts",
     "seed": "tsx prisma/seed.ts",
     "enrich:all": "tsx prisma/enrich-all.ts",

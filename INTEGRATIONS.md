@@ -61,17 +61,32 @@ Imports call transcripts; uses Fireflies' own AI summary as the raw text.
 - Fireflies → **Settings → Developer settings / Integrations → API** → copy the
   API key into `FIREFLIES_API_KEY`.
 
-### 3. Claude (the "smart" layer) — `ANTHROPIC_API_KEY`
+### 3. The "smart" layer — `GEMINI_API_KEY` *(free)* or `ANTHROPIC_API_KEY`
 Reads each interaction and extracts summary / sentiment / next step / stage.
-- <https://console.anthropic.com> → **API Keys** → create a key → add a little
-  credit. Paste into `ANTHROPIC_API_KEY`.
-- Optional `ANTHROPIC_MODEL` to override the default (a cheap, fast Haiku model).
-- **Without this key everything still runs** — activities are logged, just
+The pipeline picks a provider by which key is set: **`GEMINI_API_KEY` wins if
+present**, otherwise it falls back to `ANTHROPIC_API_KEY`.
+
+- **Option A — Google Gemini, FREE (recommended).** At ~10–15 interactions/day
+  this stays well inside Gemini's free tier — €0/month. Get a key at
+  <https://aistudio.google.com/apikey> (you can reuse the same Google account as
+  the Gmail/Calendar integration). Paste into `GEMINI_API_KEY`. Optional
+  `GEMINI_MODEL` overrides the default (`gemini-2.5-flash`).
+- **Option B — Anthropic Claude (pay-per-use).** <https://console.anthropic.com>
+  → **API Keys** → create a key → add a little credit → `ANTHROPIC_API_KEY`.
+  Optional `ANTHROPIC_MODEL` (defaults to a cheap, fast Haiku model). Only used
+  if `GEMINI_API_KEY` is unset.
+- **Without either key everything still runs** — activities are logged, just
   without the AI insight box.
 
-> You do **not** need Claude Pro or Gemini Pro for this. Those are chat
-> subscriptions; the automation uses the **Claude API key** above (pay-per-use).
-> Keep Claude Pro only if Christopher wants the chat assistant; it's unrelated.
+> You do **not** need Claude Pro or Gemini Pro / Advanced for this. Those are
+> chat subscriptions; the automation uses the **API key** above. The Gemini
+> free-tier API key costs nothing at this volume.
+
+> **Free-tier note:** Gemini's free tier has per-minute and per-day request
+> caps. Steady-state syncing is far below them; a large one-off `--backfill`
+> can briefly hit the per-minute cap — the AI pass retries once on a 429 and
+> otherwise leaves those activities for the next run to enrich, so nothing is
+> lost.
 
 ---
 

@@ -3,15 +3,28 @@
 > **Cross-session source of truth.** Update the status + checkboxes here as work lands, so any
 > freshly-`/clear`ed session knows exactly where things stand. See `docs/architecture.md` for the why.
 
-**Current phase: Phase 0 — DONE (verified live), pending commit + Railway env + deploy.**
-The single-tenant app is live and working (companies, contacts, pipeline, analytics, auth, and
-Gmail/Calendar/Fireflies/Claude integrations). The spine is built, statically verified (tsc + next
-build green), bootstrapped against the live Atlas cluster, and two-tenant isolation was confirmed in
-the browser. Next session = Phase 1.
+**Current phase: Phase 0 — DONE & DEPLOYED to prod (2026-06-24).** The multi-tenant spine + the
+pulled-ahead Google OAuth slice are live on Railway (commit `d26b480`); all multi-tenant + `GOOGLE_*`
+env vars are set on Railway and the app boots clean multi-tenant in production. Login verified in prod.
+The Google slice is now **connected & self-running for ingestion**: owner consent done
+(`Ctoppo@avelior.eu` connected) and `/api/cron` is scheduled **every 4h** via an external scheduler
+(cron-job.org, `CRON_SECRET` Bearer — deliberately off Railway to save free credit). The **AI insight
+pass was reworked to Google Gemini** (free/cheap tier) and smoke-tested live, but ⚠️ **that code change
+is not yet deployed** — prod (`d26b480`) still runs the Claude-only pass, so until `ai-extract.ts`
+ships, the cron logs activities *without* an AI box even though `GEMINI_API_KEY` is already set on
+Railway. Remaining: **deploy the Gemini change**, a one-time `--backfill` for history, and the ~weekly
+OAuth reconnect (Testing mode) until publish + CASA. Next focus = Phase 1 (or finish the per-tenant
+ingestion loop in Phase 3).
+
+> **Product is branded "Vision RM"** (repo name `avelior-analytics` is legacy). The owner is an
+> independent vendor; **Avelior is customer #1** (`crm_chris`). The Google Cloud OAuth app ("Vision RM")
+> lives in the vendor's personal Google account as **External / Testing** (no Workspace org), so refresh
+> tokens expire ~7 days until the app is published to Production + passes Google CASA verification
+> (gmail is a restricted scope). Test users: `Ctoppo@avelior.eu` + the vendor gmail.
 
 ---
 
-## Phase 0 — Spine (multi-tenancy foundation) ⬅️ current
+## Phase 0 — Spine (multi-tenancy foundation) ✅ deployed
 Get tenancy right *before* features — retrofitting it later is the rebuild we're avoiding.
 - [x] Control-plane schema (Prisma): `Tenant`, `User`, `Membership` (`prisma/control/schema.prisma`,
       generated to `src/generated/control`). Tenant data is its own schema/client
@@ -63,15 +76,18 @@ Proves the "fully editable" promise on a real user before selling it.
 The moat already exists single-tenant — make it multi-tenant.
 - [~] Move integration credentials to per-tenant, encrypted in control plane — **DONE for Google,
       single-tenant.** New control-plane `Integration` model (refresh token AES-256-GCM encrypted via
-      `crypto.ts`); helpers in `src/lib/integrations.ts`. Fireflies/Claude creds still env-based.
-- [ ] Route `/api/cron` ingestion (Gmail/Calendar/Fireflies + Claude insight) to the right tenant DB —
+      `crypto.ts`); helpers in `src/lib/integrations.ts`. Fireflies + AI (Gemini/Claude) creds still env-based.
+- [ ] Route `/api/cron` ingestion (Gmail/Calendar/Fireflies + AI insight) to the right tenant DB —
       cron still `getTenant1Prisma()`; it now resolves tenant #1's Google credential (by `TENANT1_SLUG`)
-      but does **not** iterate tenants yet. The real per-tenant loop is still open.
+      but does **not** iterate tenants yet. The real per-tenant loop is still open. *(Single-tenant cron
+      is now scheduled live — every 4h via cron-job.org → `/api/cron` with the `CRON_SECRET` Bearer.)*
 - [~] Per-tenant connect/disconnect UI for each source — **DONE for Google, tenant #1.** Seamless OAuth
       connect/disconnect on the dashboard. Fireflies/Calendar-ICS still env-only.
 
-**Pulled-ahead slice (2026-06-24):** seamless Google (Gmail + Calendar) OAuth — see working log. Replaces
-the manual IMAP App-Password + secret-iCal setup for tenant #1; legacy env paths remain as fallback.
+**Pulled-ahead slice (2026-06-24):** seamless Google (Gmail + Calendar) OAuth — see working log.
+**Deployed to prod** (`d26b480`); replaces the manual IMAP App-Password + secret-iCal setup for tenant
+#1; legacy env paths remain as fallback. **Owner-consent connect DONE + cron live every 4h (2026-06-24);
+AI-insight provider swapped to Gemini but that code is not yet deployed.**
 
 ## Phase 4 — Productize & replicate
 Replication = "Phase 0 on demand."
@@ -83,6 +99,42 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-06-24 — **AI insight → Google Gemini (free/cheap) + ingestion go-live. ⚠️ Gemini code NOT yet
+  deployed.** Reworked the AI pass to be **provider-aware** (`src/lib/ai-extract.ts`): `GEMINI_API_KEY`
+  wins → else `ANTHROPIC_API_KEY` → else no-op. Gemini path = **OpenAI-compatible endpoint**
+  (`…/v1beta/openai/chat/completions`, Bearer, default `gemini-2.5-flash`), **`reasoning_effort:"none"`**
+  to kill 2.5-flash thinking tokens (≈4× less billable output in testing, identical results), single
+  **429 retry** for free-tier RPM bumps. Shared `parseJsonObject`/`coerceInsight` unchanged (tolerates
+  weaker models). Updated `.env.example` (GEMINI_API_KEY/MODEL), `INTEGRATIONS.md` §3, and the
+  provider-neutral log/error strings in `sync-all.ts` + `/api/cron`. `tsc` clean; **live smoke-test OK**
+  (HTTP 200, valid French JSON). Key in the user's **"Vision RM" GCP project** (320715852987) —
+  **billing on = PAID tier** (€10 prepay + €2 budget alert) ⇒ **~€0.15–0.25/mo** at this volume (the GCP
+  budget "cap" only ALERTS; the €10 prepay is the real hard stop). **Ingestion go-live DONE:**
+  `GEMINI_API_KEY` set on Railway; **Google OAuth connected** (owner consent for `Ctoppo@avelior.eu`);
+  **cron every 4h** via **cron-job.org** → `/api/cron` w/ `CRON_SECRET` Bearer (kept off Railway to save
+  credit). ⚠️ **DEPLOY GAP: the `ai-extract.ts` rework is LOCAL/uncommitted — prod (`d26b480`) still runs
+  the Claude-only pass, so the cron logs activities but SKIPS the AI box (old code checks only
+  `ANTHROPIC_API_KEY`, which is unset). Commit + push to deploy before Gemini insight goes live.**
+  Remaining after deploy: one-time `--backfill` for history; ~weekly OAuth reconnect (Testing) until
+  publish + CASA.
+- 2026-06-24 — **DEPLOYED Phase 0 spine + Google OAuth slice to prod (`d26b480`).** The multi-tenant
+  refactor and the Google OAuth work had been sitting uncommitted on top of the still-single-tenant
+  `origin/main` (`e88b584`); this push cuts prod over to multi-tenant in one go. **Atlas:** ran
+  `db:push:control` + `db:push` live (additive — new `Integration` collection in `crm_control`,
+  `SyncCursor` in `CRM-Railway`; no data moved). **Railway:** added the previously-missing vars —
+  `CONTROL_DATABASE_URL`, `CLUSTER_BASE_URL`, `ENCRYPTION_KEY` (must match local exactly — decrypts
+  stored conn strings/tokens), `TENANT1_SLUG=crm_chris`, `GOOGLE_CLIENT_ID/SECRET`,
+  `GOOGLE_OAUTH_REDIRECT_URI` (prod callback). First login attempt errored only because the old
+  single-tenant deploy had none of these; once set, the app booted clean and login works in prod
+  (gotcha during testing: the `SEED_ADMIN_*` Railway vars are unused now — real login accounts live in
+  the control plane). Google Cloud "Vision RM" OAuth client created (Web app; redirect URIs for
+  localhost + prod). **New tool:** `npm run user:add` (`scripts/add-user.ts`) — idempotently
+  creates/updates a control-plane login + tenant membership (bcrypt, role, `--tenant`); used it to add
+  `ctoppo@avelior.eu` as ADMIN on `crm_chris`. Local build green; static auth-URL check confirmed the
+  consent URL (client/redirect/offline + all six scopes). **STILL PENDING (owner runtime):** click
+  **Connecter Google** as `Ctoppo@avelior.eu` (pass the Testing-mode "unverified app" screen) → first
+  `sync:all`/`/api/cron` round-trip to confirm real Gmail/Calendar ingestion + dedup, then disconnect test.
+  `scripts/add-user.ts` + the `user:add` package.json alias are **local-only / uncommitted** for now.
 - 2026-06-24 — **Seamless Google (Gmail + Calendar) OAuth — single-tenant swap (code complete, not yet
   deployed/connected).** Pulled-ahead slice of Phase 3 at owner's request (single-tenant first; read+write
   scopes requested but only read ingestion built). Replaces manual IMAP App-Password + secret-iCal with a
@@ -103,6 +155,8 @@ Replication = "Phase 0 on demand."
   `tsc` + `next build` green (only the known pre-existing enum-cell/global-search lint errors remain).
   **NOT yet done (owner-only / runtime):** Google Cloud project + OAuth client + the `GOOGLE_*` env vars;
   `db:push:control` + `db:push` for the two new models; the live connect→sync→disconnect verification.
+  → *Superseded by the 2026-06-24 deploy entry above: Cloud project/client, env vars and both `db:push`es
+  are now DONE; only the live connect→sync→disconnect round-trip remains.*
 - 2026-06-23 — **Phase 0 spine — code complete (not yet deployed/bootstrapped).** Built the
   multi-tenancy foundation. **Two Prisma schemas:** control plane (`prisma/control/schema.prisma` →
   `Tenant`/`User`/`Membership`, generated to `src/generated/control`, `CONTROL_DATABASE_URL`) +
