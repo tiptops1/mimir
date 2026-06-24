@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
 import { ConnectGmailCta } from "@/components/connect-gmail-cta";
+import { TaskList, type TaskRow } from "@/components/task-list";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { PIPELINE_STAGES, ACTIVITY_TYPES } from "@/lib/constants";
@@ -23,6 +24,13 @@ export default async function DashboardPage({
   const prisma = await getTenantDb();
   const googleStatus = (await searchParams).google;
 
+  // Forward-looking windows for the worklist strip.
+  const startOfTomorrow = new Date();
+  startOfTomorrow.setHours(0, 0, 0, 0);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  const staleBefore = new Date();
+  staleBefore.setDate(staleBefore.getDate() - 30);
+
   const [
     total,
     contactsCount,
@@ -30,6 +38,8 @@ export default async function DashboardPage({
     recentCompanies,
     recentActivities,
     googleConn,
+    todayTasksRaw,
+    staleCompanies,
   ] =
     await Promise.all([
       prisma.company.count(),
@@ -55,7 +65,44 @@ export default async function DashboardPage({
         },
       }),
       getGoogleConnection(session.tenantId),
+      // Open tasks that need attention now (overdue or due today).
+      prisma.task.findMany({
+        where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
+        orderBy: { dueDate: "asc" },
+        take: 8,
+        include: {
+          company: { select: { id: true, nomSociete: true, enseigne: true, siret: true } },
+        },
+      }),
+      // Engaged prospects gone cold: last touch > 30 days, not yet won/lost.
+      prisma.company.findMany({
+        where: {
+          dernierContact: { not: null, lt: staleBefore },
+          stage: { notIn: ["GAGNE", "PERDU"] },
+        },
+        orderBy: { dernierContact: "asc" },
+        take: 6,
+        select: {
+          id: true,
+          nomSociete: true,
+          enseigne: true,
+          siret: true,
+          stage: true,
+          dernierContact: true,
+        },
+      }),
     ]);
+
+  const todayTasks: TaskRow[] = todayTasksRaw.map((t) => ({
+    id: t.id,
+    title: t.title,
+    type: t.type,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    source: t.source,
+    company: t.company
+      ? { id: t.company.id, name: companyName(t.company) }
+      : null,
+  }));
 
   const stageCounts = new Map<string, number>();
   for (const c of companies)
@@ -104,6 +151,51 @@ export default async function DashboardPage({
             googleConn?.lastSyncedAt ? formatDate(googleConn.lastSyncedAt) : null
           }
         />
+
+        {/* Forward-looking worklist — what to act on today, before the reporting. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle>À faire aujourd'hui</CardTitle>
+              <Link href="/todo" className="text-xs font-medium text-brand hover:underline">
+                Tout voir
+              </Link>
+            </CardHeader>
+            <CardBody>
+              <TaskList
+                tasks={todayTasks}
+                empty="Rien d'urgent aujourd'hui. Planifiez une relance depuis une fiche prospect."
+              />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Prospects à relancer</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-2">
+              {staleCompanies.length === 0 ? (
+                <p className="text-sm text-muted">Aucun prospect en sommeil.</p>
+              ) : (
+                staleCompanies.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/companies/${c.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{companyName(c)}</p>
+                      <p className="text-xs text-rose-600">
+                        Dernier contact {formatDate(c.dernierContact)}
+                      </p>
+                    </div>
+                    <StageBadge stage={c.stage} />
+                  </Link>
+                ))
+              )}
+            </CardBody>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map((k) => {

@@ -4,7 +4,9 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { authorNamesByUserId } from "@/lib/authors";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
-import { StageBadge } from "@/components/badges";
+import { EnumCell } from "@/components/enum-cell";
+import { TaskList, type TaskRow } from "@/components/task-list";
+import { NewTaskForm } from "@/components/new-task-form";
 import { Search, ExternalLink } from "lucide-react";
 import {
   AddActivityForm,
@@ -24,11 +26,24 @@ import {
   suggestedEmail,
 } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
-import { ACTIVITY_TYPES, STAGE_LABELS, type StageValue } from "@/lib/constants";
+import {
+  ACTIVITY_TYPES,
+  PIPELINE_STAGES,
+  STAGE_LABELS,
+  type StageValue,
+} from "@/lib/constants";
 import { Sparkles } from "lucide-react";
 
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
+
+// Inline-edit options for the stage badge in the header (reuses EnumCell).
+const STAGE_OPTIONS = PIPELINE_STAGES.map((s) => ({
+  value: s.value,
+  label: s.label,
+  badge: s.badge,
+  dot: s.dot,
+}));
 
 const SENTIMENT_STYLE: Record<string, string> = {
   POSITIF: "bg-emerald-100 text-emerald-700",
@@ -59,9 +74,19 @@ export default async function CompanyDetailPage({
     include: {
       contacts: { orderBy: { createdAt: "asc" } },
       activities: { orderBy: { date: "desc" } },
+      tasks: { where: { done: false }, orderBy: { dueDate: "asc" } },
     },
   });
   if (!company) notFound();
+
+  const openTasks: TaskRow[] = company.tasks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    type: t.type,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    source: t.source,
+    company: null, // already on this company's page — no need to link back
+  }));
 
   // Activity authors live in the control plane — resolve their names in one batch.
   const authorNames = await authorNamesByUserId(
@@ -71,7 +96,12 @@ export default async function CompanyDetailPage({
   return (
     <div>
       <PageHeader title={companyName(company)} subtitle={company.siret}>
-        <StageBadge stage={company.stage} />
+        <EnumCell
+          id={company.id}
+          field="stage"
+          value={company.stage}
+          options={STAGE_OPTIONS}
+        />
         <a
           href={company.siteWeb || companyLinkedInSearch(company)}
           target="_blank"
@@ -87,6 +117,18 @@ export default async function CompanyDetailPage({
 
       <div className="space-y-6 p-6">
         <CompanyInlineEditor company={company} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tâches ({openTasks.length})</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <TaskList tasks={openTasks} empty="Aucune tâche ouverte." />
+            <div className="border-t border-border pt-4">
+              <NewTaskForm companyId={company.id} compact />
+            </div>
+          </CardBody>
+        </Card>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

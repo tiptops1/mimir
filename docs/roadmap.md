@@ -2,6 +2,11 @@
 
 > **Cross-session source of truth.** Update the status + checkboxes here as work lands, so any
 > freshly-`/clear`ed session knows exactly where things stand. See `docs/architecture.md` for the why.
+>
+> **This is the platform track** (multi-tenancy, config, billing — the plumbing). The parallel
+> **product/UX track** (tasks, follow-ups, outbound, dashboard-as-worklist → "world-class") lives in
+> `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
+> (outbound + sequences) ride **Phase 3**.
 
 **Current phase: Phase 0 — DONE & DEPLOYED to prod (2026-06-24).** The multi-tenant spine + the
 pulled-ahead Google OAuth slice are live on Railway (commit `d26b480`); all multi-tenant + `GOOGLE_*`

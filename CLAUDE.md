@@ -9,7 +9,8 @@ for other customers.
 
 **Before any architecture/Phase work, read:**
 - `docs/architecture.md` — the multi-tenant target design + the decisions (and *why*)
-- `docs/roadmap.md` — the phases and **which one is current** (source of truth across sessions)
+- `docs/roadmap.md` — the **platform** phases and **which one is current** (source of truth across sessions)
+- `docs/product-roadmap.md` — the **product/UX** track (tasks, follow-ups, outbound → world-class); runs in parallel, flags where it rides a platform phase
 - `README.md` / `INTEGRATIONS.md` — the current single-tenant app + its already-built integrations
 
 ## Rules that protect the goal (don't violate these)

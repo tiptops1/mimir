@@ -25,8 +25,23 @@ export interface PipelineCard {
   fields: Partial<Record<CardFieldKey, string | null>>;
   priorite: string | null;
   potentiel: string | null;
+  /** ISO date of the last touch (dernierContact or latest activity), if any. */
+  lastTouch: string | null;
+  /** Whether the company has at least one open follow-up task. */
+  hasOpenTask: boolean;
   /** Lowercased haystacks for the board's client-side filters (all contacts). */
   search: { societe: string; nom: string; contact: string };
+}
+
+/** Compact days-since-last-touch label, warming as it goes stale. */
+function touchChip(iso: string | null): { text: string; cls: string } | null {
+  if (!iso) return null;
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  const text =
+    days <= 0 ? "Aujourd'hui" : days === 1 ? "Hier" : `Il y a ${days} j`;
+  const cls =
+    days <= 7 ? "text-emerald-600" : days <= 30 ? "text-amber-600" : "text-rose-600";
+  return { text, cls };
 }
 
 type Board = Record<StageValue, PipelineCard[]>;
@@ -44,6 +59,7 @@ function CardView({
   const title =
     card.fields[config.titleField] ?? card.fields.company ?? "—";
   const subtitle = card.fields[config.subtitleField] ?? "—";
+  const touch = touchChip(card.lastTouch);
   return (
     <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -54,6 +70,17 @@ function CardView({
         <span className={`text-xs ${config.subtitleClass}`}>{subtitle}</span>
         <PotentielBadge potentiel={card.potentiel} />
       </div>
+      {(touch || card.hasOpenTask) && (
+        <div className="mt-2 flex items-center gap-2 border-t border-border pt-2 text-[11px]">
+          {touch && <span className={touch.cls}>{touch.text}</span>}
+          {card.hasOpenTask && (
+            <span className="ml-auto inline-flex items-center gap-1 text-brand">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              Relance
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

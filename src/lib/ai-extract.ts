@@ -302,6 +302,29 @@ export async function enrichActivities(
           : null,
       },
     });
+
+    // Surface the AI's recommended next action as a real follow-up task so it
+    // lands in the "À faire" worklist instead of staying buried in the timeline.
+    // Deduped by activityId so re-running this pass never creates a duplicate.
+    if (insight.nextStep && a.companyId) {
+      const already = await prisma.task.findFirst({
+        where: { activityId: a.id },
+        select: { id: true },
+      });
+      if (!already) {
+        await prisma.task.create({
+          data: {
+            title: insight.nextStep,
+            type: "RELANCE",
+            source: "AI_NEXTSTEP",
+            activityId: a.id,
+            companyId: a.companyId,
+            // Undated on purpose — we don't invent a deadline; it shows under
+            // "À planifier" for the user to schedule.
+          },
+        });
+      }
+    }
     enriched++;
   }
   return { enriched, skipped };

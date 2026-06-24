@@ -90,3 +90,18 @@ export const ACTIVITY_TYPES = [
   { value: "NOTE", label: "Note" },
   { value: "STAGE_CHANGE", label: "Changement d'étape" },
 ] as const;
+
+// Follow-up / task kinds. Values mirror Task.type in prisma/tenant/schema.prisma.
+export const TASK_TYPES = [
+  { value: "RELANCE", label: "Relance" },
+  { value: "APPEL", label: "Appel" },
+  { value: "EMAIL", label: "Email" },
+  { value: "RDV", label: "Rendez-vous" },
+  { value: "AUTRE", label: "Autre" },
+] as const;
+
+export type TaskTypeValue = (typeof TASK_TYPES)[number]["value"];
+
+export const TASK_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  TASK_TYPES.map((t) => [t.value, t.label]),
+);

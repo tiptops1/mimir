@@ -96,6 +96,7 @@ model Company {
   updatedAt  DateTime   @updatedAt
   contacts   Contact[]
   activities Activity[]
+  tasks      Task[]
 
   @@index([stage])
   @@index([ville])
@@ -152,6 +153,36 @@ model Activity {
   @@index([companyId])
   @@index([date])
   @@index([messageId])
+}
+
+// Follow-up / to-do attached to a company. The "system of action" layer:
+// manual relances + tasks auto-seeded from an Activity's AI `nextStep`.
+// Type/source kept as strings (not Prisma enums) to mirror Activity.type and
+// stay config-friendly.
+model Task {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  type       String    @default("RELANCE") // RELANCE | APPEL | EMAIL | RDV | AUTRE
+  dueDate    DateTime?
+  done       Boolean   @default(false)
+  doneAt     DateTime?
+  note       String?
+  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP
+  // When source == AI_NEXTSTEP, the Activity it was derived from — dedupe key so
+  // re-running the enrichment pass never creates a duplicate task.
+  activityId String?   @db.ObjectId
+  companyId  String    @db.ObjectId
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // Loose ids into the tenant Contact / control-plane User (no cross-DB relation),
+  // matching the Activity.userId convention.
+  contactId  String?   @db.ObjectId
+  userId     String?   @db.ObjectId
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([done, dueDate])
+  @@index([companyId])
+  @@index([activityId])
 }
 
 // Review queue for email addresses seen in synced mail that don't match a

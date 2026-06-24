@@ -124,3 +124,13 @@ export const activitySchema = z.object({
   type: z.enum(["CALL", "EMAIL", "MEETING", "NOTE", "STAGE_CHANGE"]),
   note: optionalString,
 });
+
+export const taskSchema = z.object({
+  companyId: z.string().trim().min(1, "Société requise."),
+  title: z.string().trim().min(1, "Intitulé requis."),
+  type: z
+    .enum(["RELANCE", "APPEL", "EMAIL", "RDV", "AUTRE"])
+    .default("RELANCE"),
+  dueDate: optionalDate,
+  note: optionalString,
+});

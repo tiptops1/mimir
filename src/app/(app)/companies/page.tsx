@@ -82,20 +82,21 @@ export default async function CompaniesPage({
   const site = typeof sp.site === "string" ? sp.site : "";
   const specialite = typeof sp.specialite === "string" ? sp.specialite : "";
   const dept = typeof sp.dept === "string" ? sp.dept : "";
+  const all = sp.all === "1";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
   const where: Prisma.CompanyWhereInput = {};
-  // Suivi shows only "hot" prospects — those Chris has actually engaged with
-  // (a logged activity, or a recorded first/last contact). Always applied.
-  const and: Prisma.CompanyWhereInput[] = [
-    {
-      OR: [
-        { activities: { some: {} } },
-        { dernierContact: { not: null } },
-        { datePremierContact: { not: null } },
-      ],
-    },
-  ];
+  // Suivi defaults to "hot" prospects — those Chris has actually engaged with
+  // (a logged activity, or a recorded first/last contact). `?all=1` lifts it.
+  const engagement: Prisma.CompanyWhereInput = {
+    OR: [
+      { activities: { some: {} } },
+      { dernierContact: { not: null } },
+      { datePremierContact: { not: null } },
+    ],
+  };
+  // Filters other than the engagement gate (so we can count what it hides).
+  const and: Prisma.CompanyWhereInput[] = [];
   const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
   // Société: company identity (name / enseigne / ville / SIRET / SIREN).
   if (societe) {
@@ -133,9 +134,10 @@ export default async function CompaniesPage({
   } else if (site === "without") {
     and.push({ OR: [{ siteWeb: null }, { siteWeb: "" }] });
   }
-  where.AND = and;
+  // The engagement gate applies unless the user asked to see everything.
+  where.AND = all ? and : [engagement, ...and];
 
-  const [companies, total] = await Promise.all([
+  const [companies, total, totalAll] = await Promise.all([
     prisma.company.findMany({
       where,
       orderBy: [{ updatedAt: "desc" }],
@@ -159,8 +161,11 @@ export default async function CompaniesPage({
       },
     }),
     prisma.company.count({ where }),
+    // Same filters, no engagement gate — lets us show how many are hidden.
+    prisma.company.count({ where: { ...where, AND: and } }),
   ]);
 
+  const hiddenCount = Math.max(0, totalAll - (all ? totalAll : total));
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const qs = (overrides: Record<string, string | number>) => {
@@ -175,6 +180,7 @@ export default async function CompaniesPage({
     if (site) params.set("site", site);
     if (specialite) params.set("specialite", specialite);
     if (dept) params.set("dept", dept);
+    if (all) params.set("all", "1");
     for (const [k, v] of Object.entries(overrides)) params.set(k, String(v));
     return `?${params.toString()}`;
   };
@@ -183,13 +189,36 @@ export default async function CompaniesPage({
     <div>
       <PageHeader
         title="Suivi"
-        subtitle={`${total} prospect${total > 1 ? "s" : ""} à suivre`}
+        subtitle={
+          all
+            ? `${total} société${total > 1 ? "s" : ""} (toutes)`
+            : `${total} prospect${total > 1 ? "s" : ""} engagé${total > 1 ? "s" : ""}`
+        }
       >
         <LinkButton href="/contacts/new">+ Nouveau contact</LinkButton>
       </PageHeader>
 
       <div className="p-6">
         <CompaniesFilters />
+
+        {all ? (
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+            <span>Toutes les sociétés, y compris celles sans engagement.</span>
+            <Link href={qs({ page: 1, all: "" })} className="font-medium text-brand hover:underline">
+              Voir seulement les prospects engagés
+            </Link>
+          </div>
+        ) : hiddenCount > 0 ? (
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+            <span>
+              {hiddenCount} société{hiddenCount > 1 ? "s" : ""} masquée
+              {hiddenCount > 1 ? "s" : ""} (sans engagement).
+            </span>
+            <Link href={qs({ page: 1, all: "1" })} className="font-medium text-brand hover:underline">
+              Tout afficher
+            </Link>
+          </div>
+        ) : null}
 
         {companies.length === 0 ? (
           <EmptyState

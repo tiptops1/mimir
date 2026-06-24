@@ -31,6 +31,7 @@ export default async function PipelinePage({
       priorite: true,
       potentiel: true,
       stage: true,
+      dernierContact: true,
       contacts: {
         select: {
           prenom: true,
@@ -40,6 +41,8 @@ export default async function PipelinePage({
           isDecisionMaker: true,
         },
       },
+      activities: { select: { date: true }, orderBy: { date: "desc" }, take: 1 },
+      tasks: { where: { done: false }, select: { id: true }, take: 1 },
     },
   });
 
@@ -51,6 +54,7 @@ export default async function PipelinePage({
     // Prefer the decision-maker, else the first contact, as the card's lead person.
     const lead =
       c.contacts.find((ct) => ct.isDecisionMaker) ?? c.contacts[0] ?? null;
+    const lastTouch = c.dernierContact ?? c.activities[0]?.date ?? null;
     const card: PipelineCard = {
       id: c.id,
       fields: {
@@ -60,6 +64,8 @@ export default async function PipelinePage({
       },
       priorite: c.priorite,
       potentiel: c.potentiel,
+      lastTouch: lastTouch ? lastTouch.toISOString() : null,
+      hasOpenTask: c.tasks.length > 0,
       // Haystacks across ALL contacts so the board's filters match any of them.
       search: {
         societe: [companyName(c), c.ville, c.siret]

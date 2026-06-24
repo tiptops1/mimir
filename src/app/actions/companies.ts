@@ -166,6 +166,7 @@ export async function deleteCompany(id: string): Promise<void> {
   await requireRole(["ADMIN", "MANAGER"]);
   const prisma = await getTenantDb();
   await prisma.activity.deleteMany({ where: { companyId: id } });
+  await prisma.task.deleteMany({ where: { companyId: id } });
   await prisma.contact.deleteMany({ where: { companyId: id } });
   await prisma.company.delete({ where: { id } });
   revalidatePath("/companies");

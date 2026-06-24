@@ -2,6 +2,7 @@ import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { Sidebar } from "@/components/sidebar";
 import { GlobalSearch } from "@/components/global-search";
+import { QuickAddMenu } from "@/components/quick-add-menu";
 
 export default async function AppLayout({
   children,
@@ -10,14 +11,24 @@ export default async function AppLayout({
 }) {
   const session = await verifySession();
   const prisma = await getTenantDb();
-  const pendingCount = await prisma.pendingContact.count({
-    where: { status: "PENDING" },
-  });
+
+  // "todo" badge = what needs attention now: open tasks overdue or due today.
+  const startOfTomorrow = new Date();
+  startOfTomorrow.setHours(0, 0, 0, 0);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+  const [pendingCount, todoCount] = await Promise.all([
+    prisma.pendingContact.count({ where: { status: "PENDING" } }),
+    prisma.task.count({
+      where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
+    }),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         pendingCount={pendingCount}
+        todoCount={todoCount}
         user={{
           name: session.name,
           email: session.email,
@@ -25,8 +36,9 @@ export default async function AppLayout({
         }}
       />
       <main className="flex-1 overflow-y-auto">
-        <header className="sticky top-0 z-40 flex items-center border-b border-border bg-card/95 px-6 py-3 backdrop-blur">
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border bg-card/95 px-6 py-3 backdrop-blur">
           <GlobalSearch />
+          <QuickAddMenu />
         </header>
         {children}
       </main>
