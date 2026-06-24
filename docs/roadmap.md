@@ -9,11 +9,10 @@ env vars are set on Railway and the app boots clean multi-tenant in production. 
 The Google slice is now **connected & self-running for ingestion**: owner consent done
 (`Ctoppo@avelior.eu` connected) and `/api/cron` is scheduled **every 4h** via an external scheduler
 (cron-job.org, `CRON_SECRET` Bearer — deliberately off Railway to save free credit). The **AI insight
-pass was reworked to Google Gemini** (free/cheap tier) and smoke-tested live, but ⚠️ **that code change
-is not yet deployed** — prod (`d26b480`) still runs the Claude-only pass, so until `ai-extract.ts`
-ships, the cron logs activities *without* an AI box even though `GEMINI_API_KEY` is already set on
-Railway. Remaining: **deploy the Gemini change**, a one-time `--backfill` for history, and the ~weekly
-OAuth reconnect (Testing mode) until publish + CASA. Next focus = Phase 1 (or finish the per-tenant
+pass was reworked to Google Gemini** (free/cheap tier), smoke-tested live, and **committed + pushed
+(`3f68ad7`, 2026-06-24)** → Railway auto-deploying (`GEMINI_API_KEY` already set on Railway, so it
+activates on deploy). Remaining: **confirm the deploy is green** (`/api/cron` → `ai: enriched`), a
+one-time `--backfill` for history, and the ~weekly OAuth reconnect (Testing mode) until publish + CASA. Next focus = Phase 1 (or finish the per-tenant
 ingestion loop in Phase 3).
 
 > **Product is branded "Vision RM"** (repo name `avelior-analytics` is legacy). The owner is an
@@ -99,8 +98,8 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
-- 2026-06-24 — **AI insight → Google Gemini (free/cheap) + ingestion go-live. ⚠️ Gemini code NOT yet
-  deployed.** Reworked the AI pass to be **provider-aware** (`src/lib/ai-extract.ts`): `GEMINI_API_KEY`
+- 2026-06-24 — **AI insight → Google Gemini (free/cheap) + ingestion go-live. Committed + pushed
+  (`3f68ad7`).** Reworked the AI pass to be **provider-aware** (`src/lib/ai-extract.ts`): `GEMINI_API_KEY`
   wins → else `ANTHROPIC_API_KEY` → else no-op. Gemini path = **OpenAI-compatible endpoint**
   (`…/v1beta/openai/chat/completions`, Bearer, default `gemini-2.5-flash`), **`reasoning_effort:"none"`**
   to kill 2.5-flash thinking tokens (≈4× less billable output in testing, identical results), single
@@ -112,11 +111,10 @@ Replication = "Phase 0 on demand."
   budget "cap" only ALERTS; the €10 prepay is the real hard stop). **Ingestion go-live DONE:**
   `GEMINI_API_KEY` set on Railway; **Google OAuth connected** (owner consent for `Ctoppo@avelior.eu`);
   **cron every 4h** via **cron-job.org** → `/api/cron` w/ `CRON_SECRET` Bearer (kept off Railway to save
-  credit). ⚠️ **DEPLOY GAP: the `ai-extract.ts` rework is LOCAL/uncommitted — prod (`d26b480`) still runs
-  the Claude-only pass, so the cron logs activities but SKIPS the AI box (old code checks only
-  `ANTHROPIC_API_KEY`, which is unset). Commit + push to deploy before Gemini insight goes live.**
-  Remaining after deploy: one-time `--backfill` for history; ~weekly OAuth reconnect (Testing) until
-  publish + CASA.
+  credit). ✅ **DEPLOYED: committed + pushed `3f68ad7` → Railway auto-deploying** (closed the gap where
+  prod `d26b480` ran Claude-only logic that ignored `GEMINI_API_KEY`). Remaining: confirm the deploy is
+  green (`/api/cron` → `ai: enriched`); one-time `--backfill` for history; ~weekly OAuth reconnect
+  (Testing) until publish + CASA.
 - 2026-06-24 — **DEPLOYED Phase 0 spine + Google OAuth slice to prod (`d26b480`).** The multi-tenant
   refactor and the Google OAuth work had been sitting uncommitted on top of the still-single-tenant
   `origin/main` (`e88b584`); this push cuts prod over to multi-tenant in one go. **Atlas:** ran
