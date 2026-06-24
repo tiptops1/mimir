@@ -1,6 +1,6 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import type { Prisma, PrismaClient } from "@prisma/client";
+import { getTenantDb } from "@/lib/tenant-context";
 import { companyName, contactName } from "@/lib/display";
 
 /**
@@ -37,18 +37,19 @@ function oid(v: unknown): string {
 export async function searchAll(query: string, limit = 6): Promise<SearchHit[]> {
   const q = query.trim();
   if (q.length < 2) return [];
+  const prisma = await getTenantDb();
   // Try Atlas Search first. Fall back to regex on EITHER an error (non-Atlas
   // Mongo) OR an empty result: on some Atlas tiers `$search` against a not-yet-
   // built / missing index returns [] instead of throwing, so "empty" can't be
   // trusted to mean "no matches" until the index is live. Regex then guarantees
   // the bar still works. At this scale the extra query is cheap.
   try {
-    const hits = await atlasSearch(q, limit);
+    const hits = await atlasSearch(prisma, q, limit);
     if (hits.length > 0) return hits;
   } catch {
     /* fall through to regex */
   }
-  return regexSearch(q, limit);
+  return regexSearch(prisma, q, limit);
 }
 
 type RawCompany = {
@@ -67,7 +68,11 @@ type RawContact = {
   company?: Array<{ nomSociete?: string | null; enseigne?: string | null }>;
 };
 
-async function atlasSearch(q: string, limit: number): Promise<SearchHit[]> {
+async function atlasSearch(
+  prisma: PrismaClient,
+  q: string,
+  limit: number,
+): Promise<SearchHit[]> {
   const [companies, contacts] = await Promise.all([
     prisma.company.aggregateRaw({
       pipeline: [
@@ -140,7 +145,11 @@ function contactHit(c: RawContact): SearchHit {
 }
 
 /** Regex fallback — works on any Mongo, even before the Atlas index exists. */
-async function regexSearch(q: string, limit: number): Promise<SearchHit[]> {
+async function regexSearch(
+  prisma: PrismaClient,
+  q: string,
+  limit: number,
+): Promise<SearchHit[]> {
   const ci = { contains: q, mode: "insensitive" as const };
   const [companies, contacts] = await Promise.all([
     prisma.company.findMany({

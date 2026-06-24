@@ -1,0 +1,100 @@
+// Avelior Analytics — CONTROL-PLANE schema (MongoDB, one shared DB).
+//
+// The control plane is the stable, typed spine of the platform: it owns tenants,
+// the auth identities (users) and their memberships, and the tenant -> connection
+// routing that the DB router (src/lib/tenant-db.ts) resolves at request time.
+//
+// Generated to a CUSTOM output so it never collides with the tenant client
+// (default @prisma/client). Import it from "@/generated/control".
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../src/generated/control"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("CONTROL_DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// One customer = one tenant = one isolated data DB on the cluster.
+model Tenant {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  slug String @unique // also the tenant DB name, e.g. "crm_chris", "crm_demo"
+  name String
+
+  // Full connection string to this tenant's data DB, AES-256-GCM encrypted at
+  // rest (see src/lib/crypto.ts). Stored whole — not derived — so a large tenant
+  // can later be promoted to its own cluster with no app-code change.
+  connectionString String
+
+  status       TenantStatus  @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  memberships  Membership[]
+  integrations Integration[]
+
+  @@index([status])
+}
+
+// A connected third-party account (e.g. Google) for a tenant. The OAuth refresh
+// token is AES-256-GCM encrypted at rest (see src/lib/crypto.ts) — same pattern
+// as Tenant.connectionString. Lives in the control plane because credentials and
+// routing are the control plane's job. Single-tenant today (wired for tenant #1);
+// the model is already tenant-scoped so Phase 3 just drops the single-tenant
+// assumption in the cron router.
+model Integration {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  tenantId     String    @db.ObjectId
+  provider     String // "google"
+  accountEmail String // the connected Google account (from OAuth userinfo)
+  refreshToken String // AES-256-GCM encrypted
+  scopes       String[]
+  status       String    @default("ACTIVE") // ACTIVE | REVOKED
+  connectedAt  DateTime  @default(now())
+  lastSyncedAt DateTime?
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+}
+
+// Auth identity. Moved here from the tenant DB: a user is global to the platform
+// and reaches tenant data only through a Membership.
+model User {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  email        String       @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+}
+
+// Links a user to a tenant with a per-tenant role.
+model Membership {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String @db.ObjectId
+  tenantId String @db.ObjectId
+  role     Role   @default(USER)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tenantId])
+  @@index([userId])
+  @@index([tenantId])
+}

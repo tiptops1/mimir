@@ -9,7 +9,9 @@ import { getSession, type SessionPayload } from "@/lib/session";
  */
 export const verifySession = cache(async (): Promise<SessionPayload> => {
   const session = await getSession();
-  if (!session?.userId) {
+  // Require a tenant-scoped session — a pre-multi-tenant token (no tenantId)
+  // is treated as unauthenticated so it cleanly forces a re-login.
+  if (!session?.userId || !session?.tenantId) {
     redirect("/login");
   }
   return session;

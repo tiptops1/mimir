@@ -10,41 +10,58 @@ Zapier/n8n, no per-operation fees. One scheduled request (`/api/cron`) pulls eve
 source and runs the AI pass.
 
 ```
-Gmail (IMAP)  ─┐
+Gmail (OAuth) ─┐
 Google Calendar │→  match to company/contact  →  Activity log  →  Claude insight
 Fireflies (API) ┘     (existing engine)            (in CRM)        (summary/next step)
 ```
 
 ---
 
-## What you need (4 keys, ~15 min)
+## What you need
 
-Nothing here can be done from code — these are accounts and keys only you can
-create. Add each to **Railway → avelior-analytics → Variables**, then redeploy.
-Use `.env.example` as the reference list.
+Some of this can only be done by you — accounts and keys. Add platform keys to
+**Railway → avelior-analytics → Variables**, then redeploy. Use `.env.example` as
+the reference list.
 
-### 1. Gmail / Workspace — `IMAP_PASSWORD`  *(already set up earlier)*
-Logs sent + received mail against contacts; unknown senders go to the **Boîte de
-réception** review queue.
-- Google account → **2-Step Verification** must be ON.
-- Create an **App Password**: <https://myaccount.google.com/apppasswords> → paste
-  into `IMAP_PASSWORD` (no spaces).
-- Confirm `IMAP_USER` / `OWNER_EMAIL` are Christopher's address, and IMAP is
-  enabled in Gmail → Settings → Forwarding and POP/IMAP.
+### 1. Google (Gmail + Calendar) — one-click **Connect** *(OAuth, preferred)*
+The seamless integration: a tenant clicks **Connecter Google** on the dashboard,
+approves once, and Gmail + Calendar start syncing. Emails/meetings are logged
+against the right contact; unknown senders go to the **Boîte de réception** queue.
 
-### 2. Google Calendar — `GOOGLE_CALENDAR_ICS_URL`  *(no OAuth)*
-Logs meetings with prospects and advances "dernier contact".
-- Google Calendar (web) → hover the calendar → ⋮ → **Settings and sharing**.
-- Scroll to **Integrate calendar** → copy **Secret address in iCal format**
-  (ends in `/basic.ics`).
-- Paste into `GOOGLE_CALENDAR_ICS_URL`. It's read-only; keep it secret.
+This needs a **one-time Google Cloud setup** (platform-level, done once — not per
+user):
+1. Create a Google Cloud project; enable the **Gmail API** and **Google Calendar
+   API**.
+2. **OAuth consent screen.** Scopes: `openid`, `email`, `gmail.readonly`,
+   `gmail.send`, `calendar.readonly`, `calendar.events`. (Send/event-write scopes
+   are requested now so adding those features later needs no re-consent.)
+   - **If the account is on a Google Workspace domain (e.g. `@avelior.eu`): choose
+     `Internal`.** No Google verification required, and refresh tokens **don't
+     expire** — genuinely seamless.
+   - Otherwise the app stays in **Testing** mode: works immediately, but tokens
+     expire ~7 days (reconnect from the dashboard) until you complete Google's
+     verification (CASA) — a separate, weeks-long process.
+3. Create an **OAuth client ID** → type **Web application**. Authorized redirect
+   URIs:
+   - `http://localhost:3000/api/integrations/google/callback` (dev)
+   - `https://<app>/api/integrations/google/callback` (prod)
+4. Put the client ID/secret in env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+   `GOOGLE_OAUTH_REDIRECT_URI`. The refresh token is encrypted at rest with the
+   existing `ENCRYPTION_KEY`.
 
-### 3. Fireflies — `FIREFLIES_API_KEY`  *(free tier works)*
+Then just open the dashboard and click **Connecter Google**. To switch accounts or
+revoke access, click **Déconnecter** (revokes the token at Google too).
+
+> **Legacy fallback:** until a Google account is connected, the app still syncs via
+> the old IMAP App-Password (`IMAP_*`) and secret-iCal (`GOOGLE_CALENDAR_ICS_URL`)
+> env vars, so nothing goes dark during rollout. Retire those once OAuth is live.
+
+### 2. Fireflies — `FIREFLIES_API_KEY`  *(free tier works)*
 Imports call transcripts; uses Fireflies' own AI summary as the raw text.
 - Fireflies → **Settings → Developer settings / Integrations → API** → copy the
   API key into `FIREFLIES_API_KEY`.
 
-### 4. Claude (the "smart" layer) — `ANTHROPIC_API_KEY`
+### 3. Claude (the "smart" layer) — `ANTHROPIC_API_KEY`
 Reads each interaction and extracts summary / sentiment / next step / stage.
 - <https://console.anthropic.com> → **API Keys** → create a key → add a little
   credit. Paste into `ANTHROPIC_API_KEY`.

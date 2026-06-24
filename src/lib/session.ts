@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 
 export interface SessionPayload {
   userId: string;
+  /** Active tenant for this session — drives the DB router (see tenant-context.ts). */
+  tenantId: string;
+  /** Role within the active tenant (sourced from the Membership). */
   role: "ADMIN" | "MANAGER" | "USER";
   name: string;
   email: string;

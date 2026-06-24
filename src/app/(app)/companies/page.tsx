@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton, Card, EmptyState } from "@/components/ui";
 import { CompaniesFilters } from "@/components/companies-filters";
@@ -70,6 +70,7 @@ export default async function CompaniesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const prisma = await getTenantDb();
   const sp = await searchParams;
   const societe = typeof sp.societe === "string" ? sp.societe : "";
   const nom = typeof sp.nom === "string" ? sp.nom : "";

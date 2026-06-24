@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
+import { authorNamesByUserId } from "@/lib/authors";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
@@ -51,18 +52,21 @@ export default async function CompanyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   await verifySession();
+  const prisma = await getTenantDb();
   const { id } = await params;
   const company = await prisma.company.findUnique({
     where: { id },
     include: {
       contacts: { orderBy: { createdAt: "asc" } },
-      activities: {
-        orderBy: { date: "desc" },
-        include: { user: { select: { name: true } } },
-      },
+      activities: { orderBy: { date: "desc" } },
     },
   });
   if (!company) notFound();
+
+  // Activity authors live in the control plane — resolve their names in one batch.
+  const authorNames = await authorNamesByUserId(
+    company.activities.map((a) => a.userId),
+  );
 
   return (
     <div>
@@ -181,7 +185,9 @@ export default async function CompanyDetailPage({
                           {a.note && <p className="text-slate-600">{a.note}</p>}
                           <p className="text-xs text-muted">
                             {formatDate(a.date)}
-                            {a.user?.name ? ` · ${a.user.name}` : ""}
+                            {a.userId && authorNames.get(a.userId)
+                              ? ` · ${authorNames.get(a.userId)}`
+                              : ""}
                           </p>
                           {a.aiSummary &&
                             (() => {

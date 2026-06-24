@@ -1,5 +1,5 @@
 import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { Sidebar } from "@/components/sidebar";
 import { GlobalSearch } from "@/components/global-search";
 
@@ -9,6 +9,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await verifySession();
+  const prisma = await getTenantDb();
   const pendingCount = await prisma.pendingContact.count({
     where: { status: "PENDING" },
   });

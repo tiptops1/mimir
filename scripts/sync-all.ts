@@ -1,7 +1,11 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { runImapSync } from "../src/lib/imap-sync";
+import { runGmailSync } from "../src/lib/gmail-sync";
 import { syncCalendar } from "../src/lib/calendar-sync";
+import { runGoogleCalendarSync } from "../src/lib/google-calendar-sync";
+import { resolveTenant1Google } from "../src/lib/google-oauth";
+import { touchGoogleLastSynced } from "../src/lib/integrations";
 import { syncFireflies } from "../src/lib/fireflies";
 import { enrichActivities, aiEnabled } from "../src/lib/ai-extract";
 
@@ -26,8 +30,20 @@ async function run<T>(label: string, fn: () => Promise<T>): Promise<void> {
 async function main() {
   const dry = process.argv.includes("--dry");
 
-  await run("email", () => runImapSync(prisma, { dry }));
-  await run("calendar", () => syncCalendar(prisma, { dry }));
+  // Prefer tenant #1's OAuth Google connection; else legacy IMAP/ICS.
+  const google = await resolveTenant1Google();
+  if (google) {
+    await run("email", () =>
+      runGmailSync(prisma, google.client, google.accountEmail, { dry }),
+    );
+    await run("calendar", () =>
+      runGoogleCalendarSync(prisma, google.client, google.accountEmail, { dry }),
+    );
+    if (!dry) await touchGoogleLastSynced(google.tenantId);
+  } else {
+    await run("email", () => runImapSync(prisma, { dry }));
+    await run("calendar", () => syncCalendar(prisma, { dry }));
+  }
   await run("fireflies", () => syncFireflies(prisma, { dry }));
 
   if (!dry && aiEnabled()) {

@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession, requireRole } from "@/lib/dal";
 import { contactSchema } from "@/lib/validations";
 import { SPECIALTY_FIELDS } from "@/lib/constants";
@@ -28,6 +28,7 @@ export async function createContactWithCompany(
   formData: FormData,
 ): Promise<FormResult> {
   await verifySession();
+  const prisma = await getTenantDb();
 
   const str = (k: string) => {
     const v = formData.get(k);
@@ -92,6 +93,7 @@ export async function createContact(
   formData: FormData,
 ): Promise<FormResult> {
   await verifySession();
+  const prisma = await getTenantDb();
   const parsed = contactSchema.safeParse(
     Object.fromEntries(formData.entries()),
   );
@@ -110,6 +112,7 @@ export async function updateContact(
   formData: FormData,
 ): Promise<FormResult> {
   await verifySession();
+  const prisma = await getTenantDb();
   const parsed = contactSchema.safeParse(
     Object.fromEntries(formData.entries()),
   );
@@ -129,6 +132,7 @@ export async function toggleDecisionMaker(
   value: boolean,
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   await prisma.contact.update({
     where: { id },
     data: { isDecisionMaker: value },
@@ -142,6 +146,7 @@ export async function deleteContact(
   companyId: string,
 ): Promise<void> {
   await requireRole(["ADMIN", "MANAGER"]);
+  const prisma = await getTenantDb();
   await prisma.activity.updateMany({
     where: { contactId: id },
     data: { contactId: null },

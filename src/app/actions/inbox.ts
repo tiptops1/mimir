@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { splitName, emailDomain } from "@/lib/email-sync";
 
@@ -14,6 +14,7 @@ export async function approvePending(
   companyId: string,
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   const pending = await prisma.pendingContact.findUnique({
     where: { id: pendingId },
   });
@@ -64,6 +65,7 @@ export async function approvePending(
 
 export async function dismissPending(pendingId: string): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   await prisma.pendingContact.update({
     where: { id: pendingId },
     data: { status: "DISMISSED" },

@@ -20,8 +20,15 @@ export interface PipelineCardConfig {
   subtitleClass: string;
 }
 
+/** The mailbox owner, surfaced in email-related copy (e.g. the inbox). */
+export interface OwnerConfig {
+  /** Display name of the mailbox owner, e.g. "Christopher". */
+  name: string;
+}
+
 export interface TenantConfig {
   pipelineCard: PipelineCardConfig;
+  owner: OwnerConfig;
 }
 
 /** Tenant #1 (Christopher): cards lead with the contact, company name beneath in light blue. */
@@ -30,6 +37,9 @@ const CHRISTOPHER_CONFIG: TenantConfig = {
     titleField: "contact",
     subtitleField: "company",
     subtitleClass: "text-sky-500",
+  },
+  owner: {
+    name: "Christopher",
   },
 };
 

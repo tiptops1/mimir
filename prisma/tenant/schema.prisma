@@ -1,5 +1,13 @@
-// Avelior Analytics — CRM schema (MongoDB)
-// Models map the "CRM Chris 0-200" prospecting spreadsheet (French insurance brokers).
+// Avelior Analytics — TENANT-DATA schema (MongoDB, one DB per tenant).
+// Models map the "CRM Chris" prospecting spreadsheet (French insurance brokers).
+//
+// This client keeps the DEFAULT @prisma/client output so existing imports
+// (`import { ... } from "@prisma/client"`) are unchanged. At runtime the DB
+// router (src/lib/tenant-db.ts) instantiates one client per tenant connection
+// string; DATABASE_URL below is only the generate-time / tenant-#1 fallback.
+//
+// Auth (User/Role) lives in the CONTROL plane (prisma/control/schema.prisma),
+// so Activity.userId here is a loose id with no cross-DB relation.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,12 +16,6 @@ generator client {
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  MANAGER
-  USER
 }
 
 // Pipeline stages — mirror the reference tab in the source sheet.
@@ -38,17 +40,6 @@ enum Potentiel {
   FAIBLE
   MOYEN
   FORT
-}
-
-model User {
-  id           String     @id @default(auto()) @map("_id") @db.ObjectId
-  email        String     @unique
-  name         String?
-  passwordHash String
-  role         Role       @default(USER)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  activities   Activity[]
 }
 
 // Core prospect entity — one row per SIRET (establishment) in the source sheet.
@@ -154,8 +145,8 @@ model Activity {
   company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contactId String?  @db.ObjectId
   contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  // Author of the activity. Loose id into the CONTROL-plane User (no cross-DB relation).
   userId    String?  @db.ObjectId
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 
   @@index([companyId])
@@ -181,10 +172,19 @@ model PendingContact {
   @@index([status])
 }
 
-// Incremental sync checkpoint, one row per IMAP mailbox path.
+// Incremental sync checkpoint, one row per IMAP mailbox path. (Legacy IMAP path.)
 model EmailSyncState {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   mailbox   String   @unique // e.g. "INBOX" or "[Gmail]/Sent Mail"
   lastUid   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// Incremental sync cursor for the Google APIs (string tokens, unlike the IMAP
+// UID): "gmail" stores the Gmail historyId, "calendar" the events.list syncToken.
+model SyncCursor {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  source    String   @unique // "gmail" | "calendar"
+  cursor    String?
   updatedAt DateTime @updatedAt
 }

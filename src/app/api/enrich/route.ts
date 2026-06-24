@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { getOptionalSession } from "@/lib/dal";
 import { enrichCompany } from "@/lib/enrich";
 
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const prisma = await getTenantDb();
 
   const body = (await req.json().catch(() => null)) as {
     companyId?: string;

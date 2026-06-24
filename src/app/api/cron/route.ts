@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getTenant1Prisma } from "@/lib/tenant-db";
 import { runImapSync } from "@/lib/imap-sync";
+import { runGmailSync } from "@/lib/gmail-sync";
 import { syncCalendar } from "@/lib/calendar-sync";
+import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
+import { resolveTenant1Google } from "@/lib/google-oauth";
+import { touchGoogleLastSynced } from "@/lib/integrations";
 import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
 
@@ -38,11 +42,29 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Phase 0: ingestion is single-tenant (tenant #1). Phase 3 routes per tenant.
+  const prisma = getTenant1Prisma();
+
+  // Prefer the OAuth Google connection if tenant #1 has connected one; otherwise
+  // fall back to the legacy IMAP/ICS env config so the live app never goes dark
+  // before Christopher clicks Connect.
+  const google = await resolveTenant1Google();
+
   const sources = [
-    await settle("email", () => runImapSync(prisma, {})),
-    await settle("calendar", () => syncCalendar(prisma, {})),
+    google
+      ? await settle("email", () =>
+          runGmailSync(prisma, google.client, google.accountEmail, {}),
+        )
+      : await settle("email", () => runImapSync(prisma, {})),
+    google
+      ? await settle("calendar", () =>
+          runGoogleCalendarSync(prisma, google.client, google.accountEmail, {}),
+        )
+      : await settle("calendar", () => syncCalendar(prisma, {})),
     await settle("fireflies", () => syncFireflies(prisma, {})),
   ];
+
+  if (google) await touchGoogleLastSynced(google.tenantId);
 
   const ai = aiEnabled()
     ? await settle("ai-insight", () => enrichActivities(prisma, { limit: 80 }))

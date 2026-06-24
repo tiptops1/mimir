@@ -1,17 +1,22 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { runImapSync } from "../src/lib/imap-sync";
+import { runGmailSync } from "../src/lib/gmail-sync";
+import { resolveTenant1Google } from "../src/lib/google-oauth";
+import { touchGoogleLastSynced } from "../src/lib/integrations";
 import { enrichActivities, aiEnabled } from "../src/lib/ai-extract";
 
-// Gmail/Workspace email sync over IMAP (App Password auth).
+// Email sync. Prefers tenant #1's OAuth Google connection (Gmail API); falls back
+// to the legacy IMAP App-Password path if no Google account is connected.
 //
 //   npm run sync:email                     -> incremental: only mail since last run
-//   npm run sync:email -- --backfill=200   -> also import the last 200 messages/folder
+//   npm run sync:email -- --backfill=200   -> first-run lookback (IMAP: messages/folder;
+//                                             Gmail: days of history)
 //   npm run sync:email -- --dry            -> connect + parse but write nothing
 //   npm run sync:email -- --no-ai          -> skip the Claude insight pass
 //
-// Env: IMAP_HOST, IMAP_PORT(=993), IMAP_USER, IMAP_PASSWORD (App Password),
-//      OWNER_EMAIL (defaults to IMAP_USER), ANTHROPIC_API_KEY (optional).
+// Env: GOOGLE_* + CONTROL_DATABASE_URL (OAuth path) or IMAP_*/OWNER_EMAIL (legacy),
+//      ANTHROPIC_API_KEY (optional).
 
 const prisma = new PrismaClient();
 
@@ -23,11 +28,24 @@ async function main() {
     ? Number.parseInt(backfillArg.split("=")[1] ?? "200", 10) || 200
     : 0;
 
-  const r = await runImapSync(prisma, { dry, backfill });
-  console.log(
-    `${dry ? "[DRY] " : ""}Scanned ${r.scanned} message(s) across ${r.mailboxes.join(", ")}. ` +
-      `Logged ${r.matched}, created ${r.created} contact(s), ${r.pending} queued for review.`,
-  );
+  const google = await resolveTenant1Google();
+  if (google) {
+    const r = await runGmailSync(prisma, google.client, google.accountEmail, {
+      dry,
+      backfillDays: backfill || undefined,
+    });
+    if (!dry) await touchGoogleLastSynced(google.tenantId);
+    console.log(
+      `${dry ? "[DRY] " : ""}Gmail (${google.accountEmail}): scanned ${r.scanned}. ` +
+        `Logged ${r.matched}, created ${r.created} contact(s), ${r.pending} queued.`,
+    );
+  } else {
+    const r = await runImapSync(prisma, { dry, backfill });
+    console.log(
+      `${dry ? "[DRY] " : ""}IMAP: scanned ${r.scanned} message(s) across ${r.mailboxes.join(", ")}. ` +
+        `Logged ${r.matched}, created ${r.created} contact(s), ${r.pending} queued for review.`,
+    );
+  }
 
   if (!dry && !noAi && aiEnabled()) {
     const ai = await enrichActivities(prisma, { limit: 60 });

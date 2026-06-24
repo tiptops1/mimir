@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { getOptionalSession } from "@/lib/dal";
 import { stageSchema } from "@/lib/validations";
 import { STAGE_LABELS, type StageValue } from "@/lib/constants";
@@ -12,6 +12,7 @@ export async function PATCH(
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const prisma = await getTenantDb();
 
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null);

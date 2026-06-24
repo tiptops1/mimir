@@ -1,0 +1,97 @@
+import { controlPrisma } from "@/lib/control-db";
+import { encrypt, decrypt } from "@/lib/crypto";
+
+// No "server-only" guard (like crypto.ts): the session-less sync scripts (tsx)
+// reuse these helpers, and server-only throws outside an RSC bundle.
+
+// Control-plane access to a tenant's connected third-party accounts. The OAuth
+// refresh token is encrypted with the same AES-256-GCM helper that protects
+// tenant connection strings (src/lib/crypto.ts). Mirrors tenant-context.ts in
+// style: thin helpers the routes / cron / scripts call, never a bare client.
+
+const GOOGLE = "google";
+
+/** A Google integration with its refresh token already decrypted, ready to use. */
+export interface GoogleCredential {
+  tenantId: string;
+  accountEmail: string;
+  refreshToken: string;
+  scopes: string[];
+  lastSyncedAt: Date | null;
+}
+
+/** Public view of the connection for the UI (no secret material). */
+export interface GoogleConnection {
+  accountEmail: string;
+  scopes: string[];
+  connectedAt: Date;
+  lastSyncedAt: Date | null;
+}
+
+/** Connection status for a tenant, safe to pass to a client component. */
+export async function getGoogleConnection(
+  tenantId: string,
+): Promise<GoogleConnection | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: { tenantId_provider: { tenantId, provider: GOOGLE } },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return {
+    accountEmail: row.accountEmail,
+    scopes: row.scopes,
+    connectedAt: row.connectedAt,
+    lastSyncedAt: row.lastSyncedAt,
+  };
+}
+
+/** The credential incl. decrypted refresh token, for server-side API calls. */
+export async function getGoogleCredential(
+  tenantId: string,
+): Promise<GoogleCredential | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: { tenantId_provider: { tenantId, provider: GOOGLE } },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return {
+    tenantId: row.tenantId,
+    accountEmail: row.accountEmail,
+    refreshToken: decrypt(row.refreshToken),
+    scopes: row.scopes,
+    lastSyncedAt: row.lastSyncedAt,
+  };
+}
+
+/** Create or replace the Google connection for a tenant (encrypts the token). */
+export async function upsertGoogleIntegration(args: {
+  tenantId: string;
+  accountEmail: string;
+  refreshToken: string;
+  scopes: string[];
+}): Promise<void> {
+  const data = {
+    accountEmail: args.accountEmail,
+    refreshToken: encrypt(args.refreshToken),
+    scopes: args.scopes,
+    status: "ACTIVE",
+  };
+  await controlPrisma.integration.upsert({
+    where: { tenantId_provider: { tenantId: args.tenantId, provider: GOOGLE } },
+    update: data,
+    create: { tenantId: args.tenantId, provider: GOOGLE, ...data },
+  });
+}
+
+/** Remove the Google connection for a tenant (after revoking at Google). */
+export async function deleteGoogleIntegration(tenantId: string): Promise<void> {
+  await controlPrisma.integration.deleteMany({
+    where: { tenantId, provider: GOOGLE },
+  });
+}
+
+/** Stamp lastSyncedAt after a successful ingestion run. */
+export async function touchGoogleLastSynced(tenantId: string): Promise<void> {
+  await controlPrisma.integration.updateMany({
+    where: { tenantId, provider: GOOGLE },
+    data: { lastSyncedAt: new Date() },
+  });
+}

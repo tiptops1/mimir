@@ -42,4 +42,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/src/generated/prisma
+# generated Prisma clients (control plane lives here; tenant client → node_modules/@prisma/client)
+/src/generated/

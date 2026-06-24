@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Building2, Users, Trophy, Flame } from "lucide-react";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
@@ -9,12 +9,19 @@ import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { PIPELINE_STAGES, ACTIVITY_TYPES } from "@/lib/constants";
+import { getGoogleConnection } from "@/lib/integrations";
 
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ google?: string }>;
+}) {
   const session = await verifySession();
+  const prisma = await getTenantDb();
+  const googleStatus = (await searchParams).google;
 
   const [
     total,
@@ -22,7 +29,7 @@ export default async function DashboardPage() {
     companies,
     recentCompanies,
     recentActivities,
-    syncState,
+    googleConn,
   ] =
     await Promise.all([
       prisma.company.count(),
@@ -45,13 +52,9 @@ export default async function DashboardPage() {
         take: 8,
         include: {
           company: { select: { id: true, nomSociete: true, enseigne: true, siret: true } },
-          user: { select: { name: true } },
         },
       }),
-      prisma.emailSyncState.findFirst({
-        orderBy: { updatedAt: "desc" },
-        select: { updatedAt: true },
-      }),
+      getGoogleConnection(session.tenantId),
     ]);
 
   const stageCounts = new Map<string, number>();
@@ -84,9 +87,22 @@ export default async function DashboardPage() {
       </PageHeader>
 
       <div className="space-y-6 p-6">
+        {googleStatus === "connected" && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+            Compte Google connecté. La synchronisation démarre au prochain cycle.
+          </div>
+        )}
+        {googleStatus === "error" && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
+            La connexion Google a échoué. Réessayez de connecter votre compte.
+          </div>
+        )}
         <ConnectGmailCta
-          connected={Boolean(syncState)}
-          lastSyncLabel={syncState ? formatDate(syncState.updatedAt) : null}
+          connected={Boolean(googleConn)}
+          accountEmail={googleConn?.accountEmail ?? null}
+          lastSyncLabel={
+            googleConn?.lastSyncedAt ? formatDate(googleConn.lastSyncedAt) : null
+          }
         />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

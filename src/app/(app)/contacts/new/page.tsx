@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { companyName } from "@/lib/display";
@@ -6,6 +6,7 @@ import { NewContactForm } from "@/components/new-contact-form";
 
 export default async function NewContactPage() {
   await verifySession();
+  const prisma = await getTenantDb();
 
   const companies = await prisma.company.findMany({
     select: { id: true, nomSociete: true, enseigne: true, siret: true },

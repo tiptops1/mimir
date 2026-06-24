@@ -2,7 +2,6 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -113,25 +112,11 @@ const toPotentiel = (
 };
 
 async function main() {
-  // 1) Seed the business owner admin (Christopher)
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "christopher@avelior.com";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!2026";
-  const adminName = process.env.SEED_ADMIN_NAME ?? "Christopher";
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  // Auth (users/admins) now lives in the CONTROL plane — created by the tenant
+  // provisioning/bootstrap scripts, not here. This seed only loads tenant DATA
+  // (companies + contacts) into whichever DB DATABASE_URL points at.
 
-  await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: { name: adminName, role: "ADMIN", passwordHash },
-    create: {
-      email: adminEmail,
-      name: adminName,
-      role: "ADMIN",
-      passwordHash,
-    },
-  });
-  console.log(`✓ Admin ready: ${adminName} <${adminEmail}>`);
-
-  // 2) Import companies from both committed CSVs
+  // Import companies from both committed CSVs
   const csvFiles = [
     join(process.cwd(), "data", "crm-chris-0-200.csv"),
     join(process.cwd(), "data", "crm-chris-200-1802.csv"),

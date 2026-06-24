@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession, requireRole } from "@/lib/dal";
 import { companySchema, activitySchema } from "@/lib/validations";
 
@@ -21,6 +21,7 @@ export async function createCompany(
   formData: FormData,
 ): Promise<FormResult> {
   await verifySession();
+  const prisma = await getTenantDb();
   const parsed = dataFromForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
@@ -45,6 +46,7 @@ export async function updateCompany(
   formData: FormData,
 ): Promise<FormResult> {
   await verifySession();
+  const prisma = await getTenantDb();
   const parsed = dataFromForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
@@ -62,6 +64,7 @@ export async function setPreferredChannel(
   value: string,
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   const allowed = ["PHONE", "EMAIL", "LINKEDIN"];
   await prisma.company.update({
     where: { id },
@@ -88,6 +91,7 @@ export async function setCompanySpecialties(
   activeKeys: string[],
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   const data = Object.fromEntries(
     SPECIALTY_KEYS.map((k) => [k, activeKeys.includes(k)]),
   );
@@ -125,6 +129,7 @@ export async function setCompanyEnum(
   value: string,
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   const def = ENUM_FIELDS[field];
   if (!def) return;
   let next: string | null;
@@ -147,6 +152,7 @@ export async function setCompanyNotes(
   notes: string,
 ): Promise<void> {
   await verifySession();
+  const prisma = await getTenantDb();
   const trimmed = notes.trim();
   await prisma.company.update({
     where: { id },
@@ -158,6 +164,7 @@ export async function setCompanyNotes(
 
 export async function deleteCompany(id: string): Promise<void> {
   await requireRole(["ADMIN", "MANAGER"]);
+  const prisma = await getTenantDb();
   await prisma.activity.deleteMany({ where: { companyId: id } });
   await prisma.contact.deleteMany({ where: { companyId: id } });
   await prisma.company.delete({ where: { id } });
@@ -171,6 +178,7 @@ export async function addActivity(
   formData: FormData,
 ): Promise<FormResult> {
   const session = await verifySession();
+  const prisma = await getTenantDb();
   const parsed = activitySchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     return { error: "Activité invalide." };

@@ -35,16 +35,6 @@ export function CompaniesFilters() {
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
-      <div className="min-w-44 flex-1">
-        <Input
-          value={societe}
-          onChange={(e) => {
-            setSociete(e.target.value);
-            f.setDebounced("societe", e.target.value);
-          }}
-          placeholder="Société…"
-        />
-      </div>
       <div className="min-w-40 flex-1">
         <Input
           value={nom}
@@ -53,6 +43,16 @@ export function CompaniesFilters() {
             f.setDebounced("nom", e.target.value);
           }}
           placeholder="Nom du contact…"
+        />
+      </div>
+      <div className="min-w-44 flex-1">
+        <Input
+          value={societe}
+          onChange={(e) => {
+            setSociete(e.target.value);
+            f.setDebounced("societe", e.target.value);
+          }}
+          placeholder="Société…"
         />
       </div>
       <div className="min-w-40 flex-1">

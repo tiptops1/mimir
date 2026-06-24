@@ -54,7 +54,7 @@ async function resolveTarget(
 
 export async function processCalendar(
   prisma: PrismaClient,
-  icsText: string,
+  events: IcsEvent[],
   ownerEmail: string,
   caches: Caches,
   opts: { windowDays?: number; dry?: boolean } = {},
@@ -63,7 +63,7 @@ export async function processCalendar(
   const now = Date.now();
   const out: CalendarOutcome = { events: 0, logged: 0, updated: 0, unmatched: 0 };
 
-  for (const ev of parseIcs(icsText)) {
+  for (const ev of events) {
     if (!ev.start) continue;
     if (ev.status === "CANCELLED") continue;
     const age = now - ev.start.getTime();
@@ -159,7 +159,7 @@ export async function syncCalendar(
   }
   const text = await res.text();
   const caches = await buildCaches(prisma);
-  return processCalendar(prisma, text, ownerEmail, caches, {
+  return processCalendar(prisma, parseIcs(text), ownerEmail, caches, {
     windowDays: opts.windowDays,
     dry: opts.dry,
   });

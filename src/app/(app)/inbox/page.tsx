@@ -1,14 +1,17 @@
 import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { Card, EmptyState, Badge } from "@/components/ui";
 import { PendingRow } from "@/components/inbox-actions";
 import { companyName } from "@/lib/display";
 import { emailDomain } from "@/lib/email-sync";
 import { formatDate } from "@/lib/utils";
+import { getTenantConfig } from "@/lib/tenant-config";
 
 export default async function InboxPage() {
   await verifySession();
+  const prisma = await getTenantDb();
+  const { owner } = getTenantConfig();
 
   const [pending, companiesRaw] = await Promise.all([
     prisma.pendingContact.findMany({
@@ -31,7 +34,7 @@ export default async function InboxPage() {
       />
       <div className="p-6">
         <p className="mb-4 max-w-2xl text-sm text-muted">
-          Adresses vues dans les emails de Christopher qui ne correspondent à
+          Adresses vues dans les emails de {owner.name} qui ne correspondent à
           aucun contact. Approuvez pour créer un contact (rattaché à une société
           existante ou à une nouvelle), ou ignorez.
         </p>

@@ -30,22 +30,22 @@ export function ContactsFilters() {
       </div>
       <div className="min-w-40 flex-1">
         <Input
-          value={contact}
-          onChange={(e) => {
-            setContact(e.target.value);
-            f.setDebounced("contact", e.target.value);
-          }}
-          placeholder="Email / téléphone…"
-        />
-      </div>
-      <div className="min-w-40 flex-1">
-        <Input
           value={societe}
           onChange={(e) => {
             setSociete(e.target.value);
             f.setDebounced("societe", e.target.value);
           }}
           placeholder="Société…"
+        />
+      </div>
+      <div className="min-w-40 flex-1">
+        <Input
+          value={contact}
+          onChange={(e) => {
+            setContact(e.target.value);
+            f.setDebounced("contact", e.target.value);
+          }}
+          placeholder="Email / téléphone…"
         />
       </div>
       <Select

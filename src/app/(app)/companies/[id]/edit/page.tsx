@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { CompanyForm } from "@/components/company-form";
 import { companyName } from "@/lib/display";
@@ -11,6 +11,7 @@ export default async function EditCompanyPage({
   params: Promise<{ id: string }>;
 }) {
   await verifySession();
+  const prisma = await getTenantDb();
   const { id } = await params;
   const company = await prisma.company.findUnique({ where: { id } });
   if (!company) notFound();

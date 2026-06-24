@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
@@ -66,6 +66,7 @@ function StatCard({
 
 export default async function AnalyticsPage() {
   await verifySession();
+  const prisma = await getTenantDb();
 
   const companies = await prisma.company.findMany({
     select: {

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton } from "@/components/ui";
@@ -13,6 +13,7 @@ export default async function PipelinePage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   await verifySession();
+  const prisma = await getTenantDb();
   const sp = await searchParams;
   const rawStage = typeof sp.stage === "string" ? sp.stage : "";
   const highlight = PIPELINE_STAGES.some((s) => s.value === rawStage)

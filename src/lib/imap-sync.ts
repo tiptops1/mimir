@@ -1,50 +1,12 @@
 import { ImapFlow } from "imapflow";
-import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
+import { simpleParser } from "mailparser";
 import type { PrismaClient } from "@prisma/client";
-import {
-  buildCaches,
-  processEmail,
-  type Addr,
-  type ParsedEmail,
-  type SyncOutcome,
-} from "./email-sync";
+import { buildCaches, processEmail, type SyncOutcome } from "./email-sync";
+import { toParsedEmail } from "./mime-email";
 
-// Gmail / Google Workspace email sync over IMAP (App Password auth), reusable by
-// both the CLI script (scripts/sync-email.ts) and the cron route. Reads IMAP_*
-// and OWNER_EMAIL from the environment.
-
-function addrList(a: AddressObject | AddressObject[] | undefined): Addr[] {
-  if (!a) return [];
-  const arr = Array.isArray(a) ? a : [a];
-  const out: Addr[] = [];
-  for (const obj of arr) {
-    for (const v of obj.value ?? []) {
-      if (v.address) out.push({ address: v.address, name: v.name || null });
-    }
-  }
-  return out;
-}
-
-function toParsedEmail(m: ParsedMail): ParsedEmail {
-  const text = (m.text ?? "").replace(/\r\n/g, "\n");
-  const snippet = text.replace(/\s+/g, " ").trim().slice(0, 280) || null;
-  // Strip quoted reply chains so the AI pass focuses on the new message.
-  const body =
-    text
-      .split(/\n>+|\nLe .* a écrit :|\nOn .* wrote:/)[0]
-      .trim()
-      .slice(0, 8000) || null;
-  return {
-    messageId: m.messageId ?? null,
-    date: m.date ?? new Date(),
-    subject: m.subject ?? null,
-    from: addrList(m.from),
-    to: addrList(m.to),
-    cc: addrList(m.cc),
-    snippet,
-    body,
-  };
-}
+// Gmail / Google Workspace email sync over IMAP (App Password auth). LEGACY path,
+// kept as a fallback until the tenant connects via OAuth (see gmail-sync.ts).
+// Reads IMAP_* and OWNER_EMAIL from the environment.
 
 export interface ImapSyncOptions {
   dry?: boolean;

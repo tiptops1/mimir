@@ -10,8 +10,12 @@ const encodedKey = new TextEncoder().encode(process.env.SESSION_SECRET);
 async function isAuthenticated(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   try {
-    await jwtVerify(token, encodedKey, { algorithms: ["HS256"] });
-    return true;
+    const { payload } = await jwtVerify(token, encodedKey, {
+      algorithms: ["HS256"],
+    });
+    // A pre-multi-tenant token has no tenantId — treat it as unauthenticated so
+    // stale sessions are forced to re-login (and don't loop /login ↔ /dashboard).
+    return typeof payload.tenantId === "string" && payload.tenantId.length > 0;
   } catch {
     return false;
   }
