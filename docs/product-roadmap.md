@@ -108,27 +108,38 @@ combinable filters.
 
 ## P1 — Close the prospecting loop *(the moat compounds here)*
 
+> **Status: ✅ shipped & deployed (2026-06-26).** P1.1–P1.4 all live on `main` → Railway. Outbound
+> AI-researched email, the Deal object, sequences, and notifications + digest landed in one push.
+
 Where the auto-ingestion advantage turns into an outbound advantage.
 
-### P1.1 — Outbound email from the CRM *(rides platform Phase 3 — per-tenant creds)*
-- [ ] Add **send** scope to the existing Gmail OAuth (today ingestion is read-only — a prospecting
-      tool that can't send is half a tool).
-- [ ] Compose + send from the company/contact view; the sent mail lands back in the activity timeline.
-- [ ] **Email templates** (tenant config).
+### P1.1 — Outbound email from the CRM ✅ *(shipped single-tenant; gmail.send already granted)*
+- [x] **send** scope already on the Gmail OAuth (`gmail.send` in `GOOGLE_SCOPES`) — no re-consent.
+- [x] Compose + send from the contact on the company fiche (`email-composer.tsx` →
+      `actions/email.ts sendEmail` → `lib/gmail-send.ts`); the sent mail logs as an OUTBOUND EMAIL
+      activity (own Message-ID so the next sync dedupes) and bumps `dernierContact`.
+- [x] ⭐ **AI-generate a researched draft** — "Générer avec IA" builds a documented dossier
+      (`lib/email-research.ts`: CRM record + activity history with AI summaries + live web research via
+      recherche-entreprises.gouv.fr + the firm's website) and drafts a tailored email via Gemini.
+- [ ] Email templates (tenant config) — not done; the AI composer largely supersedes it.
 
-### P1.2 — Sequences / cadences
-- [ ] Multi-touch cadence (e.g. day 0 email → day 3 call task → day 7 LinkedIn), auto-creating tasks
-      (P0.1) and sends (P1.1). This is the Outreach/Salesloft core, scoped to the FR insurance vertical.
-- [ ] Enroll/pause/skip from the company or a list.
+### P1.2 — Sequences / cadences ✅
+- [x] Multi-touch cadence (`Sequence`/`Enrollment` models; `lib/sequences.ts advanceSequences` in the
+      cron) auto-creating tasks. **Auto-send is OFF by design** — EMAIL steps create a task the user
+      actions via the AI composer. Seeded "Prospection standard" (email→call→LinkedIn→email, 0/3/7/14 j).
+- [x] Enroll/pause/skip from the company fiche (`sequences-card.tsx`, `actions/sequences.ts`).
 
-### P1.3 — Deal / Opportunity object *(fold into platform Phase 1's entity/field config)*
-- [ ] Split stage off `Company` into a `Deal` (a company re-prospected across renewals / products —
-      santé this year, prévoyance next — needs parallel + historical opportunities).
-- [ ] **Do this before the Phase 1 config model hardens** — retrofitting it later is exactly the
-      rebuild CLAUDE.md warns against.
+### P1.3 — Deal / Opportunity object ✅ *(additive write-through; folded alongside Phase 1)*
+- [x] `Deal` model (stage/product/amount/status/isPrimary); a company can hold parallel/historical
+      opportunities. The board stays company-keyed via primary-deal write-through
+      (`lib/deals.ts`); `scripts/backfill-deals.ts` seeded 731 primary deals. "Affaires" card on the fiche.
+- [x] Done before the Phase 1 config model hardened, per CLAUDE.md.
 
-### P1.4 — Notifications
-- [ ] In-app + **email digest** ("3 prospects à relancer aujourd'hui").
+### P1.4 — Notifications ✅
+- [x] In-app header **bell** (`notifications-bell.tsx`, `lib/notifications.ts`) — count of overdue/today
+      tasks + prospects to relance, from existing data (no new model).
+- [x] **Email digest** (`lib/digest.ts sendDailyDigest`, cron-guarded once/day via `SyncCursor "digest"`)
+      to the owner's mailbox via `gmail-send`.
 
 ---
 
@@ -173,6 +184,20 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-06-26 — **P1 shipped in one push (outbound AI email + Deal + sequences + notifications).**
+  Five-stage build, each additive + verified + deployed to `main`:
+  (1) **Outbound + AI-researched email** — `email-composer.tsx` on the fiche; "Générer avec IA" builds a
+  documented dossier (CRM + activity AI summaries + live registry/website research, `lib/email-research.ts`)
+  and drafts via the shared `callModel`; send via `lib/gmail-send.ts`, logged as OUTBOUND with our own
+  Message-ID (sync dedupes). (2) **Deal object** — additive `Deal` with primary-deal↔company.stage
+  write-through (`lib/deals.ts`); `deals:backfill` seeded 731. (3) **Config core** — `FieldDefinition`
+  store + flexible `customFields` Json + `CustomFieldsSection` (`config:seed`). (4) **Sequences** —
+  `Sequence`/`Enrollment`, `advanceSequences` in cron materializes tasks, auto-send OFF. (5) **Notifications**
+  — header bell + daily `sendDailyDigest` (cron-guarded). All schema changes additive `db:push` to prod
+  (Deal, FieldDefinition, Sequence, Enrollment collections). tsc + eslint + next build green throughout;
+  research/write-through/custom-field/sequence engines each verified on throwaway prod records. Commits
+  `889f2d4`/`fa251be`/`ef9029b`/`65d8274` + this stage. **Live send + AI compose run with the prod Gemini
+  key remain the owner's to exercise** (key is Railway-only; first send should go to a controlled address).
 - 2026-06-25 — **AI enrichment was silently dead in prod — found & fixed (shipped & deployed).** The
   "auto-updating intelligent record" the North star depends on had **never actually run in production**:
   `enrichActivities` (`lib/ai-extract.ts`) filtered `aiSummary: null`, but on **MongoDB a `: null` Prisma

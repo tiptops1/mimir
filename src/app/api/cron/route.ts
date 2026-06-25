@@ -9,6 +9,7 @@ import { touchGoogleLastSynced } from "@/lib/integrations";
 import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
 import { advanceSequences } from "@/lib/sequences";
+import { sendDailyDigest } from "@/lib/digest";
 
 // Scheduled entry point: pull from every connected source, then run the Claude
 // insight pass once. Hit it from Railway's cron (or any external scheduler):
@@ -74,7 +75,16 @@ async function handle(req: NextRequest) {
   // Materialize any due sequence steps into the task worklist.
   const sequences = await settle("sequences", () => advanceSequences(prisma));
 
-  return NextResponse.json({ ranAt: new Date().toISOString(), sources, ai, sequences });
+  // At most one prospecting digest email per day (guarded internally).
+  const digest = await settle("digest", () => sendDailyDigest(prisma));
+
+  return NextResponse.json({
+    ranAt: new Date().toISOString(),
+    sources,
+    ai,
+    sequences,
+    digest,
+  });
 }
 
 export const GET = handle;

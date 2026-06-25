@@ -9,6 +9,7 @@ import { touchGoogleLastSynced } from "../src/lib/integrations";
 import { syncFireflies } from "../src/lib/fireflies";
 import { enrichActivities, aiEnabled } from "../src/lib/ai-extract";
 import { advanceSequences } from "../src/lib/sequences";
+import { sendDailyDigest } from "../src/lib/digest";
 
 // One-shot: run every connected source, then the Claude insight pass once.
 // Each source is independent — one failing (or unconfigured) doesn't stop the
@@ -54,6 +55,7 @@ async function main() {
   }
 
   if (!dry) await run("sequences", () => advanceSequences(prisma));
+  if (!dry) await run("digest", () => sendDailyDigest(prisma));
 }
 
 main()

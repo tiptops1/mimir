@@ -61,14 +61,17 @@ ingestion routing is Phase 3.
 `components/enum-cell.tsx` + `components/global-search.tsx`, and `no-explicit-any` in
 `scripts/enrich-dirigeants.ts`. `next build` does not fail on them.
 
-## Phase 1 — Config-driven core
+## Phase 1 — Config-driven core  *(2026-06-26: config store + custom fields + Deal landed)*
 The product itself; Chris's CRM becomes one *config* of it.
-- [ ] Entity & field-definition model (config stored as data)
-- [ ] Dynamic form + table rendering from config
-  - ~ *Partial:* pipeline card render seam exists (`src/lib/tenant-config.ts` →
-    `getTenantConfig().pipelineCard`); still a hardcoded constant, not yet a stored config model.
-- [ ] Express Chris's current Company/Contact/Deal fields + 8 pipeline stages as seeded config
-- [ ] Custom-field read/write on flexible documents (no migration to add a field)
+- [x] Entity & field-definition model (config stored as data) — `FieldDefinition` collection
+      (entity/key/label/type/options/required/showInForm), read via `lib/field-config.ts getFieldDefs`.
+- [~] Dynamic form + table rendering from config — *Partial:* custom fields render dynamically from
+      config on the fiche (`CustomFieldsSection`); pipeline card seam still in `tenant-config.ts`.
+      Full dynamic rendering of NATIVE fields + pipeline-stages-as-config remain the documented follow-up.
+- [~] Express Chris's current fields + stages as seeded config — *Partial:* `config:seed` seeds COMPANY
+      custom-field defs; the Deal object (P1.3) split stage off Company. Native-field config = follow-up.
+- [x] Custom-field read/write on flexible documents (no migration) — `customFields Json?` on
+      Company/Contact/Deal + `actions/custom-fields.ts setCompanyCustomField`. Verified on prod Mongo.
 
 ## Phase 2 — Self-serve customization
 Proves the "fully editable" promise on a real user before selling it.
