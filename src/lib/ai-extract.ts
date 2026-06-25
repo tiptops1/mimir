@@ -79,8 +79,12 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :
 }
 
 Règles : sois factuel, n'invente rien. Si l'information manque, mets null (ou []
-pour actionItems). "suggestedStage" reflète l'avancement visible dans l'échange,
-pas une supposition.`;
+pour actionItems). "suggestedStage" = la dernière étape réellement FRANCHIE dans
+cet échange, jamais une étape seulement prévue, promise ou planifiée. Exemples :
+un rendez-vous qui vient d'avoir lieu = RDV_OBTENU ; une démo seulement planifiée
+n'est PAS DEMO_REALISEE (laisse RDV_OBTENU) ; une proposition évoquée mais pas
+encore envoyée n'est PAS PROPOSITION_ENVOYEE. Dans le doute, choisis l'étape la
+moins avancée.`;
 
 /** Pull the first balanced JSON object out of a model response. */
 function parseJsonObject(text: string): unknown {
@@ -258,7 +262,11 @@ export async function enrichActivities(
   const pending = await prisma.activity.findMany({
     where: {
       type: { in: ["EMAIL", "MEETING", "CALL"] },
-      aiSummary: null,
+      // MongoDB stores no `aiSummary` field until we write one, and on MongoDB
+      // Prisma's `aiSummary: null` does NOT match a *missing* field — so the old
+      // `null` filter silently matched nothing and the AI pass never ran in prod.
+      // `isSet: false` matches the un-enriched (field-absent) activities.
+      aiSummary: { isSet: false },
       OR: [{ body: { not: null } }, { note: { not: null } }],
     },
     orderBy: { date: "desc" },

@@ -275,7 +275,13 @@ async function logEmailActivity(
   await prisma.company.updateMany({
     where: {
       id: companyId,
-      OR: [{ dernierContact: null }, { dernierContact: { lt: email.date } }],
+      // `isSet:false` covers Mongo docs with no dernierContact field (a plain
+      // `: null` filter misses those on Mongo, so first contact never stamped).
+      OR: [
+        { dernierContact: { isSet: false } },
+        { dernierContact: null },
+        { dernierContact: { lt: email.date } },
+      ],
     },
     data: { dernierContact: email.date },
   });

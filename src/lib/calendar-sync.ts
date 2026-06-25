@@ -126,7 +126,13 @@ export async function processCalendar(
       await prisma.company.updateMany({
         where: {
           id: target.companyId,
-          OR: [{ dernierContact: null }, { dernierContact: { lt: ev.start } }],
+          // `isSet:false` covers MongoDB docs with no dernierContact field (a
+          // plain `: null` filter misses those on Mongo, so first contact never stamped).
+          OR: [
+            { dernierContact: { isSet: false } },
+            { dernierContact: null },
+            { dernierContact: { lt: ev.start } },
+          ],
         },
         data: { dernierContact: ev.start },
       });
