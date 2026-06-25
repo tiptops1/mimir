@@ -1,18 +1,42 @@
+import type { Prisma } from "@prisma/client";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui";
 import { TaskList, type TaskRow } from "@/components/task-list";
+import { TodoFilters } from "@/components/todo-filters";
 import { NewTaskForm } from "@/components/new-task-form";
 import { companyName } from "@/lib/display";
 
-export default async function TodoPage() {
+export default async function TodoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await verifySession();
   const prisma = await getTenantDb();
 
-  const [tasks, companiesRaw] = await Promise.all([
+  const sp = await searchParams;
+  const q = typeof sp.q === "string" ? sp.q : "";
+  const societe = typeof sp.societe === "string" ? sp.societe : "";
+  const type = typeof sp.type === "string" ? sp.type : "";
+  const source = typeof sp.source === "string" ? sp.source : "";
+
+  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
+  // Each active filter is one AND clause, combinable like the other list pages.
+  const and: Prisma.TaskWhereInput[] = [{ done: false }];
+  if (q) and.push({ title: ci(q) });
+  if (societe)
+    and.push({ company: { OR: [{ nomSociete: ci(societe) }, { enseigne: ci(societe) }] } });
+  if (type === "RELANCE" || type === "APPEL" || type === "EMAIL" || type === "RDV" || type === "AUTRE")
+    and.push({ type });
+  if (source === "MANUAL" || source === "AI_NEXTSTEP") and.push({ source });
+
+  const hasFilters = Boolean(q || societe || type || source);
+
+  const [tasks, totalOpen, companiesRaw] = await Promise.all([
     prisma.task.findMany({
-      where: { done: false },
+      where: { AND: and },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       include: {
         company: {
@@ -20,6 +44,7 @@ export default async function TodoPage() {
         },
       },
     }),
+    prisma.task.count({ where: { done: false } }),
     prisma.company.findMany({
       select: { id: true, nomSociete: true, enseigne: true, siret: true },
       orderBy: { nomSociete: "asc" },
@@ -68,15 +93,24 @@ export default async function TodoPage() {
     <div>
       <PageHeader
         title="À faire"
-        subtitle={`${openCount} tâche${openCount > 1 ? "s" : ""} ouverte${openCount > 1 ? "s" : ""}`}
+        subtitle={
+          hasFilters
+            ? `${openCount} sur ${totalOpen} tâche${totalOpen > 1 ? "s" : ""} ouverte${totalOpen > 1 ? "s" : ""}`
+            : `${totalOpen} tâche${totalOpen > 1 ? "s" : ""} ouverte${totalOpen > 1 ? "s" : ""}`
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          <TodoFilters />
           {openCount === 0 ? (
             <EmptyState
-              title="Rien à faire pour le moment"
-              hint="Les relances que vous planifiez et les prochaines étapes détectées par l'IA apparaîtront ici."
+              title={hasFilters ? "Aucune tâche ne correspond" : "Rien à faire pour le moment"}
+              hint={
+                hasFilters
+                  ? "Aucune tâche ouverte ne correspond à ces filtres. Réinitialisez pour tout voir."
+                  : "Les relances que vous planifiez et les prochaines étapes détectées par l'IA apparaîtront ici."
+              }
             />
           ) : (
             buckets

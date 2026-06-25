@@ -16,7 +16,12 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { PrioriteBadge, PotentielBadge } from "@/components/badges";
-import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
+import {
+  PIPELINE_STAGES,
+  PRIORITE_OPTIONS,
+  POTENTIEL_OPTIONS,
+  type StageValue,
+} from "@/lib/constants";
 import type { CardFieldKey, PipelineCardConfig } from "@/lib/tenant-config";
 
 export interface PipelineCard {
@@ -197,27 +202,34 @@ export function PipelineBoard({
   const [fSociete, setFSociete] = useState("");
   const [fNom, setFNom] = useState("");
   const [fContact, setFContact] = useState("");
+  const [fPriorite, setFPriorite] = useState("");
+  const [fPotentiel, setFPotentiel] = useState("");
+  const [fTask, setFTask] = useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  // Client-side filters — the cards are already loaded, so narrow by société /
-  // contact name / email-phone instantly, with no server round-trip. The three
-  // combine (AND). Drag-drop still operates on the full `board`.
+  // Client-side filters — the cards are already loaded, so narrow instantly with
+  // no server round-trip. All filters combine (AND). Text matches société /
+  // contact name / email-phone; the selects match priorité / potentiel / whether
+  // an open follow-up task exists. Drag-drop still operates on the full `board`.
   const s = fSociete.trim().toLowerCase();
   const n = fNom.trim().toLowerCase();
   const c = fContact.trim().toLowerCase();
-  const filtering = Boolean(s || n || c);
+  const filtering = Boolean(s || n || c || fPriorite || fPotentiel || fTask);
   const visible = useMemo<Board>(() => {
     if (!filtering) return board;
     const match = (card: PipelineCard) =>
       (!s || card.search.societe.includes(s)) &&
       (!n || card.search.nom.includes(n)) &&
-      (!c || card.search.contact.includes(c));
+      (!c || card.search.contact.includes(c)) &&
+      (!fPriorite || card.priorite === fPriorite) &&
+      (!fPotentiel || card.potentiel === fPotentiel) &&
+      (!fTask || (fTask === "yes" ? card.hasOpenTask : !card.hasOpenTask));
     return Object.fromEntries(
       STAGE_VALUES.map((st) => [st, board[st].filter(match)]),
     ) as Board;
-  }, [board, filtering, s, n, c]);
+  }, [board, filtering, s, n, c, fPriorite, fPotentiel, fTask]);
   const shownCount = STAGE_VALUES.reduce((acc, st) => acc + visible[st].length, 0);
 
   function stageOf(cardId: string): StageValue | null {
@@ -303,6 +315,39 @@ export function PipelineBoard({
           placeholder="Email / téléphone…"
           className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
         />
+        <select
+          value={fPriorite}
+          onChange={(e) => setFPriorite(e.target.value)}
+          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">Toutes priorités</option>
+          {PRIORITE_OPTIONS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={fPotentiel}
+          onChange={(e) => setFPotentiel(e.target.value)}
+          className="w-36 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">Tout potentiel</option>
+          {POTENTIEL_OPTIONS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={fTask}
+          onChange={(e) => setFTask(e.target.value)}
+          className="w-44 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">Relance : toutes</option>
+          <option value="yes">Avec relance à faire</option>
+          <option value="no">Sans relance</option>
+        </select>
         {filtering && (
           <button
             type="button"
@@ -310,6 +355,9 @@ export function PipelineBoard({
               setFSociete("");
               setFNom("");
               setFContact("");
+              setFPriorite("");
+              setFPotentiel("");
+              setFTask("");
             }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
           >
