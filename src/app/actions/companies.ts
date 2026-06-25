@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession, requireRole } from "@/lib/dal";
 import { companySchema, activitySchema } from "@/lib/validations";
+import { mirrorStageToPrimaryDeal } from "@/lib/deals";
 
 export interface FormResult {
   error?: string;
@@ -141,6 +142,10 @@ export async function setCompanyEnum(
     return; // ignore invalid values rather than throwing
   }
   await prisma.company.update({ where: { id }, data: { [field]: next } });
+  // Keep the primary deal in sync when the pipeline stage changes inline.
+  if (field === "stage" && next) {
+    await mirrorStageToPrimaryDeal(prisma, id, next);
+  }
   revalidatePath("/companies");
   revalidatePath(`/companies/${id}`);
   revalidatePath("/pipeline");

@@ -97,11 +97,37 @@ model Company {
   contacts   Contact[]
   activities Activity[]
   tasks      Task[]
+  deals      Deal[]
 
   @@index([stage])
   @@index([ville])
   @@index([priorite])
   @@index([codePostal])
+}
+
+// Opportunity / affaire — a company can be re-prospected across renewals and
+// products (santé this year, prévoyance next), so stage lives on a Deal, not only
+// on Company. One deal per company is flagged `isPrimary` and mirrors the company's
+// pipeline stage (the board stays company-keyed); additional deals track parallel
+// or historical opportunities. `stage`/`status` are strings (config-friendly,
+// mirror the PipelineStage values), matching the Task/Activity convention.
+model Deal {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String    @db.ObjectId
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title     String    @default("Opportunité")
+  stage     String    @default("A_QUALIFIER")
+  product   String? // e.g. Santé, Prévoyance, IARD
+  amount    Int? // estimated annual value, in euros
+  status    String    @default("OPEN") // OPEN | WON | LOST
+  isPrimary Boolean   @default(true) // the deal mirrored on the pipeline board
+  closeDate DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([stage])
+  @@index([status])
 }
 
 // People attached to a company (dirigeants).

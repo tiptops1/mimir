@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTenantDb } from "@/lib/tenant-context";
 import { getOptionalSession } from "@/lib/dal";
 import { stageSchema } from "@/lib/validations";
+import { mirrorStageToPrimaryDeal } from "@/lib/deals";
 import { STAGE_LABELS, type StageValue } from "@/lib/constants";
 
 export async function PATCH(
@@ -32,6 +33,7 @@ export async function PATCH(
         ...(stage === "PROPOSITION_ENVOYEE" ? { propositionEnvoyee: true } : {}),
       },
     });
+    await mirrorStageToPrimaryDeal(prisma, id, stage);
     await prisma.activity.create({
       data: {
         companyId: id,

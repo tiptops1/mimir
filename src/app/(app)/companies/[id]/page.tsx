@@ -19,6 +19,7 @@ import {
 } from "@/components/company-detail-actions";
 import { EnrichButton } from "@/components/enrich-button";
 import { CompanyInlineEditor } from "@/components/company-inline-editor";
+import { DealsCard, type DealRow } from "@/components/deals-card";
 import {
   companyName,
   contactName,
@@ -78,9 +79,20 @@ export default async function CompanyDetailPage({
       contacts: { orderBy: { createdAt: "asc" } },
       activities: { orderBy: { date: "desc" } },
       tasks: { where: { done: false }, orderBy: { dueDate: "asc" } },
+      deals: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
     },
   });
   if (!company) notFound();
+
+  const deals: DealRow[] = company.deals.map((d) => ({
+    id: d.id,
+    title: d.title,
+    stage: d.stage,
+    product: d.product,
+    amount: d.amount,
+    status: d.status,
+    isPrimary: d.isPrimary,
+  }));
 
   const openTasks: TaskRow[] = company.tasks.map((t) => ({
     id: t.id,
@@ -121,17 +133,28 @@ export default async function CompanyDetailPage({
       <div className="space-y-6 p-6">
         <CompanyInlineEditor company={company} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Tâches ({openTasks.length})</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <TaskList tasks={openTasks} empty="Aucune tâche ouverte." />
-            <div className="border-t border-border pt-4">
-              <NewTaskForm companyId={company.id} compact />
-            </div>
-          </CardBody>
-        </Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tâches ({openTasks.length})</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <TaskList tasks={openTasks} empty="Aucune tâche ouverte." />
+              <div className="border-t border-border pt-4">
+                <NewTaskForm companyId={company.id} compact />
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Affaires ({deals.length})</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <DealsCard companyId={company.id} deals={deals} />
+            </CardBody>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
