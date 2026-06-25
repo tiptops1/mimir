@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
+import { getGoogleConnection } from "@/lib/integrations";
 import { authorNamesByUserId } from "@/lib/authors";
+import { EmailComposer } from "@/components/email-composer";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import { EnumCell } from "@/components/enum-cell";
@@ -66,8 +68,9 @@ export default async function CompanyDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
+  const googleConnection = await getGoogleConnection(session.tenantId);
   const { id } = await params;
   const company = await prisma.company.findUnique({
     where: { id },
@@ -149,41 +152,51 @@ export default async function CompanyDetailPage({
                   return (
                     <div
                       key={c.id}
-                      className="flex items-start justify-between gap-3 rounded-lg border border-border p-3"
+                      className="rounded-lg border border-border p-3"
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{contactName(c)}</p>
-                          <DecisionMakerToggle
-                            id={c.id}
-                            companyId={company.id}
-                            active={Boolean(c.isDecisionMaker)}
-                          />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{contactName(c)}</p>
+                            <DecisionMakerToggle
+                              id={c.id}
+                              companyId={company.id}
+                              active={Boolean(c.isDecisionMaker)}
+                            />
+                          </div>
+                          <p className="text-xs text-muted">{c.fonction || "—"}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                            {c.email && <span>{c.email}</span>}
+                            {!c.email && guess && (
+                              <span className="text-slate-400" title="Email probable (à vérifier)">
+                                ✉ {guess} <em>(estimé)</em>
+                              </span>
+                            )}
+                            {c.telephone && <span>{c.telephone}</span>}
+                            <a
+                              href={
+                                c.linkedinUrl ||
+                                personLinkedInSearch(c, company)
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-brand hover:underline"
+                            >
+                              <Search className="h-3.5 w-3.5" />
+                              {c.linkedinUrl ? "LinkedIn" : "LinkedIn ↗"}
+                            </a>
+                            <EmailComposer
+                              companyId={company.id}
+                              contactId={c.id}
+                              contactLabel={contactName(c)}
+                              defaultTo={c.email || guess || ""}
+                              googleConnected={Boolean(googleConnection)}
+                              googleEmail={googleConnection?.accountEmail ?? null}
+                            />
+                          </div>
                         </div>
-                        <p className="text-xs text-muted">{c.fonction || "—"}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                          {c.email && <span>{c.email}</span>}
-                          {!c.email && guess && (
-                            <span className="text-slate-400" title="Email probable (à vérifier)">
-                              ✉ {guess} <em>(estimé)</em>
-                            </span>
-                          )}
-                          {c.telephone && <span>{c.telephone}</span>}
-                          <a
-                            href={
-                              c.linkedinUrl ||
-                              personLinkedInSearch(c, company)
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-brand hover:underline"
-                          >
-                            <Search className="h-3.5 w-3.5" />
-                            {c.linkedinUrl ? "LinkedIn" : "LinkedIn ↗"}
-                          </a>
-                        </div>
+                        <ContactDeleteButton id={c.id} companyId={company.id} />
                       </div>
-                      <ContactDeleteButton id={c.id} companyId={company.id} />
                     </div>
                   );
                 })

@@ -134,7 +134,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Retry-After (capped) — a persistent 429/quota leaves aiSummary null so the
  * next cron run retries the activity.
  */
-async function callGemini(userContent: string): Promise<string | null> {
+async function callGemini(
+  system: string,
+  userContent: string,
+  maxTokens: number,
+): Promise<string | null> {
   const key = process.env.GEMINI_API_KEY!;
   const model = process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
 
@@ -147,14 +151,14 @@ async function callGemini(userContent: string): Promise<string | null> {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 700,
+        max_tokens: maxTokens,
         response_format: { type: "json_object" },
         // Gemini 2.5 Flash is a "thinking" model; its hidden thinking tokens bill
         // at the output rate. Extraction needs no reasoning — disabling it cut
         // billable output ~4x in testing with identical results.
         reasoning_effort: "none",
         messages: [
-          { role: "system", content: SYSTEM },
+          { role: "system", content: system },
           { role: "user", content: userContent },
         ],
       }),
@@ -182,7 +186,11 @@ async function callGemini(userContent: string): Promise<string | null> {
 }
 
 /** Call Claude's Messages endpoint. Returns the raw text, or null on error. */
-async function callClaude(userContent: string): Promise<string | null> {
+async function callClaude(
+  system: string,
+  userContent: string,
+  maxTokens: number,
+): Promise<string | null> {
   const key = process.env.ANTHROPIC_API_KEY!;
   const res = await fetch(ANTHROPIC_URL, {
     method: "POST",
@@ -193,8 +201,8 @@ async function callClaude(userContent: string): Promise<string | null> {
     },
     body: JSON.stringify({
       model: process.env.ANTHROPIC_MODEL || ANTHROPIC_DEFAULT_MODEL,
-      max_tokens: 700,
-      system: SYSTEM,
+      max_tokens: maxTokens,
+      system,
       messages: [{ role: "user", content: userContent }],
     }),
   });
@@ -210,12 +218,34 @@ async function callClaude(userContent: string): Promise<string | null> {
     .join("");
 }
 
+/**
+ * Generic single-shot call to the active LLM (Gemini preferred, Claude fallback).
+ * Returns the raw text response, or null if no provider is configured / on error.
+ * Shared by the insight-extraction pass and the email composer (lib/email-research).
+ */
+export async function callModel(
+  system: string,
+  user: string,
+  opts: { maxTokens?: number } = {},
+): Promise<string | null> {
+  const which = provider();
+  if (!which) return null;
+  const maxTokens = opts.maxTokens ?? 700;
+  try {
+    return which === "gemini"
+      ? await callGemini(system, user, maxTokens)
+      : await callClaude(system, user, maxTokens);
+  } catch (e) {
+    console.warn(`[ai] callModel failed: ${(e as Error).message}`);
+    return null;
+  }
+}
+
 /** Call the active LLM on one interaction. Returns null if disabled or on any error. */
 export async function extractInsight(
   input: ExtractInput,
 ): Promise<CrmInsight | null> {
-  const which = provider();
-  if (!which) return null;
+  if (!aiEnabled()) return null;
 
   const body = input.body.replace(/\s+\n/g, "\n").trim().slice(0, 8000);
   if (!body) return null;
@@ -234,17 +264,9 @@ export async function extractInsight(
 
   const userContent = `${header}\n\n---\n${body}`;
 
-  try {
-    const text =
-      which === "gemini"
-        ? await callGemini(userContent)
-        : await callClaude(userContent);
-    if (!text) return null;
-    return coerceInsight(parseJsonObject(text));
-  } catch (e) {
-    console.warn(`[ai] extract failed: ${(e as Error).message}`);
-    return null;
-  }
+  const text = await callModel(SYSTEM, userContent);
+  if (!text) return null;
+  return coerceInsight(parseJsonObject(text));
 }
 
 /**
