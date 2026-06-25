@@ -8,6 +8,7 @@ import { resolveTenant1Google } from "../src/lib/google-oauth";
 import { touchGoogleLastSynced } from "../src/lib/integrations";
 import { syncFireflies } from "../src/lib/fireflies";
 import { enrichActivities, aiEnabled } from "../src/lib/ai-extract";
+import { advanceSequences } from "../src/lib/sequences";
 
 // One-shot: run every connected source, then the Claude insight pass once.
 // Each source is independent — one failing (or unconfigured) doesn't stop the
@@ -51,6 +52,8 @@ async function main() {
   } else if (!aiEnabled()) {
     console.log("· ai-insight: skipped (no GEMINI_API_KEY or ANTHROPIC_API_KEY)");
   }
+
+  if (!dry) await run("sequences", () => advanceSequences(prisma));
 }
 
 main()

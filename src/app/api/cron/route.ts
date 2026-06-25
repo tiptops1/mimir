@@ -8,6 +8,7 @@ import { resolveTenant1Google } from "@/lib/google-oauth";
 import { touchGoogleLastSynced } from "@/lib/integrations";
 import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
+import { advanceSequences } from "@/lib/sequences";
 
 // Scheduled entry point: pull from every connected source, then run the Claude
 // insight pass once. Hit it from Railway's cron (or any external scheduler):
@@ -70,7 +71,10 @@ async function handle(req: NextRequest) {
     ? await settle("ai-insight", () => enrichActivities(prisma, { limit: 80 }))
     : { source: "ai-insight", ok: false, error: "no GEMINI_API_KEY or ANTHROPIC_API_KEY" };
 
-  return NextResponse.json({ ranAt: new Date().toISOString(), sources, ai });
+  // Materialize any due sequence steps into the task worklist.
+  const sequences = await settle("sequences", () => advanceSequences(prisma));
+
+  return NextResponse.json({ ranAt: new Date().toISOString(), sources, ai, sequences });
 }
 
 export const GET = handle;

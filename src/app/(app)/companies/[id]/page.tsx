@@ -23,6 +23,12 @@ import { DealsCard, type DealRow } from "@/components/deals-card";
 import { CustomFieldsSection } from "@/components/custom-fields-section";
 import { getFieldDefs, readCustomFields } from "@/lib/field-config";
 import {
+  SequencesCard,
+  type SequenceOption,
+  type EnrollmentRow,
+} from "@/components/sequences-card";
+import { parseSteps } from "@/lib/sequences";
+import {
   companyName,
   contactName,
   personLinkedInSearch,
@@ -82,9 +88,31 @@ export default async function CompanyDetailPage({
       activities: { orderBy: { date: "desc" } },
       tasks: { where: { done: false }, orderBy: { dueDate: "asc" } },
       deals: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
+      enrollments: {
+        include: { sequence: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!company) notFound();
+
+  const availableSequences = await prisma.sequence.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+  });
+  const sequenceOptions: SequenceOption[] = availableSequences.map((s) => ({
+    id: s.id,
+    name: s.name,
+    stepCount: parseSteps(s.steps).length,
+  }));
+  const enrollmentRows: EnrollmentRow[] = company.enrollments.map((e) => ({
+    id: e.id,
+    sequenceName: e.sequence.name,
+    status: e.status,
+    nextDueAt: e.nextDueAt ? e.nextDueAt.toISOString() : null,
+    currentStep: e.currentStep,
+    stepCount: parseSteps(e.sequence.steps).length,
+  }));
 
   const deals: DealRow[] = company.deals.map((d) => ({
     id: d.id,
@@ -161,6 +189,19 @@ export default async function CompanyDetailPage({
             </CardBody>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Séquences</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <SequencesCard
+              companyId={company.id}
+              sequences={sequenceOptions}
+              enrollments={enrollmentRows}
+            />
+          </CardBody>
+        </Card>
 
         {customFieldDefs.length > 0 && (
           <Card>

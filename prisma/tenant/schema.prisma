@@ -98,10 +98,11 @@ model Company {
 
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
-  contacts   Contact[]
-  activities Activity[]
-  tasks      Task[]
-  deals      Deal[]
+  contacts    Contact[]
+  activities  Activity[]
+  tasks       Task[]
+  deals       Deal[]
+  enrollments Enrollment[]
 
   @@index([stage])
   @@index([ville])
@@ -153,6 +154,39 @@ model FieldDefinition {
 
   @@unique([entity, key])
   @@index([entity])
+}
+
+// Multi-touch outreach cadence (config). `steps` is an ordered JSON array of
+// { offsetDays, channel (EMAIL|APPEL|LINKEDIN), title }. Companies are enrolled
+// (Enrollment); the cron materializes each due step as a Task in the worklist.
+model Sequence {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  steps       Json // [{ offsetDays, channel, title }]
+  active      Boolean      @default(true)
+  enrollments Enrollment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// A company's progression through a Sequence. `currentStep` is the index of the
+// next step to materialize; `nextDueAt` is when it's due (anchored on createdAt +
+// the step's offsetDays). The cron advances ACTIVE enrollments whose step is due.
+model Enrollment {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  companyId   String    @db.ObjectId
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId   String?   @db.ObjectId
+  sequenceId  String    @db.ObjectId
+  sequence    Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  status      String    @default("ACTIVE") // ACTIVE | PAUSED | DONE
+  currentStep Int       @default(0)
+  nextDueAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, nextDueAt])
+  @@index([companyId])
 }
 
 // People attached to a company (dirigeants).
