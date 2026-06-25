@@ -53,6 +53,7 @@ daily worklist.
       `prisma/tenant/schema.prisma`; string enums (config-friendly, matches `Activity.type`).
 - [x] **Auto-seed tasks from Gemini's `nextStep`** in `enrichActivities` (`lib/ai-extract.ts`), guarded
       by an `activityId` `findFirst` dedupe so cron re-runs never duplicate. Created undated → "À planifier".
+      *(Note: this path silently never ran in prod until the 2026-06-25 Mongo `isSet` fix — see working log.)*
 - [x] **"À faire"** view (`/todo`, new nav item + overdue/today badge): buckets En retard / Aujourd'hui /
       À venir / À planifier; one-click "Fait" (`toggleTask`) + "Reporter" (`snoozeTask`). Actions in
       `src/app/actions/tasks.ts`; reusable `components/task-list.tsx` + `components/new-task-form.tsx`.
@@ -172,6 +173,20 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-06-25 — **AI enrichment was silently dead in prod — found & fixed (shipped & deployed).** The
+  "auto-updating intelligent record" the North star depends on had **never actually run in production**:
+  `enrichActivities` (`lib/ai-extract.ts`) filtered `aiSummary: null`, but on **MongoDB a `: null` Prisma
+  filter does not match a *missing* field**, and activity docs are created without an `aiSummary` field —
+  so the query matched 0 rows every cron run and Gemini enriched nothing (no summaries, no sentiment, no
+  auto-seeded `nextStep` tasks), despite the key being live. Fix = `aiSummary: { isSet: false }`. Same
+  null-vs-missing gotcha fixed in the three `dernierContact` last-contact `updateMany`s
+  (calendar/email/fireflies — added `{ dernierContact: { isSet: false } }`). Also tightened the SYSTEM
+  prompt so `suggestedStage` = the last stage actually reached, never a planned one (was over-advancing
+  planned demos to DEMO_REALISEE). **Verified live against prod Atlas** (local `.env` → prod) with the
+  Gemini key: **4 real Gmail activities enriched + 3 RELANCE/AI_NEXTSTEP tasks auto-created**. Added a
+  read-only probe `scripts/test-ai-insight.ts`. `tsc` clean. **Deployed:** `main` (`41ac37f`) → Railway
+  auto-deploy; the 4h cron now genuinely keeps the record updated on its own. Model stays `gemini-2.5-flash`
+  (Flash, not Pro — deliberate cost choice). Confirm green via `…/api/cron?key=<CRON_SECRET>` → `ai: { enriched }`.
 - 2026-06-25 — **P0.5 — inbox quality + filters everywhere (shipped & deployed).** Built a two-layer
   anti-spam pipeline so only quality senders reach the `PendingContact` review queue: header-based
   `detectBulk` (`mime-email.ts`) + sender heuristics (`isAutomatedSender` / `looksLikePerson` /
