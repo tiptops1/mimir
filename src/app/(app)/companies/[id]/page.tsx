@@ -20,6 +20,8 @@ import {
 import { EnrichButton } from "@/components/enrich-button";
 import { CompanyInlineEditor } from "@/components/company-inline-editor";
 import { DealsCard, type DealRow } from "@/components/deals-card";
+import { CustomFieldsSection } from "@/components/custom-fields-section";
+import { getFieldDefs, readCustomFields } from "@/lib/field-config";
 import {
   companyName,
   contactName,
@@ -108,6 +110,10 @@ export default async function CompanyDetailPage({
     company.activities.map((a) => a.userId),
   );
 
+  // Tenant-defined custom fields (Phase-1 config store).
+  const customFieldDefs = await getFieldDefs("COMPANY");
+  const customFieldValues = readCustomFields(company.customFields);
+
   return (
     <div>
       <PageHeader title={companyName(company)} subtitle={company.siret}>
@@ -155,6 +161,21 @@ export default async function CompanyDetailPage({
             </CardBody>
           </Card>
         </div>
+
+        {customFieldDefs.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Champs personnalisés</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <CustomFieldsSection
+                companyId={company.id}
+                defs={customFieldDefs}
+                values={customFieldValues}
+              />
+            </CardBody>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

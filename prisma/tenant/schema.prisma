@@ -92,6 +92,10 @@ model Company {
   closingEstime      DateTime?
   notes              String?
 
+  // Tenant-defined custom fields (Phase-1 "config, not code"). Flexible document
+  // keyed by FieldDefinition.key — new fields need no schema migration.
+  customFields Json?
+
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   contacts   Contact[]
@@ -122,12 +126,33 @@ model Deal {
   status    String    @default("OPEN") // OPEN | WON | LOST
   isPrimary Boolean   @default(true) // the deal mirrored on the pipeline board
   closeDate DateTime?
+  customFields Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([companyId])
   @@index([stage])
   @@index([status])
+}
+
+// Tenant-defined custom field on a CRM entity — the Phase-1 config store. New
+// fields are added here as DATA (not code) and read/written on each entity's
+// flexible `customFields` document, so adding a field needs no schema migration.
+model FieldDefinition {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  entity     String // COMPANY | CONTACT | DEAL
+  key        String // stable key stored inside customFields
+  label      String
+  type       String   @default("text") // text | number | select | bool | date
+  options    String[] @default([]) // choices when type == "select"
+  required   Boolean  @default(false)
+  showInForm Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([entity, key])
+  @@index([entity])
 }
 
 // People attached to a company (dirigeants).
@@ -140,6 +165,7 @@ model Contact {
   telephone   String?
   linkedinUrl String?
   isDecisionMaker Boolean? @default(false)
+  customFields Json?
   companyId   String     @db.ObjectId
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activities  Activity[]

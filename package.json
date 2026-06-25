@@ -17,6 +17,7 @@
     "tenant:bootstrap": "tsx scripts/bootstrap-control-plane.ts",
     "tenant:provision": "tsx scripts/provision-tenant.ts",
     "deals:backfill": "tsx scripts/backfill-deals.ts",
+    "config:seed": "tsx scripts/seed-config.ts",
     "user:add": "tsx scripts/add-user.ts",
     "search:indexes": "tsx scripts/create-search-indexes.ts",
     "seed": "tsx prisma/seed.ts",
