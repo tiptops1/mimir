@@ -79,6 +79,30 @@ daily worklist.
 - [x] Suivi "voir tout": `?all=1` lifts the engagement gate; banner shows "X sociétés masquées · Tout
       afficher" (and the reverse toggle) so empty ≠ filtered (`companies/page.tsx`).
 
+### P0.5 — Inbox quality + comprehensive filters everywhere *(shipped 2026-06-25)*
+> **Status: ✅ shipped & deployed** (`main` — commits `c063e5c`/`4ba87cc`/`bb71ddd`); `BlockedSender`
+> index pushed to prod via `db:push` (2026-06-25). `tsc` clean; verified in-browser against live data.
+
+The inbox review queue (`PendingContact`) only shows **quality** senders, and every list view has
+combinable filters.
+- [x] **Two-layer anti-spam at ingestion** so spam never enters the CRM. Header signals
+      (`detectBulk` in `mime-email.ts`: list-unsubscribe/list-id/precedence/auto-submitted/feedback-id…)
+      + sender heuristics in `email-sync.ts` (`isAutomatedSender` noreply/donotreply…, `looksLikePerson`
+      prenom.nom guard, `ROLE_TOKENS` denylist). `processEmail` gate drops bulk/automated non-persons
+      (`filtered++`). One-time cleanup script `scripts/clean-inbox-spam.ts` (`npm run clean:inbox`)
+      dismissed 42 of 109 existing pending.
+- [x] **"Spam" action** (`markPendingSpam`) → permanent `BlockedSender` block list (address **+**
+      domain unless free-domain); `buildCaches` loads it so blocked senders never re-enter. Dismisses
+      same-domain siblings immediately. New `BlockedSender` model (`value @unique`, `kind`, `@@index`).
+- [x] **Auto-expire stale pending** — `expireStalePending` dismisses PENDING with `lastSeen` older than
+      **14 days** at every sync (Gmail + IMAP), so the queue stays fresh and old entries don't resurface.
+- [x] **Add a task straight from an inbox email** (`createTaskFromPending`) — promotes the sender to a
+      contact/company and creates a follow-up Task in one step (`inbox-actions.tsx` mini-form).
+- [x] **Comprehensive combinable filters on every list** (the standing "all pages have filters" rule):
+      Inbox (`inbox-filters.tsx`: text · direction · min message count · seen-since), Todo
+      (`todo-filters.tsx`: title · société · type · source), all URL-driven via `useUrlFilters`;
+      Pipeline gains client-side priorité/potentiel/open-task selects.
+
 ---
 
 ## P1 — Close the prospecting loop *(the moat compounds here)*
@@ -148,6 +172,19 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-06-25 — **P0.5 — inbox quality + filters everywhere (shipped & deployed).** Built a two-layer
+  anti-spam pipeline so only quality senders reach the `PendingContact` review queue: header-based
+  `detectBulk` (`mime-email.ts`) + sender heuristics (`isAutomatedSender` / `looksLikePerson` /
+  `ROLE_TOKENS`) gating `processEmail` in `email-sync.ts` (drops counted as `filtered`). Added a
+  permanent **`BlockedSender`** block list (address + domain) consumed by `buildCaches`, surfaced as a
+  one-click **Spam** action (`markPendingSpam`) that also dismisses same-domain siblings; one-time
+  `npm run clean:inbox` dismissed 42/109 existing pending. Added **14-day auto-expire** of stale pending
+  (`expireStalePending`, runs at every Gmail/IMAP sync). Added **task-from-email**
+  (`createTaskFromPending` — promote sender → contact/company + create Task). Added comprehensive
+  URL-driven filters on Inbox + Todo and client-side filters on Pipeline, fulfilling the "every page has
+  filters for its content" rule. `tsc` clean; verified in-browser on live data. **Deployed:** `main`
+  (`c063e5c`/`4ba87cc`/`bb71ddd`); ran `db:push` against prod to create the `BlockedSender` collection +
+  unique/`kind` indexes (additive, no data moved).
 - 2026-06-24 — **P0.1 follow-up: complete-a-task now logs an activity.** `toggleTask` (`actions/tasks.ts`)
   on an open→done transition creates a matching Activity (task type → CALL/EMAIL/MEETING/NOTE, note
   "Tâche terminée : …", authored by the session user) and stamps `dernierContact = now` — mirrors
