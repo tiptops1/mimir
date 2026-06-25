@@ -203,6 +203,18 @@ model PendingContact {
   @@index([status])
 }
 
+// Permanent block list fed by the inbox "Spam" action. The email sync consults
+// this so a blocked address OR domain never re-enters the CRM (no contact, no
+// activity, no queue entry) — even if they mail again.
+model BlockedSender {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  value     String   @unique // lowercased email address OR bare domain
+  kind      String // "EMAIL" | "DOMAIN"
+  createdAt DateTime @default(now())
+
+  @@index([kind])
+}
+
 // Incremental sync checkpoint, one row per IMAP mailbox path. (Legacy IMAP path.)
 model EmailSyncState {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId

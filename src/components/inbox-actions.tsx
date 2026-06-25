@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, X, ListPlus } from "lucide-react";
+import { Check, X, ListPlus, Ban } from "lucide-react";
 import {
   approvePending,
   dismissPending,
   createTaskFromPending,
+  markPendingSpam,
 } from "@/app/actions/inbox";
 import { Button } from "@/components/ui";
 
@@ -92,6 +93,16 @@ export function PendingRow({
           className="px-2.5 py-1.5 text-xs"
         >
           <X className="h-3.5 w-3.5" /> Ignorer
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={pending}
+          onClick={() => startTransition(() => markPendingSpam(id))}
+          title="Bloque l'adresse et le domaine — n'apparaîtra plus jamais"
+          className="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
+        >
+          <Ban className="h-3.5 w-3.5" /> Spam
         </Button>
       </div>
 

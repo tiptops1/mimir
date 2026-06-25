@@ -63,6 +63,29 @@ export function emailDomain(addr: string): string | null {
   return d || null;
 }
 
+/** True for free/consumer mail providers — never block a whole such domain. */
+export function isFreeDomain(domain: string): boolean {
+  return FREE_DOMAINS.has(domain);
+}
+
+// Unhandled queue entries auto-expire after this many days at each sync, so the
+// inbox stays a fresh triage list instead of an ever-growing backlog.
+export const STALE_PENDING_DAYS = 14;
+
+/** Dismiss PENDING senders not seen in the last STALE_PENDING_DAYS. Returns the count. */
+export async function expireStalePending(
+  prisma: PrismaClient,
+  days = STALE_PENDING_DAYS,
+): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const r = await prisma.pendingContact.updateMany({
+    where: { status: "PENDING", lastSeen: { lt: cutoff } },
+    data: { status: "DISMISSED" },
+  });
+  return r.count;
+}
+
 // Mailbox local-parts that are machines, not people. Generic business addresses
 // (contact@, info@, commercial@…) are deliberately NOT here — in brokerage
 // prospecting those are real leads worth keeping.
@@ -165,6 +188,8 @@ export function splitName(
 export interface Caches {
   contactByEmail: Map<string, { contactId: string; companyId: string }>;
   companyByDomain: Map<string, string>;
+  blockedEmails: Set<string>;
+  blockedDomains: Set<string>;
 }
 
 export async function buildCaches(prisma: PrismaClient): Promise<Caches> {
@@ -200,7 +225,19 @@ export async function buildCaches(prisma: PrismaClient): Promise<Caches> {
       }
     }
   }
-  return { contactByEmail, companyByDomain };
+
+  // Permanent block list (inbox "Spam" action) — addresses and whole domains.
+  const blockedEmails = new Set<string>();
+  const blockedDomains = new Set<string>();
+  const blocked = await prisma.blockedSender.findMany({
+    select: { value: true, kind: true },
+  });
+  for (const b of blocked) {
+    if (b.kind === "DOMAIN") blockedDomains.add(b.value);
+    else blockedEmails.add(b.value);
+  }
+
+  return { contactByEmail, companyByDomain, blockedEmails, blockedDomains };
 }
 
 async function logEmailActivity(
@@ -302,6 +339,17 @@ export async function processEmail(
 
   const out: SyncOutcome = { matched: 0, created: 0, pending: 0, filtered: 0 };
   for (const cp of counterparties) {
+    // Permanent block list wins over everything: a sender (or its whole domain)
+    // marked as spam never enters the CRM again.
+    const cpDomain = emailDomain(cp.address);
+    if (
+      caches.blockedEmails.has(cp.address) ||
+      (cpDomain && caches.blockedDomains.has(cpDomain))
+    ) {
+      out.filtered++;
+      continue;
+    }
+
     const match = caches.contactByEmail.get(cp.address);
     if (match) {
       const did = await logEmailActivity(

@@ -1,7 +1,12 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import type { PrismaClient } from "@prisma/client";
-import { buildCaches, processEmail, type SyncOutcome } from "./email-sync";
+import {
+  buildCaches,
+  processEmail,
+  expireStalePending,
+  type SyncOutcome,
+} from "./email-sync";
 import { toParsedEmail } from "./mime-email";
 
 // Gmail / Google Workspace email sync over IMAP (App Password auth). LEGACY path,
@@ -104,6 +109,9 @@ export async function runImapSync(
   } finally {
     await client.logout().catch(() => {});
   }
+
+  // Queue maintenance: drop stale unhandled senders so the inbox stays fresh.
+  if (!opts.dry) await expireStalePending(prisma);
 
   return totals;
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { PrismaClient } from "@prisma/client";
 import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
-import { splitName, emailDomain } from "@/lib/email-sync";
+import { splitName, emailDomain, isFreeDomain } from "@/lib/email-sync";
 
 type PendingContact = NonNullable<
   Awaited<ReturnType<PrismaClient["pendingContact"]["findUnique"]>>
@@ -146,5 +146,51 @@ export async function dismissPending(pendingId: string): Promise<void> {
     where: { id: pendingId },
     data: { status: "DISMISSED" },
   });
+  revalidatePath("/inbox");
+}
+
+/**
+ * Mark a queued sender as spam: permanently block the address AND its domain (so
+ * future mail from either never re-enters the CRM), and dismiss this entry plus
+ * any other PENDING senders from the same domain.
+ */
+export async function markPendingSpam(pendingId: string): Promise<void> {
+  await verifySession();
+  const prisma = await getTenantDb();
+  const pending = await prisma.pendingContact.findUnique({
+    where: { id: pendingId },
+  });
+  if (!pending) return;
+
+  const email = pending.email.toLowerCase();
+  const domain = emailDomain(email);
+  const blockDomain = domain && !isFreeDomain(domain) ? domain : null;
+
+  // Persist the block list entries the sync consults (idempotent).
+  await prisma.blockedSender.upsert({
+    where: { value: email },
+    create: { value: email, kind: "EMAIL" },
+    update: {},
+  });
+  if (blockDomain) {
+    await prisma.blockedSender.upsert({
+      where: { value: blockDomain },
+      create: { value: blockDomain, kind: "DOMAIN" },
+      update: {},
+    });
+  }
+
+  // Clear it (and same-domain siblings) from the queue immediately.
+  await prisma.pendingContact.updateMany({
+    where: {
+      status: "PENDING",
+      OR: [
+        { email },
+        ...(blockDomain ? [{ email: { endsWith: `@${blockDomain}` } }] : []),
+      ],
+    },
+    data: { status: "DISMISSED" },
+  });
+
   revalidatePath("/inbox");
 }
