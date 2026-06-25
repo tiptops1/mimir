@@ -37,11 +37,12 @@ that gap.
 
 ## P0 — System of action *(pure UX on existing data; ships on the live single-tenant app now)*
 
-> **Status: ✅ code complete + on live Atlas (2026-06-24).** `Task` collection pushed (additive, no data
-> moved); `next build` + `tsc` green. Backend verified end-to-end on tenant #1 (Task CRUD + AI dedupe
-> holds). Dashboard worklist strip, `/todo` view, and quick-add verified rendering in-browser while
-> authed. **Not committed/deployed** — awaiting owner go-ahead. Full authenticated click-through (toggle
-> done, inline stage, `?all` banner, pipeline chip) still to be eyeballed on a live session.
+> **Status: ✅ shipped (2026-06-24).** `Task` collection on live Atlas (additive, no data moved);
+> committed + pushed to `main` (`cd67ed1`) → Railway auto-deploy. `next build` + `tsc` green. Backend
+> verified end-to-end on tenant #1 (Task CRUD + AI dedupe holds). Dashboard worklist strip, `/todo` view,
+> and quick-add verified rendering in-browser while authed. The complete-a-task→activity follow-up
+> landed too (P0.1). Still to eyeball on a live session: authenticated click-through of toggle-done,
+> inline stage, `?all` banner, pipeline chip.
 
 The highest-ROI track. No schema migration beyond the Task object; turns data we already have into a
 daily worklist.
@@ -55,7 +56,9 @@ daily worklist.
 - [x] **"À faire"** view (`/todo`, new nav item + overdue/today badge): buckets En retard / Aujourd'hui /
       À venir / À planifier; one-click "Fait" (`toggleTask`) + "Reporter" (`snoozeTask`). Actions in
       `src/app/actions/tasks.ts`; reusable `components/task-list.tsx` + `components/new-task-form.tsx`.
-- [ ] Complete-a-task → optionally log the resulting activity in the same step. *(deferred — small follow-up)*
+- [x] Complete-a-task logs a matching activity — `toggleTask` (open → done) creates an Activity with
+      the type mapped from the task (APPEL→CALL, EMAIL→EMAIL, RDV→MEETING, RELANCE/AUTRE→NOTE) and
+      bumps `dernierContact`, so the timeline + staleness/relance widgets stay accurate.
 
 ### P0.2 — Rework the dashboard into a work surface
 - [x] Forward-looking strip now leads: "À faire aujourd'hui" (overdue+today tasks, reused `TaskList`) +
@@ -145,6 +148,10 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-06-24 — **P0.1 follow-up: complete-a-task now logs an activity.** `toggleTask` (`actions/tasks.ts`)
+  on an open→done transition creates a matching Activity (task type → CALL/EMAIL/MEETING/NOTE, note
+  "Tâche terminée : …", authored by the session user) and stamps `dernierContact = now` — mirrors
+  `addActivity`. Un-completing leaves the activity in place. `tsc` clean. Closes the last open P0.1 box.
 - 2026-06-24 — **P0 implemented (code complete, on live Atlas, not yet committed/deployed).** Added the
   `Task` model (additive `db push` to tenant #1 — Task collection + 3 indexes, zero data moved) and the
   full "system of action" layer: `src/app/actions/tasks.ts` (create/toggle/snooze/setDue/delete),

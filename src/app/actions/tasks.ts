@@ -13,6 +13,16 @@ function revalidateTaskViews(companyId?: string) {
   if (companyId) revalidatePath(`/companies/${companyId}`);
 }
 
+// Completing a task logs a matching activity, so the work shows in the timeline
+// and bumps the prospect's last touch. Map the task kind to an activity type.
+const TASK_TO_ACTIVITY_TYPE: Record<string, string> = {
+  APPEL: "CALL",
+  EMAIL: "EMAIL",
+  RDV: "MEETING",
+  RELANCE: "NOTE",
+  AUTRE: "NOTE",
+};
+
 export async function createTask(
   _prev: FormResult | undefined,
   formData: FormData,
@@ -39,14 +49,37 @@ export async function createTask(
 }
 
 export async function toggleTask(id: string, done: boolean): Promise<void> {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
-  const task = await prisma.task.update({
+  const existing = await prisma.task.findUnique({
+    where: { id },
+    select: { done: true, companyId: true, title: true, type: true },
+  });
+  if (!existing) return;
+
+  await prisma.task.update({
     where: { id },
     data: { done, doneAt: done ? new Date() : null },
-    select: { companyId: true },
   });
-  revalidateTaskViews(task.companyId);
+
+  // On a real completion (open → done), log a matching activity and refresh the
+  // company's last touch so the timeline + staleness widgets stay accurate.
+  if (done && !existing.done && existing.companyId) {
+    await prisma.activity.create({
+      data: {
+        companyId: existing.companyId,
+        type: TASK_TO_ACTIVITY_TYPE[existing.type] ?? "NOTE",
+        note: `Tâche terminée : ${existing.title}`,
+        userId: session.userId,
+      },
+    });
+    await prisma.company.update({
+      where: { id: existing.companyId },
+      data: { dernierContact: new Date() },
+    });
+  }
+
+  revalidateTaskViews(existing.companyId);
 }
 
 /** Reschedule a task to an explicit date (or clear it → "À planifier"). */

@@ -20,12 +20,14 @@ export interface ParsedEmail {
   cc: Addr[];
   snippet: string | null;
   body: string | null; // fuller plain-text body, for the AI insight pass
+  bulk?: boolean; // header signature of a newsletter / mailing list / automated blast
 }
 
 export interface SyncOutcome {
   matched: number; // logged against an existing contact
   created: number; // new contact auto-created + logged
   pending: number; // queued for review
+  filtered: number; // dropped as bulk/automated (kept out of the CRM)
 }
 
 // Free/consumer mail providers are never treated as a "company domain".
@@ -59,6 +61,79 @@ export function emailDomain(addr: string): string | null {
   if (at < 0) return null;
   const d = addr.slice(at + 1).toLowerCase().trim();
   return d || null;
+}
+
+// Mailbox local-parts that are machines, not people. Generic business addresses
+// (contact@, info@, commercial@…) are deliberately NOT here — in brokerage
+// prospecting those are real leads worth keeping.
+const AUTOMATED_LOCALPARTS = new Set([
+  "mailerdaemon",
+  "postmaster",
+  "bounce",
+  "bounces",
+  "mailer",
+  "mdaemon",
+  "notification",
+  "notifications",
+  "newsletter",
+  "newsletters",
+  "mailing",
+  "mailings",
+]);
+
+/** True for no-reply / system / bulk-sender addresses that shouldn't become contacts. */
+export function isAutomatedSender(address: string): boolean {
+  const local = (address.split("@")[0] ?? "").toLowerCase();
+  const compact = local.replace(/[._+-]/g, "");
+  if (
+    compact.includes("noreply") ||
+    compact.includes("donotreply") ||
+    compact.includes("notreply") ||
+    compact.includes("nepasrepondre")
+  ) {
+    return true;
+  }
+  return AUTOMATED_LOCALPARTS.has(compact);
+}
+
+// Role/system words. A local-part containing one of these is a function or a
+// machine ("calendar-notification", "cloud-manager-support"), not a person.
+const ROLE_TOKENS = new Set([
+  "notification", "notifications", "notify", "alert", "alerts",
+  "support", "help", "service", "services", "feedback",
+  "calendar", "cloud", "manager", "team", "admin", "billing",
+  "invoice", "invoices", "payment", "payments", "order", "orders",
+  "account", "accounts", "onboarding", "marketing", "news", "newsletter",
+  "mail", "mailer", "mailing", "reply", "noreply", "no", "ne", "pas", "repondre",
+  "contact", "info", "sales", "commercial", "hello", "hi", "do", "not",
+]);
+
+/**
+ * A "prenom.nom"-shaped local-part — two alphabetic tokens, neither a role/system
+ * word. A real person, so we never drop them on a stray bulk header alone (some
+ * brokers email via tools that inject List-Unsubscribe). Automated/no-reply
+ * addresses still get filtered: isSpamSender checks isAutomatedSender first.
+ */
+export function looksLikePerson(address: string): boolean {
+  const tokens = (address.split("@")[0] ?? "")
+    .toLowerCase()
+    .split(/[._-]+/)
+    .filter(Boolean);
+  if (tokens.length < 2) return false;
+  const alpha = (s: string) => /^[a-zàâäéèêëïîôöùûüçñ]{2,}$/i.test(s);
+  const [a, b] = tokens;
+  if (!alpha(a) || !alpha(b)) return false;
+  return !ROLE_TOKENS.has(a) && !ROLE_TOKENS.has(b);
+}
+
+/**
+ * The quality gate: a NEW (unknown) sender is spam if it's an automated/no-reply
+ * address, or if the message is a bulk/marketing send AND the sender isn't a
+ * named person. Such senders never become contacts or queue entries.
+ */
+export function isSpamSender(email: ParsedEmail, address: string): boolean {
+  if (isAutomatedSender(address)) return true;
+  return Boolean(email.bulk) && !looksLikePerson(address);
 }
 
 const norm = (a: string) => a.toLowerCase().trim();
@@ -225,7 +300,7 @@ export async function processEmail(
     counterparties.push({ address, name: a.name ?? null });
   }
 
-  const out: SyncOutcome = { matched: 0, created: 0, pending: 0 };
+  const out: SyncOutcome = { matched: 0, created: 0, pending: 0, filtered: 0 };
   for (const cp of counterparties) {
     const match = caches.contactByEmail.get(cp.address);
     if (match) {
@@ -239,6 +314,13 @@ export async function processEmail(
         match.companyId,
       );
       if (did) out.matched++;
+      continue;
+    }
+
+    // Quality gate: bulk/marketing mail and automated senders never enter the
+    // CRM. Known contacts (matched above) are unaffected — only NEW senders.
+    if (isSpamSender(email, cp.address)) {
+      out.filtered++;
       continue;
     }
 

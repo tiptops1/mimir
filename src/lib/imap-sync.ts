@@ -44,6 +44,7 @@ export async function runImapSync(
     matched: 0,
     created: 0,
     pending: 0,
+    filtered: 0,
     scanned: 0,
     mailboxes: [],
   };
@@ -84,6 +85,7 @@ export async function runImapSync(
             totals.matched += r.matched;
             totals.created += r.created;
             totals.pending += r.pending;
+            totals.filtered += r.filtered;
           }
           if (msg.uid > maxUid) maxUid = msg.uid;
         }

@@ -25,6 +25,7 @@
     "sync:calendar": "tsx scripts/sync-calendar.ts",
     "sync:fireflies": "tsx scripts/sync-fireflies.ts",
     "sync:all": "tsx scripts/sync-all.ts",
+    "clean:inbox": "tsx scripts/clean-inbox-spam.ts",
     "import:200-1802": "tsx scripts/dedup-and-import.ts",
     "dedup:names": "tsx scripts/dedup-by-name.ts",
     "enrich:full": "tsx scripts/enrich-full.ts",

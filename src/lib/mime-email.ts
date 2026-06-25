@@ -19,6 +19,26 @@ function addrList(a: AddressObject | AddressObject[] | undefined): Addr[] {
   return out;
 }
 
+/**
+ * Bulk/automated-mail signature from the headers. These mark newsletters, mailing
+ * lists, marketing blasts and machine notifications (Slack, Fireflies, ESPs like
+ * Mailchimp/SendGrid) — i.e. mail the CRM should never turn into a contact.
+ */
+function detectBulk(m: ParsedMail): boolean {
+  const h = m.headers;
+  // List management ⇒ mailing list or marketing blast.
+  if (h.has("list-unsubscribe") || h.has("list-id") || h.has("list-post")) return true;
+  const precedence = String(h.get("precedence") ?? "").toLowerCase();
+  if (precedence === "bulk" || precedence === "list" || precedence === "junk") return true;
+  // RFC 3834 auto-generated/auto-replied system mail.
+  const auto = String(h.get("auto-submitted") ?? "").toLowerCase();
+  if (auto && auto !== "no") return true;
+  // Bulk-ESP fingerprints (feedback loops / complaint headers).
+  if (h.has("feedback-id") || h.has("x-csa-complaints") || h.has("x-mailgun-sid"))
+    return true;
+  return false;
+}
+
 export function toParsedEmail(m: ParsedMail): ParsedEmail {
   const text = (m.text ?? "").replace(/\r\n/g, "\n");
   const snippet = text.replace(/\s+/g, " ").trim().slice(0, 280) || null;
@@ -37,6 +57,7 @@ export function toParsedEmail(m: ParsedMail): ParsedEmail {
     cc: addrList(m.cc),
     snippet,
     body,
+    bulk: detectBulk(m),
   };
 }
 

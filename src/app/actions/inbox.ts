@@ -1,25 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { PrismaClient } from "@prisma/client";
 import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { splitName, emailDomain } from "@/lib/email-sync";
 
-/**
- * Approve a queued sender: create a Contact (optionally a new Company from the
- * email domain) and keep a note of the emails exchanged before approval.
- */
-export async function approvePending(
-  pendingId: string,
-  companyId: string,
-): Promise<void> {
-  await verifySession();
-  const prisma = await getTenantDb();
-  const pending = await prisma.pendingContact.findUnique({
-    where: { id: pendingId },
-  });
-  if (!pending || pending.status !== "PENDING") return;
+type PendingContact = NonNullable<
+  Awaited<ReturnType<PrismaClient["pendingContact"]["findUnique"]>>
+>;
 
+/**
+ * Turn a queued sender into a real Contact (optionally creating a Company from the
+ * email domain), preserving a note of the emails exchanged before approval, and
+ * mark the queue entry APPROVED. Shared by both "Approuver" and "Créer une tâche".
+ */
+async function promotePending(
+  prisma: PrismaClient,
+  pending: PendingContact,
+  companyId: string,
+): Promise<{ companyId: string; contactId: string }> {
   let targetCompanyId = companyId;
   if (!companyId || companyId === "__new__") {
     const domain = emailDomain(pending.email) ?? pending.email;
@@ -54,13 +54,89 @@ export async function approvePending(
   });
 
   await prisma.pendingContact.update({
-    where: { id: pendingId },
+    where: { id: pending.id },
     data: { status: "APPROVED" },
+  });
+
+  return { companyId: targetCompanyId, contactId: contact.id };
+}
+
+/**
+ * Approve a queued sender: create a Contact (optionally a new Company from the
+ * email domain) and keep a note of the emails exchanged before approval.
+ */
+export async function approvePending(
+  pendingId: string,
+  companyId: string,
+): Promise<void> {
+  await verifySession();
+  const prisma = await getTenantDb();
+  const pending = await prisma.pendingContact.findUnique({
+    where: { id: pendingId },
+  });
+  if (!pending || pending.status !== "PENDING") return;
+
+  const { companyId: cid } = await promotePending(prisma, pending, companyId);
+
+  revalidatePath("/inbox");
+  revalidatePath("/contacts");
+  revalidatePath(`/companies/${cid}`);
+}
+
+const TASK_TYPES = ["RELANCE", "APPEL", "EMAIL", "RDV", "AUTRE"] as const;
+
+/**
+ * Promote a queued sender AND create a follow-up task on the resulting company —
+ * the "Créer une tâche" action on an inbox row. Returns an error string for the
+ * client to surface, or null on success.
+ */
+export async function createTaskFromPending(
+  pendingId: string,
+  companyId: string,
+  input: { title: string; type: string; dueDate: string | null },
+): Promise<string | null> {
+  const session = await verifySession();
+  const prisma = await getTenantDb();
+  const pending = await prisma.pendingContact.findUnique({
+    where: { id: pendingId },
+  });
+  if (!pending || pending.status !== "PENDING") return "Entrée déjà traitée.";
+
+  const title = input.title.trim();
+  if (!title) return "Intitulé requis.";
+  const type = (TASK_TYPES as readonly string[]).includes(input.type)
+    ? input.type
+    : "RELANCE";
+  let dueDate: Date | null = null;
+  if (input.dueDate) {
+    const d = new Date(input.dueDate);
+    if (!Number.isNaN(d.getTime())) dueDate = d;
+  }
+
+  const { companyId: cid, contactId } = await promotePending(
+    prisma,
+    pending,
+    companyId,
+  );
+
+  await prisma.task.create({
+    data: {
+      companyId: cid,
+      contactId,
+      title,
+      type,
+      dueDate,
+      source: "MANUAL",
+      userId: session.userId,
+    },
   });
 
   revalidatePath("/inbox");
   revalidatePath("/contacts");
-  revalidatePath(`/companies/${targetCompanyId}`);
+  revalidatePath("/todo");
+  revalidatePath("/dashboard");
+  revalidatePath(`/companies/${cid}`);
+  return null;
 }
 
 export async function dismissPending(pendingId: string): Promise<void> {
