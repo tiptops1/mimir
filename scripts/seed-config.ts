@@ -116,6 +116,40 @@ const NATIVE_CONTACT_FIELDS: Array<{
   { key: "linkedinUrl", label: "LinkedIn", type: "text", order: 3, section: "Coordonnées" },
 ];
 
+// Finances cockpit categories, expressed as config (FieldDefinition entity
+// "FINANCE"). The Finances page reads these `options` for its category select;
+// keeping them as data means they're editable without a code change. Kept in
+// sync with DEFAULT_FINANCE_CATEGORIES in src/lib/finance.ts (inlined here to
+// avoid a path-alias import in this standalone script).
+const FINANCE_FIELDS: Array<{
+  key: string;
+  label: string;
+  type: string;
+  options?: string[];
+  order: number;
+  section: string;
+}> = [
+  {
+    key: "category",
+    label: "Catégorie",
+    type: "select",
+    options: [
+      "Logiciels",
+      "Marketing",
+      "Bureau",
+      "Matériel",
+      "Sous-traitance",
+      "Banque · frais",
+      "Impôts · taxes",
+      "Déplacements",
+      "Revenu",
+      "Autre",
+    ],
+    order: 1,
+    section: "Finances",
+  },
+];
+
 // Starter outreach cadence (Phase-1 P1.2). Idempotent by name.
 const SEQUENCES: Array<{ name: string; steps: unknown[] }> = [
   {
@@ -240,6 +274,34 @@ async function main() {
     });
   }
   console.log(`Seeded ${NATIVE_CONTACT_FIELDS.length} NATIVE CONTACT field definitions.`);
+
+  for (const f of FINANCE_FIELDS) {
+    await prisma.fieldDefinition.upsert({
+      where: { entity_key: { entity: "FINANCE", key: f.key } },
+      update: {
+        label: f.label,
+        type: f.type,
+        options: f.options ?? [],
+        order: f.order,
+        showInForm: true,
+        source: "NATIVE",
+        section: f.section,
+      },
+      create: {
+        entity: "FINANCE",
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        options: f.options ?? [],
+        required: false,
+        showInForm: true,
+        order: f.order,
+        source: "NATIVE",
+        section: f.section,
+      },
+    });
+  }
+  console.log(`Seeded ${FINANCE_FIELDS.length} FINANCE field definitions.`);
 
   const count = await prisma.fieldDefinition.count();
   console.log(`Total FieldDefinition rows: ${count}`);

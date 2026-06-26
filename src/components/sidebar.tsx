@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   BarChart3,
   Inbox,
+  Wallet,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/inbox", label: "Boîte de réception", icon: Inbox },
+  { href: "/finances", label: "Finances", icon: Wallet },
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
 ];
 

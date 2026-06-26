@@ -92,6 +92,7 @@ model Company {
   tasks       Task[]
   deals       Deal[]
   enrollments Enrollment[]
+  financeEntries FinanceEntry[]
 
   @@index([stage])
   @@index([ville])
@@ -123,6 +124,64 @@ model Deal {
   @@index([companyId])
   @@index([stage])
   @@index([status])
+}
+
+// Business cost / income ledger — the "Finances cockpit". One flexible model
+// covers all four kinds the owner pilots by, distinguished by `kind` + the
+// money `direction` (mirrors how Deal/Activity carry type-specific nullable
+// fields rather than splitting into many tables):
+//   SUBSCRIPTION — recurring software (with free-trial + renewal tracking)
+//   STAFF        — recurring people cost (salary / freelancer retainer)
+//   EXPENSE      — one-off spend or supplier bill
+//   INVOICE      — money billed to a client (direction = IN)
+// `amount` is euros (Int, matching Deal.amount / Company.chiffreAffaires).
+// `category` is config-driven (FieldDefinition entity "FINANCE", a select).
+// trialEndsAt / renewsAt / dueDate seed Task alerts via lib/finance-alerts.ts.
+model FinanceEntry {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  direction    String    @default("OUT") // OUT = cost | IN = income
+  kind         String    @default("EXPENSE") // SUBSCRIPTION | STAFF | EXPENSE | INVOICE
+  label        String
+  vendor       String? // supplier (cost) or client (invoice)
+  category     String?
+  amount       Int       @default(0) // euros
+  currency     String    @default("EUR")
+  recurrence   String    @default("NONE") // NONE | MONTHLY | QUARTERLY | ANNUAL
+  status       String    @default("ACTIVE") // cost: ACTIVE|TRIAL|PAUSED|CANCELLED ; invoice: DRAFT|SENT|PAID|OVERDUE
+  date         DateTime? // one-off spend date / invoice issue date
+  startDate    DateTime? // subscription / engagement start
+  endDate      DateTime? // engagement end / cancellation date
+  trialEndsAt  DateTime? // free-trial end → alert
+  renewsAt     DateTime? // next billing/renewal → alert
+  dueDate      DateTime? // invoice due → alert if unpaid
+  autoRenew    Boolean   @default(true)
+  notes        String?
+  // Optional link to a CRM Company (the client on an invoice, or a vendor that
+  // is also a prospect). SetNull on delete — losing the company doesn't lose the
+  // ledger entry.
+  companyId    String?   @db.ObjectId
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  customFields Json? // self-serve custom fields (no migration), keyed by FieldDefinition.key
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([direction, status])
+  @@index([kind])
+  @@index([renewsAt])
+  @@index([trialEndsAt])
+  @@index([dueDate])
+  @@index([date])
+  @@index([companyId])
+}
+
+// Small tenant key/value store for single scalar settings that don't warrant
+// their own model — e.g. "finance.cashOnHand" (trésorerie) backing the cockpit
+// runway figure. Value is a string; callers coerce. Upserted by `key`.
+model Setting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 // Tenant-defined custom field on a CRM entity — the Phase-1 config store. New
@@ -270,12 +329,18 @@ model Task {
   done       Boolean   @default(false)
   doneAt     DateTime?
   note       String?
-  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP
+  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP | FINANCE
   // When source == AI_NEXTSTEP, the Activity it was derived from — dedupe key so
   // re-running the enrichment pass never creates a duplicate task.
   activityId String?   @db.ObjectId
-  companyId  String    @db.ObjectId
-  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // When source == FINANCE, the FinanceEntry whose trial/renewal/due date seeded
+  // this task — dedupe key so the cron never creates a duplicate finance alert.
+  financeEntryId String? @db.ObjectId
+  // companyId is OPTIONAL: prospecting tasks attach to a company, but finance
+  // alerts (trial ends, renewals, invoices due) have no company. toggleTask only
+  // logs an activity when companyId is set, so company-less tasks are a no-op there.
+  companyId  String?   @db.ObjectId
+  company    Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   // Loose ids into the tenant Contact / control-plane User (no cross-DB relation),
   // matching the Activity.userId convention.
   contactId  String?   @db.ObjectId
@@ -286,6 +351,7 @@ model Task {
   @@index([done, dueDate])
   @@index([companyId])
   @@index([activityId])
+  @@index([financeEntryId])
 }
 
 // Review queue for email addresses seen in synced mail that don't match a

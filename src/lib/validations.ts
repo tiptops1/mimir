@@ -109,6 +109,39 @@ export const activitySchema = z.object({
   note: optionalString,
 });
 
+// Finances cockpit. `direction` and `status` are derived/validated server-side
+// in actions/finances.ts (from `kind` + statusOptionsFor), so this only shapes
+// and coerces the raw form input. `amount` empty → 0 (handled in the action).
+export const financeEntrySchema = z.object({
+  kind: z
+    .enum(["SUBSCRIPTION", "STAFF", "EXPENSE", "INVOICE"])
+    .default("EXPENSE")
+    .catch("EXPENSE"),
+  label: z.string().trim().min(1, "Intitulé requis."),
+  vendor: optionalString,
+  category: optionalString,
+  amount: optionalInt,
+  currency: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? v : "EUR")),
+  recurrence: z
+    .enum(["NONE", "MONTHLY", "QUARTERLY", "ANNUAL"])
+    .default("NONE")
+    .catch("NONE"),
+  status: optionalString,
+  date: optionalDate,
+  startDate: optionalDate,
+  endDate: optionalDate,
+  trialEndsAt: optionalDate,
+  renewsAt: optionalDate,
+  dueDate: optionalDate,
+  autoRenew: checkbox,
+  notes: optionalString,
+  companyId: optionalString,
+});
+
 export const taskSchema = z.object({
   companyId: z.string().trim().min(1, "Société requise."),
   title: z.string().trim().min(1, "Intitulé requis."),

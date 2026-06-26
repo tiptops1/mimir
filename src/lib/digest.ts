@@ -46,7 +46,7 @@ export async function sendDailyDigest(
   const body = [
     `Bonjour ${owner},`,
     "",
-    "Voici votre point prospection du jour :",
+    "Voici votre point du jour :",
     `• ${summary.taskCount} tâche(s) à faire (en retard ou aujourd'hui)`,
     `• ${summary.staleCount} prospect(s) à relancer (sans contact depuis 30 jours)`,
     "",

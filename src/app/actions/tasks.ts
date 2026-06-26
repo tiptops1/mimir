@@ -7,7 +7,7 @@ import { taskSchema } from "@/lib/validations";
 import type { FormResult } from "@/app/actions/companies";
 
 /** Revalidate every surface that shows tasks. */
-function revalidateTaskViews(companyId?: string) {
+function revalidateTaskViews(companyId?: string | null) {
   revalidatePath("/todo");
   revalidatePath("/dashboard");
   if (companyId) revalidatePath(`/companies/${companyId}`);

@@ -1,3 +1,16 @@
+/** Money formatter — euros (Int) → "1 250 €". Used across the Finances cockpit. */
+export function formatCurrency(
+  amount: number | null | undefined,
+  currency = "EUR",
+): string {
+  if (amount == null || Number.isNaN(amount)) return "—";
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function companyName(c: {
   nomSociete?: string | null;
   enseigne?: string | null;

@@ -7,11 +7,14 @@ import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/
 import { StageBadge } from "@/components/badges";
 import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { TaskList, type TaskRow } from "@/components/task-list";
+import { FinanceKpiStrip } from "@/components/finance-kpi-strip";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { ACTIVITY_TYPES } from "@/lib/constants";
 import { getStageDefs } from "@/lib/stage-config";
 import { getGoogleConnection } from "@/lib/integrations";
+import { computeFinanceCockpit } from "@/lib/finance-cockpit";
+import { getNumberSetting, SETTINGS } from "@/lib/settings";
 
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
@@ -94,6 +97,11 @@ export default async function DashboardPage({
         },
       }),
     ]);
+
+  const [financeCockpit, financeCash] = await Promise.all([
+    computeFinanceCockpit(prisma),
+    getNumberSetting(prisma, SETTINGS.cashOnHand),
+  ]);
 
   const todayTasks: TaskRow[] = todayTasksRaw.map((t) => ({
     id: t.id,
@@ -198,6 +206,22 @@ export default async function DashboardPage({
             </CardBody>
           </Card>
         </div>
+
+        {/* Business cockpit — revenue vs costs vs net, with runway. */}
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">
+              Santé de l&apos;activité
+            </h2>
+            <Link
+              href="/finances"
+              className="text-xs font-medium text-brand hover:underline"
+            >
+              Ouvrir les finances
+            </Link>
+          </div>
+          <FinanceKpiStrip cockpit={financeCockpit} cash={financeCash} />
+        </section>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpis.map((k) => {

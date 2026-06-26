@@ -166,6 +166,41 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 
 ---
 
+## P3 — Finances: the business cockpit *(new track — from system-of-action to one-stop pilot)*
+
+> **Status: 🟡 in progress (2026-06-26).** Turns the CRM from a prospecting tool into the place a
+> solo owner pilots the whole business from: the revenue side already existed (deals/pipeline/won
+> amounts); this adds the **cost side** and ties both into a P&L cockpit. Built additive + config-first
+> per `CLAUDE.md`, on the live single-tenant app. Schema changes are additive `db:push` (new
+> `FinanceEntry` + `Setting` collections; `Task.companyId` relaxed to optional + `financeEntryId`).
+
+The north-star principle still holds — every finance screen leads with a **forward action** (what's
+about to cost or pay), not a backward report.
+
+### P3.1 — One flexible `FinanceEntry` model + cockpit
+- [x] `FinanceEntry` (`direction` OUT/IN × `kind` SUBSCRIPTION/STAFF/EXPENSE/INVOICE; amount in euros,
+      recurrence, status, trial/renew/due dates, optional CRM `company` link, `customFields`). One model,
+      four lenses — mirrors how `Deal`/`Activity` carry type-specific nullable fields.
+- [x] `/finances` cockpit: KPI strip (revenu / coûts / **net mensuel** / **trésorerie + autonomie**),
+      Échéances radar (next 30 j), cost-by-category Donut, and a segment-filtered, **inline-editable**
+      table (status badge dropdown + click-to-edit amount, reusing the `EnumCell`/`useTransition`
+      pattern). Detail/edit page at `/finances/[id]`.
+- [x] P&L strip on the home dashboard (`FinanceKpiStrip`): revenue vs costs vs net + runway, with
+      open-deal pipeline as the forward revenue figure. Editable cash-on-hand (`Setting` store).
+
+### P3.2 — Renewal / trial / invoice radar → tasks → bell → digest
+- [x] `advanceFinanceAlerts` in `/api/cron` materializes trial-ends / renewals / invoices-due into
+      `Task`s (`source: "FINANCE"`, deduped by `financeEntryId`), which flow into `/todo`, the header
+      bell, and the daily digest for free. `Task.companyId` made optional so finance tasks need no company.
+
+### P3.3 — Config + follow-ons
+- [x] Categories seeded as config (`FieldDefinition` entity `FINANCE`), read by the page.
+- [ ] Surface entity `FINANCE` in the `/settings/fields` self-serve editor (custom finance fields).
+- [ ] Out of scope (v1, each a clean follow-on): receipt/file upload + OCR, bank/Stripe import, TVA
+      reporting, PDF invoice generation, multi-currency conversion.
+
+---
+
 ## How this interleaves with the platform roadmap
 
 | Product item | Depends on / rides | Can ship now? |

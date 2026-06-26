@@ -9,6 +9,7 @@ import { touchGoogleLastSynced } from "@/lib/integrations";
 import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
 import { advanceSequences } from "@/lib/sequences";
+import { advanceFinanceAlerts } from "@/lib/finance-alerts";
 import { sendDailyDigest } from "@/lib/digest";
 
 // Scheduled entry point: pull from every connected source, then run the Claude
@@ -75,6 +76,11 @@ async function handle(req: NextRequest) {
   // Materialize any due sequence steps into the task worklist.
   const sequences = await settle("sequences", () => advanceSequences(prisma));
 
+  // Materialize finance échéances (trial-ends / renewals / invoices due) into tasks.
+  const financeAlerts = await settle("finance-alerts", () =>
+    advanceFinanceAlerts(prisma),
+  );
+
   // At most one prospecting digest email per day (guarded internally).
   const digest = await settle("digest", () => sendDailyDigest(prisma));
 
@@ -83,6 +89,7 @@ async function handle(req: NextRequest) {
     sources,
     ai,
     sequences,
+    financeAlerts,
     digest,
   });
 }
