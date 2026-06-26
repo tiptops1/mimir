@@ -58,7 +58,7 @@ function StageRow({ def }: { def: StageDefRow }) {
           {...attributes}
           {...listeners}
           type="button"
-          className="cursor-grab text-slate-400 active:cursor-grabbing"
+          className="cursor-grab text-faint active:cursor-grabbing"
           aria-label="Réordonner"
         >
           <GripVertical className="h-4 w-4" />

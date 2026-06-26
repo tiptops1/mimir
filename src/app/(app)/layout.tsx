@@ -38,11 +38,13 @@ export default async function AppLayout({
           role: session.role,
         }}
       />
-      <main className="flex-1 overflow-y-auto">
-        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border bg-card/95 px-6 py-3 backdrop-blur">
+      <main className="flex-1 overflow-y-auto bg-background">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-6 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
           <GlobalSearch />
-          <QuickAddMenu />
-          <NotificationsBell summary={notifications} />
+          <div className="ml-auto flex items-center gap-2">
+            <QuickAddMenu />
+            <NotificationsBell summary={notifications} />
+          </div>
         </header>
         {children}
       </main>

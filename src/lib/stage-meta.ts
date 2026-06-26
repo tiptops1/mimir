@@ -20,7 +20,7 @@ export const FALLBACK_STAGE: StageDef = {
   label: "À qualifier",
   order: 0,
   accent: "border-t-slate-400",
-  badge: "bg-slate-100 text-slate-700",
+  badge: "bg-surface-2 text-foreground",
   dot: "bg-slate-400",
   isWon: false,
   isLost: false,

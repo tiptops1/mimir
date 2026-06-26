@@ -26,13 +26,13 @@ function FieldRow({ entity, def }: { entity: ConfigEntity; def: FieldDefRow }) {
           <Badge
             className={
               def.source === "NATIVE"
-                ? "bg-slate-100 text-slate-600"
+                ? "bg-surface-2 text-muted"
                 : "bg-indigo-50 text-brand"
             }
           >
             {def.source === "NATIVE" ? "Natif" : "Personnalisé"}
           </Badge>
-          <Badge className="bg-slate-50 text-slate-500">{def.type}</Badge>
+          <Badge className="bg-surface-2 text-muted">{def.type}</Badge>
         </div>
         <p className="mt-0.5 truncate text-xs text-muted">
           clé: {def.key}

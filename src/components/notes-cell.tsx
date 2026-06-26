@@ -62,7 +62,7 @@ export function NotesCell({
           >
             Annuler
           </button>
-          <span className="ml-auto text-[10px] text-slate-400">⌘↵</span>
+          <span className="ml-auto text-[10px] text-faint">⌘↵</span>
         </div>
       </div>
     );
@@ -73,14 +73,14 @@ export function NotesCell({
       type="button"
       onClick={() => setEditing(true)}
       disabled={pending}
-      className="group flex w-60 items-start gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left hover:border-border hover:bg-slate-50 disabled:opacity-50"
+      className="group flex w-60 items-start gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-left hover:border-border hover:bg-surface-2 disabled:opacity-50"
     >
       {notes ? (
-        <span className="line-clamp-3 whitespace-pre-wrap text-xs text-slate-700">
+        <span className="line-clamp-3 whitespace-pre-wrap text-xs text-foreground">
           {notes}
         </span>
       ) : (
-        <span className="text-xs text-slate-400">+ Ajouter une note</span>
+        <span className="text-xs text-faint">+ Ajouter une note</span>
       )}
       <span className="ml-auto hidden shrink-0 text-[10px] text-brand group-hover:inline">
         ✎

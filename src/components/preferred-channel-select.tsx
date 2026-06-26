@@ -33,7 +33,7 @@ export function PreferredChannelSelect({
         value={channel}
         disabled={pending}
         onChange={(e) => onChange(e.target.value)}
-        className="w-32 rounded-md border border-border bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-50"
+        className="w-32 rounded-md border border-border bg-white px-2 py-1 text-xs text-foreground disabled:opacity-50"
       >
         <option value="">—</option>
         {CANAL_PREFERE_OPTIONS.map((o) => (
@@ -52,7 +52,7 @@ export function PreferredChannelSelect({
             {phone}
           </a>
         ) : (
-          <span className="text-xs text-slate-400">Aucun numéro</span>
+          <span className="text-xs text-faint">Aucun numéro</span>
         ))}
 
       {channel === "EMAIL" &&
@@ -64,7 +64,7 @@ export function PreferredChannelSelect({
             {email}
           </a>
         ) : (
-          <span className="text-xs text-slate-400">Aucun email</span>
+          <span className="text-xs text-faint">Aucun email</span>
         ))}
 
       {channel === "LINKEDIN" &&
@@ -78,7 +78,7 @@ export function PreferredChannelSelect({
             {linkedinLabel ?? "LinkedIn ↗"}
           </a>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-faint">—</span>
         ))}
     </div>
   );

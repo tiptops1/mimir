@@ -28,7 +28,7 @@ export interface EnrollmentRow {
 const STATUS_STYLE: Record<string, string> = {
   ACTIVE: "bg-emerald-100 text-emerald-700",
   PAUSED: "bg-amber-100 text-amber-700",
-  DONE: "bg-slate-100 text-slate-600",
+  DONE: "bg-surface-2 text-muted",
 };
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Active",
@@ -51,7 +51,7 @@ function EnrollmentItem({
           <span className="font-medium">{enr.sequenceName}</span>
           <span
             className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-              STATUS_STYLE[enr.status] ?? "bg-slate-100 text-slate-600"
+              STATUS_STYLE[enr.status] ?? "bg-surface-2 text-muted"
             }`}
           >
             {STATUS_LABEL[enr.status] ?? enr.status}
@@ -79,7 +79,7 @@ function EnrollmentItem({
                 );
               })
             }
-            className="text-slate-400 hover:text-brand"
+            className="text-faint hover:text-brand"
           >
             {enr.status === "ACTIVE" ? (
               <Pause className="h-4 w-4" />
@@ -97,7 +97,7 @@ function EnrollmentItem({
               await deleteEnrollment(enr.id, companyId);
             })
           }
-          className="text-slate-400 hover:text-rose-600"
+          className="text-faint hover:text-rose-600"
         >
           <Trash2 className="h-4 w-4" />
         </button>

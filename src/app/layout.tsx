@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Avelior Analytics — CRM",
+  title: "Vision RM",
   description:
-    "Avelior Analytics — CRM de prospection pour le courtage en assurance.",
+    "Vision RM — CRM de prospection pour le courtage en assurance.",
 };
 
 export default function RootLayout({

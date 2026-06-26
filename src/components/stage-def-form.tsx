@@ -32,7 +32,7 @@ export function StageDefForm({
   return (
     <form
       action={formAction}
-      className="space-y-3 rounded-lg border border-border bg-slate-50/60 p-4"
+      className="space-y-3 rounded-lg border border-border bg-surface-2/60 p-4"
     >
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -67,7 +67,7 @@ export function StageDefForm({
             id="badgeClass"
             name="badgeClass"
             defaultValue={def?.badge}
-            placeholder="bg-slate-100 text-slate-700"
+            placeholder="bg-surface-2 text-foreground"
           />
         </div>
         <div>

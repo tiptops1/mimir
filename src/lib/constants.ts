@@ -9,7 +9,7 @@ export type PrioriteValue = "A" | "B" | "C";
 export const PRIORITE_OPTIONS: { value: PrioriteValue; label: string; badge: string }[] = [
   { value: "A", label: "A — Haute", badge: "bg-rose-100 text-rose-700" },
   { value: "B", label: "B — Moyenne", badge: "bg-amber-100 text-amber-700" },
-  { value: "C", label: "C — Basse", badge: "bg-slate-100 text-slate-600" },
+  { value: "C", label: "C — Basse", badge: "bg-surface-2 text-muted" },
 ];
 
 export type PotentielValue = "FAIBLE" | "MOYEN" | "FORT";

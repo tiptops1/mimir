@@ -118,7 +118,7 @@ export function AddContactForm({
             <NativeFieldControl
               def={def}
               defaultValue=""
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         ))}
@@ -156,7 +156,7 @@ export function DecisionMakerToggle({
         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
           active
             ? "bg-amber-100 text-amber-700"
-            : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            : "text-faint hover:bg-surface-2 hover:text-foreground"
         }`}
       >
         <Star
@@ -186,7 +186,7 @@ export function ContactDeleteButton({
     >
       <button
         type="submit"
-        className="text-slate-400 transition-colors hover:text-rose-600"
+        className="text-faint transition-colors hover:text-rose-600"
         aria-label="Supprimer le contact"
       >
         <Trash2 className="h-4 w-4" />

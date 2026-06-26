@@ -69,7 +69,7 @@ export function ConnectGmailCta({
           type="button"
           disabled={pending}
           onClick={() => startTransition(() => disconnectGoogle())}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-slate-50 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 disabled:opacity-50"
         >
           {pending && <RefreshCw className="h-4 w-4 animate-spin" />}
           Déconnecter

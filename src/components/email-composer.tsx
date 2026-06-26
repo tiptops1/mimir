@@ -64,7 +64,7 @@ export function EmailComposer({
   }
 
   return (
-    <div className="mt-3 w-full rounded-lg border border-border bg-slate-50/60 p-3">
+    <div className="mt-3 w-full rounded-lg border border-border bg-surface-2/60 p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-xs font-semibold text-foreground">
           Email à {contactLabel}
@@ -72,7 +72,7 @@ export function EmailComposer({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-slate-400 hover:text-slate-600"
+          className="text-faint hover:text-foreground"
           aria-label="Fermer"
         >
           <X className="h-4 w-4" />
@@ -113,7 +113,7 @@ export function EmailComposer({
           {genError ? <p className="text-sm text-rose-700">{genError}</p> : null}
 
           {sources.length > 0 && (
-            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-slate-600">
+            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-muted">
               <span className="inline-flex items-center gap-1 font-medium text-brand">
                 <FileSearch className="h-3.5 w-3.5" /> Sources consultées
               </span>

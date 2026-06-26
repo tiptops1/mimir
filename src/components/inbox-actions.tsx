@@ -38,7 +38,7 @@ export function PendingRow({
   const [pending, startTransition] = useTransition();
 
   const selectClass =
-    "max-w-56 rounded-md border border-border bg-white px-2 py-1.5 text-xs text-slate-700 disabled:opacity-50";
+    "max-w-56 rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground disabled:opacity-50";
 
   const submitTask = () =>
     startTransition(async () => {
@@ -107,7 +107,7 @@ export function PendingRow({
       </div>
 
       {showTask && (
-        <div className="flex w-full max-w-md flex-col gap-2 rounded-lg border border-border bg-slate-50 p-3">
+        <div className="flex w-full max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-2 p-3">
           <p className="text-xs text-muted">
             Crée le contact (société ci-dessus) et une tâche de suivi.
           </p>
@@ -123,7 +123,7 @@ export function PendingRow({
               value={type}
               onChange={(e) => setType(e.target.value)}
               disabled={pending}
-              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-slate-700"
+              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground"
             >
               {TASK_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -136,7 +136,7 @@ export function PendingRow({
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               disabled={pending}
-              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-slate-700"
+              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground"
             />
             <Button
               type="button"

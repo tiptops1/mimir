@@ -64,17 +64,17 @@ export function EnumCell({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={pending}
-        className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-left hover:bg-slate-100 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-left hover:bg-surface-2 disabled:opacity-50"
       >
         {selected ? (
-          <Badge className={selected.badge ?? "bg-slate-100 text-slate-600"}>
+          <Badge className={selected.badge ?? "bg-surface-2 text-muted"}>
             {selected.dot && (
               <span className={`h-1.5 w-1.5 rounded-full ${selected.dot}`} />
             )}
             {selected.short ?? selected.label}
           </Badge>
         ) : (
-          <span className="text-xs text-slate-400">{placeholder} ✎</span>
+          <span className="text-xs text-faint">{placeholder} ✎</span>
         )}
       </button>
 
@@ -84,7 +84,7 @@ export function EnumCell({
             <button
               type="button"
               onClick={() => choose("")}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-50"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted hover:bg-surface-2"
             >
               {placeholder} <span className="text-[10px]">(effacer)</span>
             </button>
@@ -96,13 +96,13 @@ export function EnumCell({
                 key={o.value}
                 type="button"
                 onClick={() => choose(o.value)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50 ${
-                  on ? "bg-slate-50" : ""
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-2 ${
+                  on ? "bg-surface-2" : ""
                 }`}
               >
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium ${
-                    o.badge ?? "bg-slate-100 text-slate-600"
+                    o.badge ?? "bg-surface-2 text-muted"
                   }`}
                 >
                   {o.dot && (

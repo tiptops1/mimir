@@ -9,26 +9,25 @@ export function BrandMark({
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm ring-1 ring-inset ring-white/15">
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          className="h-5 w-5"
+          className="h-[18px] w-[18px]"
           aria-hidden="true"
         >
           <path
-            d="M4 19V9m5 10V5m5 14v-7m5 7V8"
+            d="M4 19V11m5 8V6m5 13v-9m5 9V8"
             stroke="currentColor"
-            strokeWidth="2.2"
+            strokeWidth="2.4"
             strokeLinecap="round"
           />
         </svg>
       </div>
       {showText ? (
-        <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight">Avelior</p>
-          <p className="-mt-0.5 text-[11px] font-medium text-muted">
-            Analytics
+        <div className="leading-none">
+          <p className="text-[15px] font-semibold tracking-tight text-foreground">
+            Vision<span className="text-brand"> RM</span>
           </p>
         </div>
       ) : null}

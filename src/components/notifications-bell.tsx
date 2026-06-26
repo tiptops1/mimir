@@ -27,7 +27,7 @@ export function NotificationsBell({ summary }: { summary: NotificationSummary })
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-slate-600 hover:bg-slate-50"
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-muted hover:bg-surface-2"
         aria-label="Notifications"
       >
         <Bell className="h-4 w-4" />
@@ -58,7 +58,7 @@ export function NotificationsBell({ summary }: { summary: NotificationSummary })
                   key={it.id}
                   href={it.href}
                   onClick={() => setOpen(false)}
-                  className="block px-4 py-2.5 hover:bg-slate-50"
+                  className="block px-4 py-2.5 hover:bg-surface-2"
                 >
                   <p className="truncate text-sm font-medium">{it.label}</p>
                   <p className="text-xs text-muted">{it.sub}</p>
@@ -69,7 +69,7 @@ export function NotificationsBell({ summary }: { summary: NotificationSummary })
           <Link
             href="/todo"
             onClick={() => setOpen(false)}
-            className="block border-t border-border px-4 py-2.5 text-center text-xs font-medium text-brand hover:bg-slate-50"
+            className="block border-t border-border px-4 py-2.5 text-center text-xs font-medium text-brand hover:bg-surface-2"
           >
             Voir toutes les tâches
           </Link>

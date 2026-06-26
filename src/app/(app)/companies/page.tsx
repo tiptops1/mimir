@@ -43,7 +43,7 @@ function touchLabel(date: Date | null | undefined): {
   text: string;
   cls: string;
 } {
-  if (!date) return { text: "—", cls: "text-slate-300" };
+  if (!date) return { text: "—", cls: "text-faint" };
   const days = Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
   const text =
     days <= 0 ? "Aujourd'hui" : days === 1 ? "Hier" : `Il y a ${days} j`;
@@ -203,14 +203,14 @@ export default async function CompaniesPage({
         <CompaniesFilters stages={stageDefs} />
 
         {all ? (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-sm text-muted">
             <span>Toutes les sociétés, y compris celles sans engagement.</span>
             <Link href={qs({ page: 1, all: "" })} className="font-medium text-brand hover:underline">
               Voir seulement les prospects engagés
             </Link>
           </div>
         ) : hiddenCount > 0 ? (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-surface-2 px-4 py-2.5 text-sm text-muted">
             <span>
               {hiddenCount} société{hiddenCount > 1 ? "s" : ""} masquée
               {hiddenCount > 1 ? "s" : ""} (sans engagement).
@@ -231,14 +231,14 @@ export default async function CompaniesPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3 font-medium">Contact</th>
-                    <th className="px-4 py-3 font-medium">Spécialités</th>
-                    <th className="px-4 py-3 font-medium">Notes / prochaines étapes</th>
-                    <th className="px-4 py-3 font-medium">Étape</th>
-                    <th className="px-4 py-3 font-medium">Priorité</th>
-                    <th className="px-4 py-3 font-medium">Potentiel</th>
-                    <th className="px-4 py-3 font-medium">Dernier contact</th>
+                  <tr className="border-b border-border bg-surface-2/60 text-left text-[11px] uppercase tracking-wider text-faint">
+                    <th className="px-4 py-2.5 font-semibold">Contact</th>
+                    <th className="px-4 py-2.5 font-semibold">Spécialités</th>
+                    <th className="px-4 py-2.5 font-semibold">Notes / prochaines étapes</th>
+                    <th className="px-4 py-2.5 font-semibold">Étape</th>
+                    <th className="px-4 py-2.5 font-semibold">Priorité</th>
+                    <th className="px-4 py-2.5 font-semibold">Potentiel</th>
+                    <th className="px-4 py-2.5 font-semibold">Dernier contact</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,7 +254,7 @@ export default async function CompaniesPage({
                     return (
                       <tr
                         key={c.id}
-                        className="border-b border-border last:border-0 align-top hover:bg-slate-50/60"
+                        className="border-b border-border last:border-0 align-top transition-colors hover:bg-surface-2/70"
                       >
                         <td className="px-4 py-3">
                           <Link href={`/companies/${c.id}`} className="block">
@@ -263,7 +263,7 @@ export default async function CompaniesPage({
                             </span>
                             <span
                               className={`mt-0.5 block text-xs ${
-                                hasContact ? "text-sky-500" : "text-muted"
+                                hasContact ? "text-muted" : "text-faint tnum"
                               }`}
                             >
                               {hasContact ? companyName(c) : c.siret}
@@ -323,7 +323,7 @@ export default async function CompaniesPage({
               {page > 1 && (
                 <Link
                   href={qs({ page: page - 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
+                  className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-surface-2 hover:border-border-strong"
                 >
                   Précédent
                 </Link>
@@ -331,7 +331,7 @@ export default async function CompaniesPage({
               {page < totalPages && (
                 <Link
                   href={qs({ page: page + 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
+                  className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:bg-surface-2 hover:border-border-strong"
                 >
                   Suivant
                 </Link>

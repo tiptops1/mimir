@@ -46,7 +46,7 @@ const activityLabel = (t: string) =>
 
 const SENTIMENT_STYLE: Record<string, string> = {
   POSITIF: "bg-emerald-100 text-emerald-700",
-  NEUTRE: "bg-slate-100 text-slate-600",
+  NEUTRE: "bg-surface-2 text-muted",
   NEGATIF: "bg-rose-100 text-rose-700",
 };
 
@@ -158,7 +158,7 @@ export default async function CompanyDetailPage({
           href={company.siteWeb || companyLinkedInSearch(company)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-medium hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-medium hover:bg-surface-2"
         >
           <ExternalLink className="h-4 w-4 text-brand" />
           {company.siteWeb ? "Site web" : "LinkedIn"}
@@ -253,10 +253,10 @@ export default async function CompanyDetailPage({
                             />
                           </div>
                           <p className="text-xs text-muted">{c.fonction || "—"}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                             {c.email && <span>{c.email}</span>}
                             {!c.email && guess && (
-                              <span className="text-slate-400" title="Email probable (à vérifier)">
+                              <span className="text-faint" title="Email probable (à vérifier)">
                                 ✉ {guess} <em>(estimé)</em>
                               </span>
                             )}
@@ -321,11 +321,11 @@ export default async function CompanyDetailPage({
                             {isEmail ? dir ?? "Email" : activityLabel(a.type)}
                           </p>
                           {isEmail && a.subject && (
-                            <p className="truncate text-slate-700">
+                            <p className="truncate text-foreground">
                               {a.subject}
                             </p>
                           )}
-                          {a.note && <p className="text-slate-600">{a.note}</p>}
+                          {a.note && <p className="text-muted">{a.note}</p>}
                           <p className="text-xs text-muted">
                             {formatDate(a.date)}
                             {a.userId && authorNames.get(a.userId)
@@ -344,16 +344,16 @@ export default async function CompanyDetailPage({
                                       <span
                                         className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                                           SENTIMENT_STYLE[a.sentiment] ??
-                                          "bg-slate-100 text-slate-600"
+                                          "bg-surface-2 text-muted"
                                         }`}
                                       >
                                         {a.sentiment}
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-slate-700">{a.aiSummary}</p>
+                                  <p className="text-foreground">{a.aiSummary}</p>
                                   {a.nextStep && (
-                                    <p className="mt-1.5 text-slate-700">
+                                    <p className="mt-1.5 text-foreground">
                                       <span className="font-medium">
                                         Prochaine étape :{" "}
                                       </span>
@@ -361,16 +361,16 @@ export default async function CompanyDetailPage({
                                     </p>
                                   )}
                                   {actions.length > 0 && (
-                                    <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-slate-600">
+                                    <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-muted">
                                       {actions.map((item, i) => (
                                         <li key={i}>{item}</li>
                                       ))}
                                     </ul>
                                   )}
                                   {a.suggestedStage && (
-                                    <p className="mt-1.5 text-slate-500">
+                                    <p className="mt-1.5 text-muted">
                                       Étape suggérée :{" "}
-                                      <span className="font-medium text-slate-700">
+                                      <span className="font-medium text-foreground">
                                         {stageLabels[a.suggestedStage] ?? a.suggestedStage}
                                       </span>
                                     </p>

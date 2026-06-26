@@ -115,7 +115,7 @@ export default async function ContactsPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
+                  <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-4 py-3 font-medium">Société</th>
                     <th className="px-4 py-3 font-medium">Chiffre d&apos;affaires</th>
                     <th className="px-4 py-3 font-medium">Site web</th>
@@ -136,7 +136,7 @@ export default async function ContactsPage({
                     return (
                       <tr
                         key={c.id}
-                        className="border-b border-border last:border-0 hover:bg-slate-50/60"
+                        className="border-b border-border last:border-0 hover:bg-surface-2/60"
                       >
                         <td className="px-4 py-3">
                           <Link
@@ -146,12 +146,12 @@ export default async function ContactsPage({
                             {companyName(c.company)}
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-muted">
                           {c.company.chiffreAffaires != null
                             ? euro.format(c.company.chiffreAffaires)
                             : "—"}
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-muted">
                           {siteHref ? (
                             <a
                               href={siteHref}
@@ -166,7 +166,7 @@ export default async function ContactsPage({
                           )}
                         </td>
                         <td className="px-4 py-3 font-medium">{contactName(c)}</td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-muted">
                           {c.email ?? "—"}
                         </td>
                         <td className="px-4 py-3">
@@ -182,7 +182,7 @@ export default async function ContactsPage({
                             {c.linkedinUrl ? "Profil" : "Rechercher ↗"}
                           </a>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-muted">
                           {c.telephone ?? "—"}
                         </td>
                       </tr>
@@ -203,7 +203,7 @@ export default async function ContactsPage({
               {page > 1 && (
                 <Link
                   href={qs({ page: page - 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
+                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-surface-2"
                 >
                   Précédent
                 </Link>
@@ -211,7 +211,7 @@ export default async function ContactsPage({
               {page < totalPages && (
                 <Link
                   href={qs({ page: page + 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-slate-50"
+                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-surface-2"
                 >
                   Suivant
                 </Link>

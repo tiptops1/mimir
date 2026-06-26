@@ -18,7 +18,7 @@ import { formatDate } from "@/lib/utils";
 
 // Subtle "looks like text until you click it" styling for inline editing.
 const editCls =
-  "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-foreground transition-colors hover:bg-slate-100 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-100";
+  "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-foreground transition-colors hover:bg-surface-2 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-100";
 const selectCls =
   "w-full rounded-md border border-border bg-white px-2 py-1 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-indigo-100";
 

@@ -101,7 +101,7 @@ export function GlobalSearch() {
 
   return (
     <div ref={rootRef} className="relative w-full max-w-md">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
       <input
         ref={inputRef}
         value={q}
@@ -109,9 +109,9 @@ export function GlobalSearch() {
         onFocus={() => results.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
         placeholder="Rechercher société ou contact…"
-        className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-12 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+        className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-12 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
       />
-      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:block">
+      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-faint sm:block">
         ⌘K
       </kbd>
 
@@ -132,10 +132,10 @@ export function GlobalSearch() {
                       onMouseEnter={() => setActive(i)}
                       onClick={() => go(hit)}
                       className={`flex w-full items-center gap-3 px-3 py-2 text-left ${
-                        i === active ? "bg-indigo-50" : "hover:bg-slate-50"
+                        i === active ? "bg-indigo-50" : "hover:bg-surface-2"
                       }`}
                     >
-                      <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+                      <Icon className="h-4 w-4 shrink-0 text-faint" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-foreground">
                           {hit.title}
@@ -144,7 +144,7 @@ export function GlobalSearch() {
                           {hit.subtitle}
                         </span>
                       </span>
-                      <span className="shrink-0 text-[10px] uppercase tracking-wide text-slate-400">
+                      <span className="shrink-0 text-[10px] uppercase tracking-wide text-faint">
                         {hit.type === "company" ? "Société" : "Contact"}
                       </span>
                     </button>

@@ -45,7 +45,7 @@ export function NewContactForm({
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 ${
               companyMode === "existing"
                 ? "bg-brand text-white"
-                : "border border-border bg-white text-foreground hover:bg-slate-50"
+                : "border border-border bg-white text-foreground hover:bg-surface-2"
             }`}
           >
             Société existante
@@ -56,7 +56,7 @@ export function NewContactForm({
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               companyMode === "new"
                 ? "bg-brand text-white"
-                : "border border-border bg-white text-foreground hover:bg-slate-50"
+                : "border border-border bg-white text-foreground hover:bg-surface-2"
             }`}
           >
             Nouvelle société
@@ -126,7 +126,7 @@ export function NewContactForm({
                 <NativeFieldControl
                   def={def}
                   defaultValue=""
-                  className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             ))}

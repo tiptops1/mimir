@@ -62,7 +62,7 @@ export function CashOnHandCard({
           className="mt-0.5 flex items-center gap-1.5 text-2xl font-semibold hover:text-brand disabled:opacity-50"
         >
           {cash != null ? formatCurrency(cash) : "—"}
-          <Pencil className="h-3.5 w-3.5 text-slate-400" />
+          <Pencil className="h-3.5 w-3.5 text-faint" />
         </button>
       )}
       <p

@@ -13,16 +13,16 @@ export function StageBadge({ stage, stageDefs }: { stage: string; stageDefs: Sta
 }
 
 export function PrioriteBadge({ priorite }: { priorite: string | null }) {
-  if (!priorite) return <span className="text-slate-300">—</span>;
+  if (!priorite) return <span className="text-faint">—</span>;
   const opt = PRIORITE_OPTIONS.find((p) => p.value === priorite);
-  if (!opt) return <span className="text-slate-300">—</span>;
+  if (!opt) return <span className="text-faint">—</span>;
   return <Badge className={opt.badge}>{opt.value}</Badge>;
 }
 
 export function PotentielBadge({ potentiel }: { potentiel: string | null }) {
-  if (!potentiel) return <span className="text-slate-300">—</span>;
+  if (!potentiel) return <span className="text-faint">—</span>;
   const opt = POTENTIEL_OPTIONS.find((p) => p.value === potentiel);
   return (
-    <Badge className="bg-slate-100 text-slate-600">{opt?.label ?? potentiel}</Badge>
+    <Badge className="bg-surface-2 text-muted">{opt?.label ?? potentiel}</Badge>
   );
 }

@@ -44,9 +44,9 @@ export function QuickAddMenu() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-surface-2"
               >
-                <Icon className="h-4 w-4 text-slate-400" />
+                <Icon className="h-4 w-4 text-faint" />
                 {item.label}
               </Link>
             );

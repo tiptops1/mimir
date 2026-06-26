@@ -60,13 +60,13 @@ function DealItem({
           )}
           <span
             className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-              STATUS_STYLE[deal.status] ?? "bg-slate-100 text-slate-600"
+              STATUS_STYLE[deal.status] ?? "bg-surface-2 text-muted"
             }`}
           >
             {STATUS_LABEL[deal.status] ?? deal.status}
           </span>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           {deal.product && <span>{deal.product}</span>}
           {amount && <span className="font-medium">{amount}</span>}
         </div>
@@ -98,7 +98,7 @@ function DealItem({
         >
           <button
             type="submit"
-            className="text-slate-400 transition-colors hover:text-rose-600"
+            className="text-faint transition-colors hover:text-rose-600"
             aria-label="Supprimer l'affaire"
           >
             <Trash2 className="h-4 w-4" />

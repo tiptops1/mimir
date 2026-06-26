@@ -123,10 +123,10 @@ export default async function DashboardPage({
   const firstName = session.name?.split(" ")[0] || "";
 
   const kpis = [
-    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-500", href: "/companies" },
-    { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-500", href: "/contacts" },
-    { label: "À contacter", value: aContacter, icon: Flame, color: "text-orange-500", href: "/companies?stage=A_CONTACTER" },
-    { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-500", href: "/companies?stage=GAGNE" },
+    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-600", tile: "bg-indigo-50", href: "/companies" },
+    { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-600", tile: "bg-sky-50", href: "/contacts" },
+    { label: "À contacter", value: aContacter, icon: Flame, color: "text-orange-600", tile: "bg-orange-50", href: "/companies?stage=A_CONTACTER" },
+    { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-600", tile: "bg-emerald-50", href: "/companies?stage=GAGNE" },
   ];
 
   const maxStage = Math.max(1, ...stageDefs.map((s) => stageCounts.get(s.value) ?? 0));
@@ -191,7 +191,7 @@ export default async function DashboardPage({
                   <Link
                     key={c.id}
                     href={`/companies/${c.id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50"
+                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-surface-2"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{companyName(c)}</p>
@@ -210,7 +210,7 @@ export default async function DashboardPage({
         {/* Business cockpit — revenue vs costs vs net, with runway. */}
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-700">
+            <h2 className="text-sm font-semibold text-foreground">
               Santé de l&apos;activité
             </h2>
             <Link
@@ -229,15 +229,15 @@ export default async function DashboardPage({
             return (
               <Card
                 key={k.label}
-                className="transition-colors hover:border-brand/40 hover:bg-slate-50/60"
+                className="transition-[border-color,box-shadow] duration-100 hover:border-border-strong hover:shadow-sm"
               >
                 <Link href={k.href}>
                   <CardBody className="flex items-center gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${k.tile}`}>
                       <Icon className={`h-5 w-5 ${k.color}`} />
                     </div>
                     <div>
-                      <p className="text-2xl font-semibold">{k.value}</p>
+                      <p className="text-2xl font-semibold tracking-tight tnum">{k.value}</p>
                       <p className="text-xs text-muted">{k.label}</p>
                     </div>
                   </CardBody>
@@ -259,18 +259,18 @@ export default async function DashboardPage({
                   <Link
                     key={s.value}
                     href={`/pipeline?stage=${s.value}`}
-                    className="flex items-center gap-3 rounded-md px-1 py-0.5 hover:bg-slate-50"
+                    className="flex items-center gap-3 rounded-md px-1 py-0.5 hover:bg-surface-2"
                   >
-                    <span className="w-40 shrink-0 text-sm text-slate-600">
+                    <span className="w-40 shrink-0 text-sm text-muted">
                       {s.label}
                     </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
                       <div
                         className={`h-full rounded-full ${s.dot}`}
                         style={{ width: `${(count / maxStage) * 100}%` }}
                       />
                     </div>
-                    <span className="w-8 text-right text-sm font-medium">
+                    <span className="w-8 text-right text-sm font-medium tnum">
                       {count}
                     </span>
                   </Link>
@@ -325,7 +325,7 @@ export default async function DashboardPage({
               <Link
                 key={c.id}
                 href={`/companies/${c.id}`}
-                className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-slate-50"
+                className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-surface-2"
               >
                 <div>
                   <p className="text-sm font-medium">{companyName(c)}</p>

@@ -25,14 +25,14 @@ const SNOOZE = [
 
 /** Color the due date by urgency (red overdue → amber soon → slate later). */
 function dueStyle(dueIso: string | null): string {
-  if (!dueIso) return "text-slate-400";
+  if (!dueIso) return "text-faint";
   const due = new Date(dueIso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.floor((due.getTime() - today.getTime()) / 86_400_000);
   if (days < 0) return "text-rose-600";
   if (days <= 1) return "text-amber-600";
-  return "text-slate-500";
+  return "text-muted";
 }
 
 function TaskItem({ task }: { task: TaskRow }) {
@@ -53,7 +53,7 @@ function TaskItem({ task }: { task: TaskRow }) {
           startTransition(() => toggleTask(task.id, true));
         }}
         aria-label="Marquer comme fait"
-        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 text-transparent transition-colors hover:border-emerald-500 hover:bg-emerald-500 hover:text-white disabled:opacity-50"
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-border-strong text-transparent transition-colors hover:border-emerald-500 hover:bg-emerald-500 hover:text-white disabled:opacity-50"
       >
         <Check className="h-3 w-3" />
       </button>
@@ -61,7 +61,7 @@ function TaskItem({ task }: { task: TaskRow }) {
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-snug">{task.title}</p>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <Badge className="bg-slate-100 text-slate-600">
+          <Badge className="bg-surface-2 text-muted">
             {TASK_TYPE_LABELS[task.type] ?? task.type}
           </Badge>
           {task.source === "AI_NEXTSTEP" && (
@@ -89,7 +89,7 @@ function TaskItem({ task }: { task: TaskRow }) {
           disabled={pending}
           onClick={() => setSnoozeOpen((v) => !v)}
           title="Reporter"
-          className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+          className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-50"
         >
           <Clock className="h-4 w-4" />
         </button>
@@ -103,7 +103,7 @@ function TaskItem({ task }: { task: TaskRow }) {
                   setSnoozeOpen(false);
                   startTransition(() => snoozeTask(task.id, s.days));
                 }}
-                className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+                className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-2"
               >
                 {s.label}
               </button>

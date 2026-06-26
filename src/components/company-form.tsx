@@ -104,7 +104,7 @@ export function CompanyForm({
             <NativeFieldControl
               def={def}
               defaultValue={nativeFieldDefaultValue(record, def)}
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         ))}
@@ -125,7 +125,7 @@ export function CompanyForm({
             <NativeFieldControl
               def={def}
               defaultValue={nativeFieldDefaultValue(record, def)}
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         ))}
@@ -197,7 +197,7 @@ export function CompanyForm({
             <NativeFieldControl
               def={def}
               defaultValue={nativeFieldDefaultValue(record, def)}
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         ))}

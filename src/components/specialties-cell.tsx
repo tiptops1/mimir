@@ -47,7 +47,7 @@ export function SpecialtiesCell({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex flex-col items-start gap-1 rounded-md px-1 py-0.5 text-left hover:bg-slate-100 disabled:opacity-50"
+        className="flex flex-col items-start gap-1 rounded-md px-1 py-0.5 text-left hover:bg-surface-2 disabled:opacity-50"
         disabled={pending}
       >
         {activeFields.length > 0 ? (
@@ -61,7 +61,7 @@ export function SpecialtiesCell({
             </span>
           ))
         ) : (
-          <span className="text-xs text-slate-400">+ Spécialités</span>
+          <span className="text-xs text-faint">+ Spécialités</span>
         )}
       </button>
 
@@ -74,11 +74,11 @@ export function SpecialtiesCell({
                 key={f.key}
                 type="button"
                 onClick={() => toggle(f.key)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-2"
               >
                 <span
                   className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    on ? "border-brand bg-brand text-white" : "border-slate-300"
+                    on ? "border-brand bg-brand text-white" : "border-border-strong"
                   }`}
                 >
                   {on && (

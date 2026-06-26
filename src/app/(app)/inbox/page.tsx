@@ -87,7 +87,7 @@ export default async function InboxPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50 text-left text-xs uppercase tracking-wide text-muted">
+                  <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-4 py-3 font-medium">Expéditeur</th>
                     <th className="px-4 py-3 font-medium">Messages</th>
                     <th className="px-4 py-3 font-medium">Dernier sujet</th>
@@ -99,26 +99,26 @@ export default async function InboxPage({
                   {pending.map((p) => (
                     <tr
                       key={p.id}
-                      className="border-b border-border last:border-0 align-top hover:bg-slate-50/60"
+                      className="border-b border-border last:border-0 align-top hover:bg-surface-2/60"
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium">{p.name || p.email}</p>
                         {p.name && (
                           <p className="text-xs text-muted">{p.email}</p>
                         )}
-                        <Badge className="mt-1 bg-slate-100 text-slate-600">
+                        <Badge className="mt-1 bg-surface-2 text-muted">
                           {p.direction === "OUTBOUND" ? "↗ Envoyé" : "↘ Reçu"}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <td className="px-4 py-3 text-muted">
                         {p.messageCount}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <td className="px-4 py-3 text-muted">
                         <span className="line-clamp-2 max-w-xs">
                           {p.sampleSubject || "—"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <td className="px-4 py-3 text-muted">
                         {formatDate(p.lastSeen)}
                       </td>
                       <td className="px-4 py-3">

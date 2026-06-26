@@ -39,17 +39,18 @@ export function Sidebar({
   todoCount?: number;
 }) {
   const pathname = usePathname();
-  const nav = user.role === "ADMIN"
-    ? [...NAV, { href: "/settings", label: "Paramètres", icon: Settings }]
-    : NAV;
+  const nav =
+    user.role === "ADMIN"
+      ? [...NAV, { href: "/settings", label: "Paramètres", icon: Settings }]
+      : NAV;
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card">
-      <div className="px-5 py-5">
+      <div className="px-5 py-4">
         <BrandMark />
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-0.5 px-3 pt-1">
         {nav.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -65,16 +66,26 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-100",
                 active
-                  ? "bg-indigo-50 text-brand"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-foreground",
+                  ? "bg-surface-2 text-foreground"
+                  : "text-muted hover:bg-surface-2 hover:text-foreground",
               )}
             >
-              <Icon className="h-[18px] w-[18px]" />
-              <span className="flex-1">{item.label}</span>
+              {active && (
+                <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-brand" />
+              )}
+              <Icon
+                className={cn(
+                  "h-[18px] w-[18px] shrink-0 transition-colors",
+                  active
+                    ? "text-brand"
+                    : "text-faint group-hover:text-muted",
+                )}
+              />
+              <span className="flex-1 truncate">{item.label}</span>
               {badge > 0 && (
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-semibold text-white">
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold text-on-brand tnum">
                   {badge}
                 </span>
               )}
@@ -84,12 +95,12 @@ export function Sidebar({
       </nav>
 
       <div className="border-t border-border p-3">
-        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-brand">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-[11px] font-semibold text-brand">
             {initialsFromName(user.name || user.email)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
+            <p className="truncate text-[13px] font-medium text-foreground">
               {user.name || "Utilisateur"}
             </p>
             <p className="truncate text-xs text-muted">{user.email}</p>
@@ -98,7 +109,7 @@ export function Sidebar({
         <form action={logout}>
           <button
             type="submit"
-            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-muted transition-colors duration-100 hover:bg-danger-subtle hover:text-danger"
           >
             <LogOut className="h-[18px] w-[18px]" />
             Se déconnecter

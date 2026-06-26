@@ -56,7 +56,7 @@ function StatCard({
   );
   if (href) {
     return (
-      <Card className="transition-colors hover:border-brand/40 hover:bg-slate-50/60">
+      <Card className="transition-colors hover:border-brand/40 hover:bg-surface-2/60">
         <Link href={href}>{inner}</Link>
       </Card>
     );

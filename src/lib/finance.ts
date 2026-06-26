@@ -15,7 +15,7 @@ export const FINANCE_KINDS: Array<{
 }> = [
   { value: "SUBSCRIPTION", label: "Abonnement", plural: "Abonnements", direction: "OUT", badge: "bg-indigo-100 text-indigo-700" },
   { value: "STAFF", label: "Personnel", plural: "Personnel", direction: "OUT", badge: "bg-violet-100 text-violet-700" },
-  { value: "EXPENSE", label: "Dépense", plural: "Dépenses", direction: "OUT", badge: "bg-slate-100 text-slate-600" },
+  { value: "EXPENSE", label: "Dépense", plural: "Dépenses", direction: "OUT", badge: "bg-surface-2 text-muted" },
   { value: "INVOICE", label: "Facture", plural: "Factures", direction: "IN", badge: "bg-emerald-100 text-emerald-700" },
 ];
 
@@ -64,11 +64,11 @@ const COST_STATUSES: StatusMeta[] = [
   { value: "ACTIVE", label: "Actif", badge: "bg-emerald-100 text-emerald-700" },
   { value: "TRIAL", label: "Essai", badge: "bg-rose-100 text-rose-700" },
   { value: "PAUSED", label: "En pause", badge: "bg-amber-100 text-amber-700" },
-  { value: "CANCELLED", label: "Annulé", badge: "bg-slate-100 text-slate-500" },
+  { value: "CANCELLED", label: "Annulé", badge: "bg-surface-2 text-muted" },
 ];
 
 const INVOICE_STATUSES: StatusMeta[] = [
-  { value: "DRAFT", label: "Brouillon", badge: "bg-slate-100 text-slate-600" },
+  { value: "DRAFT", label: "Brouillon", badge: "bg-surface-2 text-muted" },
   { value: "SENT", label: "Envoyée", badge: "bg-sky-100 text-sky-700" },
   { value: "PAID", label: "Payée", badge: "bg-emerald-100 text-emerald-700" },
   { value: "OVERDUE", label: "En retard", badge: "bg-rose-100 text-rose-700" },

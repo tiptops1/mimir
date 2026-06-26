@@ -155,7 +155,7 @@ function Column({
             </span>
           )}
         </div>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">
           {cards.length}
         </span>
       </div>
@@ -166,14 +166,14 @@ function Column({
             ? "border-brand bg-indigo-50/40"
             : highlighted
               ? "border-brand bg-indigo-50/40 ring-2 ring-brand/40"
-              : "border-border bg-slate-50/60"
+              : "border-border bg-surface-2/60"
         }`}
       >
         {cards.map((card) => (
           <DraggableCard key={card.id} card={card} config={config} />
         ))}
         {cards.length === 0 && (
-          <p className="px-2 py-6 text-center text-xs text-slate-400">
+          <p className="px-2 py-6 text-center text-xs text-faint">
             Déposez ici
           </p>
         )}
@@ -294,25 +294,25 @@ export function PipelineBoard({
             : `${total} sociétés au total`}
         </p>
         <div className="relative w-44">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
             value={fNom}
             onChange={(e) => setFNom(e.target.value)}
             placeholder="Nom du contact…"
-            className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-3 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
           />
         </div>
         <input
           value={fSociete}
           onChange={(e) => setFSociete(e.target.value)}
           placeholder="Société…"
-          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
         />
         <input
           value={fContact}
           onChange={(e) => setFContact(e.target.value)}
           placeholder="Email / téléphone…"
-          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
         />
         <select
           value={fPriorite}

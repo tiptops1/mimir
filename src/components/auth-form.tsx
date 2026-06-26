@@ -46,7 +46,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
 
       {state?.error ? (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger ring-1 ring-inset ring-danger/15">
           {state.error}
         </p>
       ) : null}

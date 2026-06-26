@@ -119,7 +119,7 @@ export default async function TodoPage({
                 <Card key={b.title}>
                   <CardHeader className="flex items-center justify-between">
                     <CardTitle className={b.accent}>{b.title}</CardTitle>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">
                       {b.tasks.length}
                     </span>
                   </CardHeader>

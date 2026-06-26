@@ -54,9 +54,9 @@ function StatusCell({ row }: { row: FinanceRow }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={pending}
-        className="inline-flex items-center rounded-md px-1 py-0.5 hover:bg-slate-100 disabled:opacity-50"
+        className="inline-flex items-center rounded-md px-1 py-0.5 hover:bg-surface-2 disabled:opacity-50"
       >
-        <Badge className={meta?.badge ?? "bg-slate-100 text-slate-600"}>
+        <Badge className={meta?.badge ?? "bg-surface-2 text-muted"}>
           {meta?.label ?? current}
         </Badge>
       </button>
@@ -71,8 +71,8 @@ function StatusCell({ row }: { row: FinanceRow }) {
                 setOpen(false);
                 startTransition(() => setFinanceStatus(row.id, o.value));
               }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50 ${
-                o.value === current ? "bg-slate-50" : ""
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-2 ${
+                o.value === current ? "bg-surface-2" : ""
               }`}
             >
               <span
@@ -139,7 +139,7 @@ function AmountCell({ row }: { row: FinanceRow }) {
       type="button"
       onClick={() => setEditing(true)}
       disabled={pending}
-      className={`rounded-md px-1 py-0.5 tabular-nums hover:bg-slate-100 disabled:opacity-50 ${
+      className={`rounded-md px-1 py-0.5 tabular-nums hover:bg-surface-2 disabled:opacity-50 ${
         row.direction === "IN" ? "text-emerald-700" : "text-foreground"
       }`}
     >
@@ -158,7 +158,7 @@ function Row({ row }: { row: FinanceRow }) {
   const kindMeta = KIND_META[row.kind];
 
   return (
-    <tr className="border-t border-border hover:bg-slate-50/60">
+    <tr className="border-t border-border hover:bg-surface-2/60">
       <td className="px-4 py-2.5">
         <Link
           href={`/finances/${row.id}`}
@@ -173,7 +173,7 @@ function Row({ row }: { row: FinanceRow }) {
           {row.vendor ?? row.company?.name ?? ""}
         </div>
       </td>
-      <td className="px-4 py-2.5 text-sm text-slate-600">{row.category ?? "—"}</td>
+      <td className="px-4 py-2.5 text-sm text-muted">{row.category ?? "—"}</td>
       <td className="px-4 py-2.5">
         <StatusCell row={row} />
       </td>
@@ -184,7 +184,7 @@ function Row({ row }: { row: FinanceRow }) {
         <div className="inline-flex items-center gap-1">
           <Link
             href={`/finances/${row.id}`}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-foreground"
             aria-label="Modifier"
           >
             <Pencil className="h-4 w-4" />
@@ -197,7 +197,7 @@ function Row({ row }: { row: FinanceRow }) {
               setRemoved(true);
               startTransition(() => deleteFinanceEntry(row.id));
             }}
-            className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+            className="rounded-md p-1 text-faint hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
             aria-label="Supprimer"
           >
             <Trash2 className="h-4 w-4" />
@@ -247,7 +247,7 @@ export function FinanceTable({
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 segment === s.value
                   ? "bg-indigo-50 text-brand"
-                  : "text-slate-500 hover:bg-slate-100"
+                  : "text-muted hover:bg-surface-2"
               }`}
             >
               {s.label}
@@ -268,7 +268,7 @@ export function FinanceTable({
       </div>
 
       {adding && (
-        <div className="border-b border-border bg-slate-50/60 p-4">
+        <div className="border-b border-border bg-surface-2/60 p-4">
           <FinanceEntryForm
             mode="create"
             categories={categories}
