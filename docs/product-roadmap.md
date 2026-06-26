@@ -168,11 +168,16 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 
 ## P3 — Finances: the business cockpit *(new track — from system-of-action to one-stop pilot)*
 
-> **Status: 🟡 in progress (2026-06-26).** Turns the CRM from a prospecting tool into the place a
-> solo owner pilots the whole business from: the revenue side already existed (deals/pipeline/won
-> amounts); this adds the **cost side** and ties both into a P&L cockpit. Built additive + config-first
-> per `CLAUDE.md`, on the live single-tenant app. Schema changes are additive `db:push` (new
-> `FinanceEntry` + `Setting` collections; `Task.companyId` relaxed to optional + `financeEntryId`).
+> **Status: ✅ shipped & deployed (2026-06-26)** — `main` (`a4eed07`) → Railway auto-deploy. Additive
+> `db:push` run live against prod Atlas (`FinanceEntry` + `Setting` collections + indexes;
+> `Task.financeEntryId` index) and `config:seed` run (FINANCE category). `tsc` + `eslint` +
+> `prisma validate` + **full `next build` green**. Browser/live click-through still to be eyeballed once
+> the deploy lands.
+>
+> Turns the CRM from a prospecting tool into the place a solo owner pilots the whole business from: the
+> revenue side already existed (deals/pipeline/won amounts); this adds the **cost side** and ties both
+> into a P&L cockpit. Built additive + config-first per `CLAUDE.md`, on the live single-tenant app
+> (`Task.companyId` relaxed to optional so finance alerts need no company).
 
 The north-star principle still holds — every finance screen leads with a **forward action** (what's
 about to cost or pay), not a backward report.
@@ -219,6 +224,26 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-06-26 — **P3 Finances cockpit — shipped & deployed (new product track).** Evolved the CRM from a
+  prospecting tool into a one-stop business cockpit by adding the **cost side** and tying it to revenue.
+  **One flexible `FinanceEntry`** model (`direction` OUT/IN × `kind` SUBSCRIPTION/STAFF/EXPENSE/INVOICE;
+  euros, recurrence, status, trial/renew/due dates, optional CRM `company` link, `customFields`) + a tiny
+  `Setting` key/value store (trésorerie). **`/finances`**: KPI strip (revenu / coûts / net mensuel /
+  trésorerie + autonomie via `FinanceKpiStrip`, shared with the dashboard), 30-day **échéances radar**,
+  cost-by-category Donut, and an **inline-editable** segment-filtered table (status badge dropdown +
+  click-to-edit amount, reusing the `EnumCell`/`useTransition` pattern); detail/edit at `/finances/[id]`.
+  Server math in `lib/finance-cockpit.ts`; client-safe meta/`monthlyAmount` in `lib/finance.ts`;
+  `formatCurrency` added to `lib/display.ts`. **Alert engine reuse:** `advanceFinanceAlerts`
+  (`lib/finance-alerts.ts`) in `/api/cron` materializes trial-ends / renewals / invoices-due into
+  `FINANCE` `Task`s (deduped by `financeEntryId`) → `/todo` + bell + digest for free; **`Task.companyId`
+  relaxed to optional** (`toggleTask` already guarded it, so additive + safe). FINANCE category seeded as
+  config (`scripts/seed-config.ts`). All schema changes additive `db:push` to prod (FinanceEntry + Setting
+  collections + indexes, Task.financeEntryId index); `config:seed` run live. `tsc` + `eslint` +
+  `prisma validate` + **full `next build` green**. **Deployed:** committed + pushed `a4eed07` → `main`
+  (alongside the previously-held Phase 1/2 commits, per owner go-ahead) → Railway auto-deploy. **Still to
+  eyeball on a live authed session:** create one of each kind, inline edits, the radar, and a cron-seeded
+  finance task. **Open follow-ons:** surface entity `FINANCE` in `/settings/fields`; out of scope for v1 —
+  receipt upload/OCR, bank/Stripe import, TVA reporting, PDF invoices, multi-currency.
 - 2026-06-26 — **P1 shipped in one push (outbound AI email + Deal + sequences + notifications).**
   Five-stage build, each additive + verified + deployed to `main`:
   (1) **Outbound + AI-researched email** — `email-composer.tsx` on the fiche; "Générer avec IA" builds a

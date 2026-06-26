@@ -8,9 +8,12 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 2 — fields + stages self-serve UI DONE (2026-06-26, code complete,
-browser-verified against prod Atlas, not yet committed/pushed).** Christopher (ADMIN) can now add/
-edit/delete his own CUSTOM fields and pipeline stages from a `/settings` UI, with guardrails. "Saved
+**Current phase: Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
+(stages + native fields as config) and Phase 2 (fields + stages self-serve `/settings` UI) commits were
+**committed + pushed to `main` (`a4eed07`)** → Railway auto-deploy, on the owner's explicit go-ahead,
+alongside the new **Finances cockpit** product track (see `docs/product-roadmap.md` P3). Christopher
+(ADMIN) can now add/edit/delete his own CUSTOM fields and pipeline stages from a `/settings` UI, with
+guardrails. Additive `db:push` + `config:seed` re-run against prod Atlas; full `next build` green. "Saved
 views" remains open (deferred, undesigned — own pass). Next focus = saved views, or finishing the
 per-tenant ingestion loop in **Phase 3**.
 
@@ -135,6 +138,15 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-06-26 — **DEPLOYED the held-back Phase 1 + Phase 2 commits to prod (`a4eed07` → `main`).** The
+  three previously-uncommitted/unpushed commits — Phase 1 stages-as-config (`baca810`), Phase 1 native
+  fields from config (`0962e60`), and Phase 2 self-serve `/settings` UI (`03ce648`) — were pushed to
+  `main` on the owner's explicit go-ahead, bundled with the new **Finances cockpit** product track (P3 in
+  `docs/product-roadmap.md`). Their prod schema/config migrations (stages-as-config, FieldDefinition seed)
+  had already been run live in earlier sessions; this push cuts the prod **code** over to match. Verified
+  before push: `tsc` + `eslint` + `prisma validate` + **full `next build` green** (all 25 routes incl.
+  `/settings/*` and `/finances/*`). Railway auto-deploying. **To confirm:** Railway build green + a live
+  authed pass over `/settings/fields`, `/settings/stages`, and `/finances`.
 - 2026-06-26 — **Phase 2: self-serve fields + stages UI (code complete, browser-verified on prod, not
   yet committed/pushed).** New ADMIN-only `/settings` area (`(app)/settings/layout.tsx` gates via
   `requireRole(["ADMIN"])`) with two tabs: **Champs** (`/settings/fields`) and **Étapes**
