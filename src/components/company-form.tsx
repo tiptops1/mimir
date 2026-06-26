@@ -15,6 +15,8 @@ import {
   CANAL_PREFERE_OPTIONS,
 } from "@/lib/constants";
 import type { StageDef } from "@/lib/stage-meta";
+import type { FieldDef } from "@/lib/field-config";
+import { NativeFieldControl, nativeFieldDefaultValue } from "@/components/native-field-control";
 
 type CompanyLike = {
   id?: string;
@@ -72,10 +74,12 @@ export function CompanyForm({
   company,
   mode,
   stages,
+  nativeDefs,
 }: {
   company?: CompanyLike;
   mode: "create" | "edit";
   stages: StageDef[];
+  nativeDefs: FieldDef[];
 }) {
   const router = useRouter();
   const action =
@@ -87,87 +91,23 @@ export function CompanyForm({
     FormData
   >(action, undefined);
 
+  const record = (company ?? {}) as Record<string, unknown>;
+  const bySection = (name: string) =>
+    nativeDefs.filter((d) => d.section === name).sort((a, b) => a.order - b.order);
+
   return (
     <form action={formAction} className="space-y-5">
       <Section title="Identité">
-        <div>
-          <Label htmlFor="siret">SIRET *</Label>
-          <Input
-            id="siret"
-            name="siret"
-            required
-            defaultValue={company?.siret ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="siren">SIREN</Label>
-          <Input id="siren" name="siren" defaultValue={company?.siren ?? ""} />
-        </div>
-        <div>
-          <Label htmlFor="nomSociete">Nom société</Label>
-          <Input
-            id="nomSociete"
-            name="nomSociete"
-            defaultValue={company?.nomSociete ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="enseigne">Enseigne</Label>
-          <Input
-            id="enseigne"
-            name="enseigne"
-            defaultValue={company?.enseigne ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="categorieEntreprise">Catégorie</Label>
-          <Input
-            id="categorieEntreprise"
-            name="categorieEntreprise"
-            defaultValue={company?.categorieEntreprise ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="formeJuridique">Forme juridique</Label>
-          <Input
-            id="formeJuridique"
-            name="formeJuridique"
-            defaultValue={company?.formeJuridique ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="dateCreation">Date de création</Label>
-          <Input
-            id="dateCreation"
-            name="dateCreation"
-            type="date"
-            defaultValue={dateValue(company?.dateCreation)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="trancheEffectifs">Tranche d&apos;effectifs</Label>
-          <Input
-            id="trancheEffectifs"
-            name="trancheEffectifs"
-            defaultValue={company?.trancheEffectifs ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="codeNaf">Code NAF</Label>
-          <Input
-            id="codeNaf"
-            name="codeNaf"
-            defaultValue={company?.codeNaf ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="libelleNaf">Libellé NAF</Label>
-          <Input
-            id="libelleNaf"
-            name="libelleNaf"
-            defaultValue={company?.libelleNaf ?? ""}
-          />
-        </div>
+        {bySection("Identité").map((def) => (
+          <div key={def.key}>
+            <Label htmlFor={def.key}>{def.label}{def.required ? " *" : ""}</Label>
+            <NativeFieldControl
+              def={def}
+              defaultValue={nativeFieldDefaultValue(record, def)}
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+        ))}
       </Section>
 
       <Section title="Coordonnées">
@@ -179,51 +119,16 @@ export function CompanyForm({
             defaultValue={company?.adresse ?? ""}
           />
         </div>
-        <div>
-          <Label htmlFor="codePostal">Code postal</Label>
-          <Input
-            id="codePostal"
-            name="codePostal"
-            defaultValue={company?.codePostal ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="ville">Ville</Label>
-          <Input id="ville" name="ville" defaultValue={company?.ville ?? ""} />
-        </div>
-        <div>
-          <Label htmlFor="siteWeb">Site web</Label>
-          <Input
-            id="siteWeb"
-            name="siteWeb"
-            defaultValue={company?.siteWeb ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="emailGenerique">Email générique</Label>
-          <Input
-            id="emailGenerique"
-            name="emailGenerique"
-            defaultValue={company?.emailGenerique ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="telephoneStandard">Téléphone standard</Label>
-          <Input
-            id="telephoneStandard"
-            name="telephoneStandard"
-            defaultValue={company?.telephoneStandard ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="chiffreAffaires">Chiffre d&apos;affaires (€)</Label>
-          <Input
-            id="chiffreAffaires"
-            name="chiffreAffaires"
-            type="number"
-            defaultValue={company?.chiffreAffaires ?? ""}
-          />
-        </div>
+        {bySection("Coordonnées").map((def) => (
+          <div key={def.key}>
+            <Label htmlFor={def.key}>{def.label}</Label>
+            <NativeFieldControl
+              def={def}
+              defaultValue={nativeFieldDefaultValue(record, def)}
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+        ))}
         <div>
           <Label htmlFor="canalPrefere">Communication préférée</Label>
           <Select
@@ -257,10 +162,6 @@ export function CompanyForm({
           </Select>
         </div>
         <div>
-          <Label htmlFor="canal">Canal</Label>
-          <Input id="canal" name="canal" defaultValue={company?.canal ?? ""} />
-        </div>
-        <div>
           <Label htmlFor="priorite">Priorité</Label>
           <Select
             id="priorite"
@@ -290,32 +191,16 @@ export function CompanyForm({
             ))}
           </Select>
         </div>
-        <div>
-          <Label htmlFor="icpScore">Score ICP</Label>
-          <Input
-            id="icpScore"
-            name="icpScore"
-            type="number"
-            defaultValue={company?.icpScore ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="nbCollaborateursEstime">Nb collaborateurs estimé</Label>
-          <Input
-            id="nbCollaborateursEstime"
-            name="nbCollaborateursEstime"
-            type="number"
-            defaultValue={company?.nbCollaborateursEstime ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="niveauDigitalisation">Niveau digitalisation</Label>
-          <Input
-            id="niveauDigitalisation"
-            name="niveauDigitalisation"
-            defaultValue={company?.niveauDigitalisation ?? ""}
-          />
-        </div>
+        {bySection("Qualification").map((def) => (
+          <div key={def.key}>
+            <Label htmlFor={def.key}>{def.label}</Label>
+            <NativeFieldControl
+              def={def}
+              defaultValue={nativeFieldDefaultValue(record, def)}
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+        ))}
       </Section>
 
       <Section title="Spécialités">

@@ -135,9 +135,15 @@ export default async function CompanyDetailPage({
     company.activities.map((a) => a.userId),
   );
 
-  // Tenant-defined custom fields (Phase-1 config store).
-  const customFieldDefs = await getFieldDefs("COMPANY");
+  // Tenant-defined field config (Phase-1 store): NATIVE defs drive the inline
+  // editor's form rendering; CUSTOM defs render via CustomFieldsSection.
+  const allFieldDefs = await getFieldDefs("COMPANY");
+  const nativeFieldDefs = allFieldDefs.filter((d) => d.source === "NATIVE");
+  const customFieldDefs = allFieldDefs.filter((d) => d.source === "CUSTOM");
   const customFieldValues = readCustomFields(company.customFields);
+  const contactNativeDefs = (await getFieldDefs("CONTACT")).filter(
+    (d) => d.source === "NATIVE",
+  );
 
   return (
     <div>
@@ -162,7 +168,7 @@ export default async function CompanyDetailPage({
       </PageHeader>
 
       <div className="space-y-6 p-6">
-        <CompanyInlineEditor company={company} stages={stageDefs} />
+        <CompanyInlineEditor company={company} stages={stageDefs} nativeDefs={nativeFieldDefs} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
@@ -283,7 +289,7 @@ export default async function CompanyDetailPage({
                   );
                 })
               )}
-              <AddContactForm companyId={company.id} />
+              <AddContactForm companyId={company.id} nativeDefs={contactNativeDefs} />
             </CardBody>
           </Card>
 

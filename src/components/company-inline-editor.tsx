@@ -12,6 +12,8 @@ import {
   CANAL_PREFERE_OPTIONS,
 } from "@/lib/constants";
 import type { StageDef } from "@/lib/stage-meta";
+import type { FieldDef } from "@/lib/field-config";
+import { NativeFieldControl, nativeFieldDefaultValue } from "@/components/native-field-control";
 import { formatDate } from "@/lib/utils";
 
 // Subtle "looks like text until you click it" styling for inline editing.
@@ -19,12 +21,6 @@ const editCls =
   "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-foreground transition-colors hover:bg-slate-100 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-100";
 const selectCls =
   "w-full rounded-md border border-border bg-white px-2 py-1 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-indigo-100";
-
-function dateValue(d?: Date | string | null) {
-  if (!d) return "";
-  const date = typeof d === "string" ? new Date(d) : d;
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
-}
 
 function Field({
   label,
@@ -46,12 +42,17 @@ function Field({
 export function CompanyInlineEditor({
   company,
   stages,
+  nativeDefs,
 }: {
   company: Company;
   stages: StageDef[];
+  nativeDefs: FieldDef[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
+  const record = company as unknown as Record<string, unknown>;
+  const bySection = (name: string) =>
+    nativeDefs.filter((d) => d.section === name).sort((a, b) => a.order - b.order);
 
   const [state, formAction, pending] = useActionState<
     FormResult | undefined,
@@ -95,49 +96,27 @@ export function CompanyInlineEditor({
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-              <Field label="Nom société">{text("nomSociete")}</Field>
-              <Field label="Enseigne">{text("enseigne")}</Field>
-              <Field label="SIREN">{text("siren")}</Field>
-              <Field label="SIRET *">
-                <input
-                  name="siret"
-                  required
-                  defaultValue={company.siret ?? ""}
-                  className={editCls}
-                />
-              </Field>
-              <Field label="Catégorie">{text("categorieEntreprise")}</Field>
-              <Field label="Forme juridique">{text("formeJuridique")}</Field>
-              <Field label="Date de création">
-                <input
-                  type="date"
-                  name="dateCreation"
-                  defaultValue={dateValue(company.dateCreation)}
-                  className={editCls}
-                />
-              </Field>
-              <Field label="Code NAF">{text("codeNaf")}</Field>
-              <Field label="Libellé NAF">{text("libelleNaf")}</Field>
-              <Field label="Tranche effectifs">
-                {text("trancheEffectifs")}
-              </Field>
+              {bySection("Identité").map((def) => (
+                <Field key={def.key} label={`${def.label}${def.required ? " *" : ""}`}>
+                  <NativeFieldControl
+                    def={def}
+                    defaultValue={nativeFieldDefaultValue(record, def)}
+                    className={def.type === "select" ? selectCls : editCls}
+                  />
+                </Field>
+              ))}
               <Field label="Adresse" full>
                 {text("adresse")}
               </Field>
-              <Field label="Code postal">{text("codePostal")}</Field>
-              <Field label="Ville">{text("ville")}</Field>
-              <Field label="Chiffre d'affaires (€)">
-                <input
-                  type="number"
-                  name="chiffreAffaires"
-                  defaultValue={company.chiffreAffaires ?? ""}
-                  placeholder="—"
-                  className={editCls}
-                />
-              </Field>
-              <Field label="Site web">{text("siteWeb")}</Field>
-              <Field label="Email">{text("emailGenerique")}</Field>
-              <Field label="Téléphone">{text("telephoneStandard")}</Field>
+              {bySection("Coordonnées").map((def) => (
+                <Field key={def.key} label={def.label}>
+                  <NativeFieldControl
+                    def={def}
+                    defaultValue={nativeFieldDefaultValue(record, def)}
+                    className={def.type === "select" ? selectCls : editCls}
+                  />
+                </Field>
+              ))}
               <Field label="Communication préférée">
                 <select
                   name="canalPrefere"
@@ -237,28 +216,15 @@ export function CompanyInlineEditor({
                   ))}
                 </select>
               </Field>
-              <Field label="Score ICP">
-                <input
-                  type="number"
-                  name="icpScore"
-                  defaultValue={company.icpScore ?? ""}
-                  placeholder="—"
-                  className={editCls}
-                />
-              </Field>
-              <Field label="Nb collaborateurs estimé">
-                <input
-                  type="number"
-                  name="nbCollaborateursEstime"
-                  defaultValue={company.nbCollaborateursEstime ?? ""}
-                  placeholder="—"
-                  className={editCls}
-                />
-              </Field>
-              <Field label="Niveau digitalisation">
-                {text("niveauDigitalisation")}
-              </Field>
-              <Field label="Canal">{text("canal")}</Field>
+              {bySection("Qualification").map((def) => (
+                <Field key={def.key} label={def.label}>
+                  <NativeFieldControl
+                    def={def}
+                    defaultValue={nativeFieldDefaultValue(record, def)}
+                    className={def.type === "select" ? selectCls : editCls}
+                  />
+                </Field>
+              ))}
 
               {/* Read-only (driven by activity, not edited here) */}
               <div className="flex items-center justify-between border-t border-border pt-3">

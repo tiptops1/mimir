@@ -12,6 +12,8 @@ import {
 import type { FormResult } from "@/app/actions/companies";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { ACTIVITY_TYPES } from "@/lib/constants";
+import type { FieldDef } from "@/lib/field-config";
+import { NativeFieldControl } from "@/components/native-field-control";
 
 export function DeleteCompanyButton({ id }: { id: string }) {
   const action = deleteCompany.bind(null, id);
@@ -69,7 +71,13 @@ export function AddActivityForm({ companyId }: { companyId: string }) {
   );
 }
 
-export function AddContactForm({ companyId }: { companyId: string }) {
+export function AddContactForm({
+  companyId,
+  nativeDefs,
+}: {
+  companyId: string;
+  nativeDefs: FieldDef[];
+}) {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState<
@@ -100,30 +108,20 @@ export function AddContactForm({ companyId }: { companyId: string }) {
     >
       <input type="hidden" name="companyId" value={companyId} />
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor="prenom">Prénom</Label>
-          <Input id="prenom" name="prenom" />
-        </div>
-        <div>
-          <Label htmlFor="nom">Nom</Label>
-          <Input id="nom" name="nom" />
-        </div>
-        <div>
-          <Label htmlFor="fonction">Fonction</Label>
-          <Input id="fonction" name="fonction" />
-        </div>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" />
-        </div>
-        <div>
-          <Label htmlFor="telephone">Téléphone</Label>
-          <Input id="telephone" name="telephone" />
-        </div>
-        <div>
-          <Label htmlFor="linkedinUrl">LinkedIn</Label>
-          <Input id="linkedinUrl" name="linkedinUrl" />
-        </div>
+        {["Identité", "Coordonnées"]
+          .flatMap((section) =>
+            nativeDefs.filter((d) => d.section === section).sort((a, b) => a.order - b.order),
+          )
+          .map((def) => (
+          <div key={def.key}>
+            <Label htmlFor={def.key}>{def.label}</Label>
+            <NativeFieldControl
+              def={def}
+              defaultValue=""
+              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+        ))}
       </div>
       {state?.error ? (
         <p className="text-sm text-rose-700">{state.error}</p>

@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/dal";
 import { PageHeader } from "@/components/page-header";
 import { companyName } from "@/lib/display";
 import { NewContactForm } from "@/components/new-contact-form";
+import { getFieldDefs } from "@/lib/field-config";
 
 export default async function NewContactPage() {
   await verifySession();
@@ -17,6 +18,10 @@ export default async function NewContactPage() {
     .map((c) => ({ id: c.id, name: companyName(c) }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
+  const contactNativeDefs = (await getFieldDefs("CONTACT")).filter(
+    (d) => d.source === "NATIVE",
+  );
+
   return (
     <div>
       <PageHeader
@@ -24,7 +29,7 @@ export default async function NewContactPage() {
         subtitle="Rattacher à une société existante ou en créer une nouvelle"
       />
       <div className="max-w-3xl p-6">
-        <NewContactForm companies={options} />
+        <NewContactForm companies={options} nativeDefs={contactNativeDefs} />
       </div>
     </div>
   );

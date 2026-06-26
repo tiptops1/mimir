@@ -6,13 +6,21 @@ import { createContactWithCompany } from "@/app/actions/contacts";
 import type { FormResult } from "@/app/actions/contacts";
 import { Button, Input, Label, Select } from "@/components/ui";
 import { SPECIALTY_FIELDS } from "@/lib/constants";
+import type { FieldDef } from "@/lib/field-config";
+import { NativeFieldControl } from "@/components/native-field-control";
 
 export interface CompanyOption {
   id: string;
   name: string;
 }
 
-export function NewContactForm({ companies }: { companies: CompanyOption[] }) {
+export function NewContactForm({
+  companies,
+  nativeDefs,
+}: {
+  companies: CompanyOption[];
+  nativeDefs: FieldDef[];
+}) {
   const router = useRouter();
   const [companyMode, setCompanyMode] = useState<"existing" | "new">(
     companies.length > 0 ? "existing" : "new",
@@ -106,26 +114,22 @@ export function NewContactForm({ companies }: { companies: CompanyOption[] }) {
       <div className="rounded-xl border border-border bg-card p-5">
         <h3 className="mb-4 text-sm font-semibold">Contact</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="prenom">Prénom</Label>
-            <Input id="prenom" name="prenom" />
-          </div>
-          <div>
-            <Label htmlFor="nom">Nom</Label>
-            <Input id="nom" name="nom" />
-          </div>
-          <div>
-            <Label htmlFor="telephone">Téléphone</Label>
-            <Input id="telephone" name="telephone" />
-          </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" />
-          </div>
-          <div className="sm:col-span-2">
-            <Label htmlFor="linkedinUrl">LinkedIn</Label>
-            <Input id="linkedinUrl" name="linkedinUrl" />
-          </div>
+          {["Identité", "Coordonnées"]
+            .flatMap((section) =>
+              nativeDefs
+                .filter((d) => d.section === section)
+                .sort((a, b) => a.order - b.order),
+            )
+            .map((def) => (
+              <div key={def.key} className={def.key === "linkedinUrl" ? "sm:col-span-2" : undefined}>
+                <Label htmlFor={def.key}>{def.label}</Label>
+                <NativeFieldControl
+                  def={def}
+                  defaultValue=""
+                  className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            ))}
         </div>
         <label className="mt-4 flex w-fit items-center gap-2 text-sm">
           <input

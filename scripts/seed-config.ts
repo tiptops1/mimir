@@ -65,10 +65,10 @@ const NATIVE_COMPANY_FIELDS: Array<{
   order: number;
   section: string;
 }> = [
-  { key: "nomSociete", label: "Nom société", type: "text", order: 1, section: "Identité" },
-  { key: "enseigne", label: "Enseigne", type: "text", order: 2, section: "Identité" },
-  { key: "siren", label: "SIREN", type: "text", order: 3, section: "Identité" },
-  { key: "siret", label: "SIRET", type: "text", required: true, order: 4, section: "Identité" },
+  { key: "siret", label: "SIRET", type: "text", required: true, order: 1, section: "Identité" },
+  { key: "siren", label: "SIREN", type: "text", order: 2, section: "Identité" },
+  { key: "nomSociete", label: "Nom société", type: "text", order: 3, section: "Identité" },
+  { key: "enseigne", label: "Enseigne", type: "text", order: 4, section: "Identité" },
   { key: "categorieEntreprise", label: "Catégorie", type: "text", order: 5, section: "Identité" },
   { key: "formeJuridique", label: "Forme juridique", type: "text", order: 6, section: "Identité" },
   { key: "dateCreation", label: "Date de création", type: "date", order: 7, section: "Identité" },
@@ -76,37 +76,28 @@ const NATIVE_COMPANY_FIELDS: Array<{
   { key: "codeNaf", label: "Code NAF", type: "text", order: 9, section: "Identité" },
   { key: "libelleNaf", label: "Libellé NAF", type: "text", order: 10, section: "Identité" },
 
-  { key: "adresse", label: "Adresse", type: "text", order: 1, section: "Coordonnées" },
-  { key: "codePostal", label: "Code postal", type: "text", order: 2, section: "Coordonnées" },
-  { key: "ville", label: "Ville", type: "text", order: 3, section: "Coordonnées" },
-  { key: "siteWeb", label: "Site web", type: "text", order: 4, section: "Coordonnées" },
-  { key: "emailGenerique", label: "Email générique", type: "text", order: 5, section: "Coordonnées" },
-  { key: "telephoneStandard", label: "Téléphone standard", type: "text", order: 6, section: "Coordonnées" },
-  { key: "chiffreAffaires", label: "Chiffre d'affaires (€)", type: "number", order: 7, section: "Coordonnées" },
-  {
-    key: "canalPrefere",
-    label: "Communication préférée",
-    type: "select",
-    options: ["PHONE", "EMAIL", "LINKEDIN"],
-    order: 8,
-    section: "Coordonnées",
-  },
+  // adresse is NOT seeded — it's full-width (sm:col-span-2) in the form, which
+  // the generic single-column field loop doesn't express; stays hardcoded.
+  { key: "codePostal", label: "Code postal", type: "text", order: 1, section: "Coordonnées" },
+  { key: "ville", label: "Ville", type: "text", order: 2, section: "Coordonnées" },
+  { key: "siteWeb", label: "Site web", type: "text", order: 3, section: "Coordonnées" },
+  { key: "emailGenerique", label: "Email générique", type: "text", order: 4, section: "Coordonnées" },
+  { key: "telephoneStandard", label: "Téléphone standard", type: "text", order: 5, section: "Coordonnées" },
+  { key: "chiffreAffaires", label: "Chiffre d'affaires (€)", type: "number", order: 6, section: "Coordonnées" },
+  // canalPrefere is NOT seeded here — it has a hardcoded French-label select
+  // (CANAL_PREFERE_OPTIONS) that FieldDefinition.options (a plain string[] with
+  // no separate label) can't express yet, so it stays a special-cased control
+  // in the form, like stage/priorite/potentiel/specialties below.
 
+  // priorite/potentiel are NOT seeded as NATIVE fields for the same reason
+  // (label-mapped Prisma enums, e.g. "A" → "A — Haute") — they stay
+  // special-cased controls (PRIORITE_OPTIONS/POTENTIEL_OPTIONS) in the form.
   { key: "canal", label: "Canal", type: "text", order: 1, section: "Qualification" },
-  { key: "priorite", label: "Priorité", type: "select", options: ["A", "B", "C"], order: 2, section: "Qualification" },
-  {
-    key: "potentiel",
-    label: "Potentiel",
-    type: "select",
-    options: ["FAIBLE", "MOYEN", "FORT"],
-    order: 3,
-    section: "Qualification",
-  },
-  { key: "icpScore", label: "Score ICP", type: "number", order: 4, section: "Qualification" },
-  { key: "nbCollaborateursEstime", label: "Nb collaborateurs estimé", type: "number", order: 5, section: "Qualification" },
-  { key: "niveauDigitalisation", label: "Niveau digitalisation", type: "text", order: 6, section: "Qualification" },
-
-  { key: "notes", label: "Notes", type: "text", order: 1, section: "Notes" },
+  { key: "icpScore", label: "Score ICP", type: "number", order: 2, section: "Qualification" },
+  { key: "nbCollaborateursEstime", label: "Nb collaborateurs estimé", type: "number", order: 3, section: "Qualification" },
+  { key: "niveauDigitalisation", label: "Niveau digitalisation", type: "text", order: 4, section: "Qualification" },
+  // notes is NOT seeded — it renders as a multiline <textarea>, which the
+  // generic single-line NativeFieldControl doesn't support; stays hardcoded.
 ];
 
 const NATIVE_CONTACT_FIELDS: Array<{

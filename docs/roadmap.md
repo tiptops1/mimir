@@ -8,7 +8,13 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 0 — DONE & DEPLOYED to prod (2026-06-24).** The multi-tenant spine + the
+**Current phase: Phase 1 — DONE (2026-06-26, code complete + seeded on prod Atlas, not yet
+committed/pushed to Railway).** Native-field config-driven rendering + pipeline-stages-as-config
+landed, closing out Phase 1's two `[~]` partial items. Next focus = **Phase 2** (self-serve UI for a
+tenant to add/edit their own fields + pipeline stages — the data model Phase 1 built is now there to
+edit) or finishing the per-tenant ingestion loop in **Phase 3**.
+
+**Phase 0 — DONE & DEPLOYED to prod (2026-06-24).** The multi-tenant spine + the
 pulled-ahead Google OAuth slice are live on Railway (commit `d26b480`); all multi-tenant + `GOOGLE_*`
 env vars are set on Railway and the app boots clean multi-tenant in production. Login verified in prod.
 The Google slice is now **connected & self-running for ingestion**: owner consent done
@@ -17,8 +23,7 @@ The Google slice is now **connected & self-running for ingestion**: owner consen
 pass was reworked to Google Gemini** (free/cheap tier), smoke-tested live, and **committed + pushed
 (`3f68ad7`, 2026-06-24)** → Railway auto-deploying (`GEMINI_API_KEY` already set on Railway, so it
 activates on deploy). Remaining: **confirm the deploy is green** (`/api/cron` → `ai: enriched`), a
-one-time `--backfill` for history, and the ~weekly OAuth reconnect (Testing mode) until publish + CASA. Next focus = Phase 1 (or finish the per-tenant
-ingestion loop in Phase 3).
+one-time `--backfill` for history, and the ~weekly OAuth reconnect (Testing mode) until publish + CASA.
 
 > **Product is branded "Vision RM"** (repo name `avelior-analytics` is legacy). The owner is an
 > independent vendor; **Avelior is customer #1** (`crm_chris`). The Google Cloud OAuth app ("Vision RM")
@@ -61,15 +66,37 @@ ingestion routing is Phase 3.
 `components/enum-cell.tsx` + `components/global-search.tsx`, and `no-explicit-any` in
 `scripts/enrich-dirigeants.ts`. `next build` does not fail on them.
 
-## Phase 1 — Config-driven core  *(2026-06-26: config store + custom fields + Deal landed)*
+## Phase 1 — Config-driven core ✅ *(2026-06-26: config store + custom fields + Deal landed; native fields + stages-as-config landed same day)*
 The product itself; Chris's CRM becomes one *config* of it.
 - [x] Entity & field-definition model (config stored as data) — `FieldDefinition` collection
-      (entity/key/label/type/options/required/showInForm), read via `lib/field-config.ts getFieldDefs`.
-- [~] Dynamic form + table rendering from config — *Partial:* custom fields render dynamically from
-      config on the fiche (`CustomFieldsSection`); pipeline card seam still in `tenant-config.ts`.
-      Full dynamic rendering of NATIVE fields + pipeline-stages-as-config remain the documented follow-up.
-- [~] Express Chris's current fields + stages as seeded config — *Partial:* `config:seed` seeds COMPANY
-      custom-field defs; the Deal object (P1.3) split stage off Company. Native-field config = follow-up.
+      (entity/key/label/type/options/required/showInForm/**source**/**section**), read via
+      `lib/field-config.ts getFieldDefs`. `source` ("NATIVE" | "CUSTOM") now distinguishes metadata
+      about an existing scalar column from a tenant-added `customFields` field; `section` groups
+      fields for rendering.
+- [x] Dynamic form + table rendering from config — Company's ~20 NATIVE fields (Identité/Coordonnées/
+      Qualification) render via a generic loop (`NativeFieldControl` + `nativeFieldDefaultValue` in
+      `components/native-field-control.tsx`) in `company-form.tsx` + `company-inline-editor.tsx`, same
+      pattern extended to Contact (`new-contact-form.tsx`, `company-detail-actions.tsx`
+      `AddContactForm`). **Deliberately stayed hardcoded** (label≠value enums or layout the generic
+      single-line-input renderer doesn't support): `stage` (own StageDefinition control, see below),
+      `priorite`/`potentiel`/`canalPrefere` (French-label selects — `FieldDefinition.options` has no
+      separate label field yet), specialty checkboxes (8 fixed booleans tied to filter/badge logic),
+      `adresse` (full-width span), `notes` (multiline textarea). Sociétés/Contacts **table columns**
+      stay curated/hardcoded — reworking which columns a table shows is a Phase 2 "saved views" concern,
+      not this pass. Pipeline card seam (`tenant-config.ts`) unchanged.
+- [x] Pipeline stages as config — `StageDefinition` collection (key/label/order/accentClass/
+      badgeClass/dotClass/isWon/isLost), read via new `lib/stage-config.ts` `getStageDefs()`
+      (server/RSC) + `lib/stage-meta.ts` (client-safe `StageDef` type + `stageMetaFrom`/
+      `stageLabelsFrom`, split out so client components like `pipeline-board.tsx`/`badges.tsx` don't
+      pull in the server-only tenant DB router). `Company.stage` moved from a Prisma `enum
+      PipelineStage` to `String` (no data migration needed — Mongo always stored it as a plain
+      string). `Deal.stage` was already a string. All ~15 call sites (validations, `ai-extract.ts`
+      prompt + STAGES, actions, pipeline board, forms, filters, funnel, dashboard) now read stage defs
+      as data instead of importing a static array — unblocks Phase 2's stage editor UI.
+- [x] Express Chris's current fields + stages as seeded config — `config:seed` (`scripts/seed-config.ts`)
+      seeds the 8 stages + ~20 NATIVE Company fields + 6 NATIVE Contact fields + the original 4 CUSTOM
+      Company fields, idempotent by key. Run live against prod Atlas (35 FieldDefinition + 8
+      StageDefinition rows).
 - [x] Custom-field read/write on flexible documents (no migration) — `customFields Json?` on
       Company/Contact/Deal + `actions/custom-fields.ts setCompanyCustomField`. Verified on prod Mongo.
 
@@ -106,6 +133,39 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-06-26 — **Phase 1 closed out: native-field config-driven rendering + pipeline-stages-as-config.**
+  Two-part build, each its own commit (local `main`, not yet pushed):
+  **(A) Stages → config.** New `StageDefinition` model (key/label/order/colors/isWon/isLost);
+  `Company.stage` enum → `String` (no data migration — Mongo always stored it as a string). New
+  `src/lib/stage-config.ts` (`getStageDefs`/`loadStageDefs`, server-only, request-memoized via React
+  `cache`) + `src/lib/stage-meta.ts` (client-safe `StageDef` type + `stageMetaFrom`/`stageLabelsFrom`,
+  split out so "use client" components like `pipeline-board.tsx`/`badges.tsx` don't pull the
+  server-only tenant DB router into the client bundle — hit a Next.js build error first time and fixed
+  by the split). All ~15 call sites updated: `validations.ts` (stage is now "non-empty string", real
+  allow-list check moved server-side), `ai-extract.ts` (STAGES list + SYSTEM prompt built per-call from
+  config, `enrichActivities` fetches via `loadStageDefs(prisma)`), `actions/companies.ts` (new
+  `ensureValidStage` helper; `ENUM_FIELDS.stage` removed, special-cased in `setCompanyEnum`),
+  `actions/deals.ts`, `api/companies/[id]/stage/route.ts`, `email-research.ts`, `notifications.ts`, and
+  client components (`pipeline-board.tsx`, `company-form.tsx`, `company-inline-editor.tsx`,
+  `companies-filters.tsx`, `deals-card.tsx`, `badges.tsx`) now take `stages`/`stageDefs` as a prop from
+  their server-component parent instead of importing a static array.
+  **(B) Native fields → config.** `FieldDefinition` gained `source` ("NATIVE" | "CUSTOM") and `section`
+  (form grouping). New `NativeFieldControl`/`nativeFieldDefaultValue` (`components/native-field-control.tsx`)
+  render the right `<input>`/`<select>` from a `FieldDef`, slotting into the **same** existing
+  `<form>`/Zod-validated submit path (`name={def.key}` matches the Prisma field) — no new write action,
+  no UX change, just config-driven JSX generation. Rewired `company-form.tsx`, `company-inline-editor.tsx`,
+  `new-contact-form.tsx`, `company-detail-actions.tsx` `AddContactForm`. **Deliberately scoped out**
+  (documented inline in the code + Phase 1 section above): `stage`/`priorite`/`potentiel`/`canalPrefere`
+  (label≠value enums), specialties (fixed boolean grid), `adresse` (full-width), `notes` (textarea),
+  table columns (Phase 2 "saved views" territory). `scripts/seed-config.ts` extended to seed 8 stages +
+  ~20 native Company fields + 6 native Contact fields; ran live against prod Atlas, then had to delete 5
+  stale `FieldDefinition` rows (adresse/canalPrefere/priorite/potentiel/notes) left over from an
+  in-progress seed-list trim — **user approved that one prod deletion explicitly** before running it.
+  `tsc` + `next build` green throughout; verified in-browser against live prod data (pipeline board all
+  8 stage columns, company fiche/forms render every native field with the right `name`, no console
+  errors) — did **not** live-submit a write (the harness correctly blocked a test value into a real
+  prod company record; deferred to the user). **Not yet pushed to `main`** — push on explicit go-ahead
+  per CLAUDE.md.
 - 2026-06-24 — **AI insight → Google Gemini (free/cheap) + ingestion go-live. Committed + pushed
   (`3f68ad7`).** Reworked the AI pass to be **provider-aware** (`src/lib/ai-extract.ts`): `GEMINI_API_KEY`
   wins → else `ANTHROPIC_API_KEY` → else no-op. Gemini path = **OpenAI-compatible endpoint**
