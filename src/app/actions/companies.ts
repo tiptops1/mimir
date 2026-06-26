@@ -6,6 +6,7 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession, requireRole } from "@/lib/dal";
 import { companySchema, activitySchema } from "@/lib/validations";
 import { mirrorStageToPrimaryDeal } from "@/lib/deals";
+import { getStageDefs } from "@/lib/stage-config";
 
 export interface FormResult {
   error?: string;
@@ -15,6 +16,12 @@ export interface FormResult {
 function dataFromForm(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
   return companySchema.safeParse(raw);
+}
+
+/** Stage is config data (StageDefinition), not a Zod enum — check it here. */
+async function ensureValidStage(data: { stage: string }): Promise<void> {
+  const keys = (await getStageDefs()).map((s) => s.value);
+  if (!keys.includes(data.stage)) data.stage = keys[0];
 }
 
 export async function createCompany(
@@ -27,6 +34,7 @@ export async function createCompany(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
   }
+  await ensureValidStage(parsed.data);
 
   const existing = await prisma.company.findUnique({
     where: { siret: parsed.data.siret },
@@ -52,6 +60,7 @@ export async function updateCompany(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Données invalides." };
   }
+  await ensureValidStage(parsed.data);
 
   await prisma.company.update({ where: { id }, data: parsed.data });
   revalidatePath("/companies");
@@ -102,26 +111,14 @@ export async function setCompanySpecialties(
 }
 
 // Whitelist of inline-editable enum fields → their allowed values.
-// `nullable` fields accept "" to clear the value.
+// `nullable` fields accept "" to clear the value. `stage` isn't listed here —
+// its allow-list is config data (StageDefinition), fetched in setCompanyEnum.
 const ENUM_FIELDS = {
-  stage: {
-    values: [
-      "A_QUALIFIER",
-      "A_CONTACTER",
-      "CONTACTE",
-      "RDV_OBTENU",
-      "DEMO_REALISEE",
-      "PROPOSITION_ENVOYEE",
-      "GAGNE",
-      "PERDU",
-    ],
-    nullable: false,
-  },
   priorite: { values: ["A", "B", "C"], nullable: true },
   potentiel: { values: ["FAIBLE", "MOYEN", "FORT"], nullable: true },
 } as const;
 
-export type EnumField = keyof typeof ENUM_FIELDS;
+export type EnumField = "stage" | keyof typeof ENUM_FIELDS;
 
 /** Inline-edit a single enum column (stage / priorité / potentiel) from the table. */
 export async function setCompanyEnum(
@@ -131,15 +128,21 @@ export async function setCompanyEnum(
 ): Promise<void> {
   await verifySession();
   const prisma = await getTenantDb();
-  const def = ENUM_FIELDS[field];
-  if (!def) return;
   let next: string | null;
-  if (def.values.includes(value as never)) {
+  if (field === "stage") {
+    const stageKeys = (await getStageDefs()).map((s) => s.value);
+    if (!stageKeys.includes(value)) return;
     next = value;
-  } else if (def.nullable && value === "") {
-    next = null;
   } else {
-    return; // ignore invalid values rather than throwing
+    const def = ENUM_FIELDS[field];
+    if (!def) return;
+    if (def.values.includes(value as never)) {
+      next = value;
+    } else if (def.nullable && value === "") {
+      next = null;
+    } else {
+      return; // ignore invalid values rather than throwing
+    }
   }
   await prisma.company.update({ where: { id }, data: { [field]: next } });
   // Keep the primary deal in sync when the pipeline stage changes inline.

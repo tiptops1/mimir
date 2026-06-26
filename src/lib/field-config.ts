@@ -8,6 +8,10 @@ import { getTenantDb } from "./tenant-context";
 
 export type FieldType = "text" | "number" | "select" | "bool" | "date";
 export type ConfigEntity = "COMPANY" | "CONTACT" | "DEAL";
+// CUSTOM = stored in the entity's flexible `customFields` document (original
+// Phase-1 design). NATIVE = metadata about an existing scalar column; `key` is
+// the Prisma field name and reads/writes go through that column, not customFields.
+export type FieldSource = "CUSTOM" | "NATIVE";
 
 export interface FieldDef {
   key: string;
@@ -16,6 +20,8 @@ export interface FieldDef {
   options: string[];
   required: boolean;
   order: number;
+  source: FieldSource;
+  section: string;
 }
 
 export const getFieldDefs = cache(
@@ -32,9 +38,22 @@ export const getFieldDefs = cache(
       options: r.options,
       required: r.required,
       order: r.order,
+      source: r.source as FieldSource,
+      section: r.section,
     }));
   },
 );
+
+/** Group an entity's field defs by their `section`, in seed/array order. */
+export function groupBySection(defs: FieldDef[]): Map<string, FieldDef[]> {
+  const groups = new Map<string, FieldDef[]>();
+  for (const def of defs) {
+    const list = groups.get(def.section) ?? [];
+    list.push(def);
+    groups.set(def.section, list);
+  }
+  return groups;
+}
 
 /** Coerce a raw form string to the stored value for a field type. null clears it. */
 export function coerceFieldValue(def: FieldDef, raw: string): unknown {

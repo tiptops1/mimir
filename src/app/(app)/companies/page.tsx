@@ -6,21 +6,15 @@ import { LinkButton, Card, EmptyState } from "@/components/ui";
 import { CompaniesFilters } from "@/components/companies-filters";
 import { companyName, contactName } from "@/lib/display";
 import {
-  PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   SPECIALTY_FIELDS,
 } from "@/lib/constants";
+import { getStageDefs } from "@/lib/stage-config";
 import { SpecialtiesCell } from "@/components/specialties-cell";
 import { NotesCell } from "@/components/notes-cell";
 import { EnumCell } from "@/components/enum-cell";
 
-const STAGE_OPTIONS = PIPELINE_STAGES.map((s) => ({
-  value: s.value,
-  label: s.label,
-  badge: s.badge,
-  dot: s.dot,
-}));
 const PRIORITE_CELL_OPTIONS = PRIORITE_OPTIONS.map((p) => ({
   value: p.value,
   label: p.label,
@@ -71,6 +65,13 @@ export default async function CompaniesPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const prisma = await getTenantDb();
+  const stageDefs = await getStageDefs();
+  const stageOptions = stageDefs.map((s) => ({
+    value: s.value,
+    label: s.label,
+    badge: s.badge,
+    dot: s.dot,
+  }));
   const sp = await searchParams;
   const societe = typeof sp.societe === "string" ? sp.societe : "";
   const nom = typeof sp.nom === "string" ? sp.nom : "";
@@ -199,7 +200,7 @@ export default async function CompaniesPage({
       </PageHeader>
 
       <div className="p-6">
-        <CompaniesFilters />
+        <CompaniesFilters stages={stageDefs} />
 
         {all ? (
           <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
@@ -280,7 +281,7 @@ export default async function CompaniesPage({
                             id={c.id}
                             field="stage"
                             value={c.stage}
-                            options={STAGE_OPTIONS}
+                            options={stageOptions}
                           />
                         </td>
                         <td className="px-4 py-3">

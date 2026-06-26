@@ -9,12 +9,12 @@ import {
 } from "@/app/actions/companies";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import {
-  PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   SPECIALTY_FIELDS,
   CANAL_PREFERE_OPTIONS,
 } from "@/lib/constants";
+import type { StageDef } from "@/lib/stage-meta";
 
 type CompanyLike = {
   id?: string;
@@ -71,9 +71,11 @@ function dateValue(d?: Date | string | null) {
 export function CompanyForm({
   company,
   mode,
+  stages,
 }: {
   company?: CompanyLike;
   mode: "create" | "edit";
+  stages: StageDef[];
 }) {
   const router = useRouter();
   const action =
@@ -245,9 +247,9 @@ export function CompanyForm({
           <Select
             id="stage"
             name="stage"
-            defaultValue={company?.stage ?? "A_QUALIFIER"}
+            defaultValue={company?.stage ?? stages[0]?.value}
           >
-            {PIPELINE_STAGES.map((s) => (
+            {stages.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>

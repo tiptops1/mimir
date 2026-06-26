@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { loadStageDefs } from "./stage-config";
 
 // The "brain": turns raw interaction text (an email, a meeting, a call
 // transcript) into structured CRM signal via an LLM. Decoupled from any one
@@ -21,25 +22,13 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 // Haiku is cheap + fast and plenty for extraction. Override with ANTHROPIC_MODEL.
 const ANTHROPIC_DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
-// Must match the PipelineStage enum in schema.prisma.
-const STAGES = [
-  "A_QUALIFIER",
-  "A_CONTACTER",
-  "CONTACTE",
-  "RDV_OBTENU",
-  "DEMO_REALISEE",
-  "PROPOSITION_ENVOYEE",
-  "GAGNE",
-  "PERDU",
-] as const;
-
 export interface CrmInsight {
   summary: string; // 1–2 sentence neutral recap, in French
   sentiment: "POSITIF" | "NEUTRE" | "NEGATIF" | null;
   interestLevel: "FORT" | "MOYEN" | "FAIBLE" | null;
   nextStep: string | null; // recommended next action, in French
   actionItems: string[]; // concrete to-dos extracted from the exchange
-  suggestedStage: (typeof STAGES)[number] | null;
+  suggestedStage: string | null; // one of the tenant's configured stage keys
 }
 
 export interface ExtractInput {
@@ -64,7 +53,10 @@ export function aiEnabled(): boolean {
   return provider() !== null;
 }
 
-const SYSTEM = `Tu es l'assistant CRM d'un courtier en assurances B2B (Avelior).
+// Stages are config data (StageDefinition), so the prompt is built per-call
+// from the tenant's actual stage keys instead of a hardcoded list.
+function buildSystemPrompt(stageKeys: string[]): string {
+  return `Tu es l'assistant CRM d'un courtier en assurances B2B (Avelior).
 On te donne le contenu d'un email, d'une réunion ou d'un compte-rendu d'appel
 avec un prospect. Tu en extrais le signal commercial utile au suivi.
 
@@ -75,7 +67,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :
   "interestLevel": "FORT" | "MOYEN" | "FAIBLE",
   "nextStep": "prochaine action recommandée (français)" | null,
   "actionItems": ["tâche concrète", ...],
-  "suggestedStage": un de [A_QUALIFIER, A_CONTACTER, CONTACTE, RDV_OBTENU, DEMO_REALISEE, PROPOSITION_ENVOYEE, GAGNE, PERDU] | null
+  "suggestedStage": un de [${stageKeys.join(", ")}] | null
 }
 
 Règles : sois factuel, n'invente rien. Si l'information manque, mets null (ou []
@@ -85,6 +77,7 @@ un rendez-vous qui vient d'avoir lieu = RDV_OBTENU ; une démo seulement planifi
 n'est PAS DEMO_REALISEE (laisse RDV_OBTENU) ; une proposition évoquée mais pas
 encore envoyée n'est PAS PROPOSITION_ENVOYEE. Dans le doute, choisis l'étape la
 moins avancée.`;
+}
 
 /** Pull the first balanced JSON object out of a model response. */
 function parseJsonObject(text: string): unknown {
@@ -99,7 +92,7 @@ function parseJsonObject(text: string): unknown {
   }
 }
 
-function coerceInsight(raw: unknown): CrmInsight | null {
+function coerceInsight(raw: unknown, stageKeys: string[]): CrmInsight | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const oneOf = <T extends string>(v: unknown, allowed: readonly T[]): T | null =>
@@ -122,7 +115,7 @@ function coerceInsight(raw: unknown): CrmInsight | null {
           .map((x) => x.trim())
           .slice(0, 10)
       : [],
-    suggestedStage: oneOf(o.suggestedStage, STAGES),
+    suggestedStage: oneOf(o.suggestedStage, stageKeys),
   };
 }
 
@@ -244,6 +237,7 @@ export async function callModel(
 /** Call the active LLM on one interaction. Returns null if disabled or on any error. */
 export async function extractInsight(
   input: ExtractInput,
+  stageKeys: string[],
 ): Promise<CrmInsight | null> {
   if (!aiEnabled()) return null;
 
@@ -264,9 +258,9 @@ export async function extractInsight(
 
   const userContent = `${header}\n\n---\n${body}`;
 
-  const text = await callModel(SYSTEM, userContent);
+  const text = await callModel(buildSystemPrompt(stageKeys), userContent);
   if (!text) return null;
-  return coerceInsight(parseJsonObject(text));
+  return coerceInsight(parseJsonObject(text), stageKeys);
 }
 
 /**
@@ -280,6 +274,7 @@ export async function enrichActivities(
 ): Promise<{ enriched: number; skipped: number }> {
   if (!aiEnabled()) return { enriched: 0, skipped: 0 };
   const limit = opts.limit ?? 40;
+  const stageKeys = (await loadStageDefs(prisma)).map((s) => s.value);
 
   const pending = await prisma.activity.findMany({
     where: {
@@ -309,13 +304,16 @@ export async function enrichActivities(
       skipped++;
       continue;
     }
-    const insight = await extractInsight({
-      kind: a.type as ExtractInput["kind"],
-      subject: a.subject,
-      body: text,
-      direction: a.direction,
-      companyName: a.company?.nomSociete || a.company?.enseigne || null,
-    });
+    const insight = await extractInsight(
+      {
+        kind: a.type as ExtractInput["kind"],
+        subject: a.subject,
+        body: text,
+        direction: a.direction,
+        companyName: a.company?.nomSociete || a.company?.enseigne || null,
+      },
+      stageKeys,
+    );
     if (!insight) {
       skipped++;
       continue;

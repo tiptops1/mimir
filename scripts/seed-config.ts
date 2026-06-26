@@ -8,6 +8,29 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Pipeline stages (Phase-1 follow-up: was a Prisma enum + a hardcoded array in
+// src/lib/constants.ts). Today's 8 stages, expressed as data — see
+// src/lib/stage-config.ts. Upserted by `key`, so re-running is safe.
+const STAGES: Array<{
+  key: string;
+  label: string;
+  order: number;
+  accentClass: string;
+  badgeClass: string;
+  dotClass: string;
+  isWon?: boolean;
+  isLost?: boolean;
+}> = [
+  { key: "A_QUALIFIER", label: "À qualifier", order: 1, accentClass: "border-t-slate-400", badgeClass: "bg-slate-100 text-slate-700", dotClass: "bg-slate-400" },
+  { key: "A_CONTACTER", label: "À contacter", order: 2, accentClass: "border-t-sky-400", badgeClass: "bg-sky-100 text-sky-700", dotClass: "bg-sky-400" },
+  { key: "CONTACTE", label: "Contacté", order: 3, accentClass: "border-t-indigo-400", badgeClass: "bg-indigo-100 text-indigo-700", dotClass: "bg-indigo-400" },
+  { key: "RDV_OBTENU", label: "RDV obtenu", order: 4, accentClass: "border-t-violet-400", badgeClass: "bg-violet-100 text-violet-700", dotClass: "bg-violet-400" },
+  { key: "DEMO_REALISEE", label: "Démo réalisée", order: 5, accentClass: "border-t-amber-400", badgeClass: "bg-amber-100 text-amber-700", dotClass: "bg-amber-400" },
+  { key: "PROPOSITION_ENVOYEE", label: "Proposition envoyée", order: 6, accentClass: "border-t-orange-400", badgeClass: "bg-orange-100 text-orange-700", dotClass: "bg-orange-400" },
+  { key: "GAGNE", label: "Gagné", order: 7, accentClass: "border-t-emerald-500", badgeClass: "bg-emerald-100 text-emerald-700", dotClass: "bg-emerald-500", isWon: true },
+  { key: "PERDU", label: "Perdu", order: 8, accentClass: "border-t-rose-400", badgeClass: "bg-rose-100 text-rose-700", dotClass: "bg-rose-400", isLost: true },
+];
+
 const COMPANY_FIELDS: Array<{
   key: string;
   label: string;
@@ -27,6 +50,81 @@ const COMPANY_FIELDS: Array<{
   { key: "multiAgences", label: "Multi-agences", type: "bool", order: 4 },
 ];
 
+// Native field metadata (Phase-1 follow-up: "express Chris's current fields as
+// config"). `key` is the real Prisma scalar column name on Company/Contact —
+// these are read/written through that column, never via `customFields`.
+// `section` matches the form groupings already on screen, so the dynamic
+// renderer reproduces today's layout exactly. Order matches the current
+// hardcoded JSX order in company-form.tsx / company-inline-editor.tsx.
+const NATIVE_COMPANY_FIELDS: Array<{
+  key: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+  order: number;
+  section: string;
+}> = [
+  { key: "nomSociete", label: "Nom société", type: "text", order: 1, section: "Identité" },
+  { key: "enseigne", label: "Enseigne", type: "text", order: 2, section: "Identité" },
+  { key: "siren", label: "SIREN", type: "text", order: 3, section: "Identité" },
+  { key: "siret", label: "SIRET", type: "text", required: true, order: 4, section: "Identité" },
+  { key: "categorieEntreprise", label: "Catégorie", type: "text", order: 5, section: "Identité" },
+  { key: "formeJuridique", label: "Forme juridique", type: "text", order: 6, section: "Identité" },
+  { key: "dateCreation", label: "Date de création", type: "date", order: 7, section: "Identité" },
+  { key: "trancheEffectifs", label: "Tranche d'effectifs", type: "text", order: 8, section: "Identité" },
+  { key: "codeNaf", label: "Code NAF", type: "text", order: 9, section: "Identité" },
+  { key: "libelleNaf", label: "Libellé NAF", type: "text", order: 10, section: "Identité" },
+
+  { key: "adresse", label: "Adresse", type: "text", order: 1, section: "Coordonnées" },
+  { key: "codePostal", label: "Code postal", type: "text", order: 2, section: "Coordonnées" },
+  { key: "ville", label: "Ville", type: "text", order: 3, section: "Coordonnées" },
+  { key: "siteWeb", label: "Site web", type: "text", order: 4, section: "Coordonnées" },
+  { key: "emailGenerique", label: "Email générique", type: "text", order: 5, section: "Coordonnées" },
+  { key: "telephoneStandard", label: "Téléphone standard", type: "text", order: 6, section: "Coordonnées" },
+  { key: "chiffreAffaires", label: "Chiffre d'affaires (€)", type: "number", order: 7, section: "Coordonnées" },
+  {
+    key: "canalPrefere",
+    label: "Communication préférée",
+    type: "select",
+    options: ["PHONE", "EMAIL", "LINKEDIN"],
+    order: 8,
+    section: "Coordonnées",
+  },
+
+  { key: "canal", label: "Canal", type: "text", order: 1, section: "Qualification" },
+  { key: "priorite", label: "Priorité", type: "select", options: ["A", "B", "C"], order: 2, section: "Qualification" },
+  {
+    key: "potentiel",
+    label: "Potentiel",
+    type: "select",
+    options: ["FAIBLE", "MOYEN", "FORT"],
+    order: 3,
+    section: "Qualification",
+  },
+  { key: "icpScore", label: "Score ICP", type: "number", order: 4, section: "Qualification" },
+  { key: "nbCollaborateursEstime", label: "Nb collaborateurs estimé", type: "number", order: 5, section: "Qualification" },
+  { key: "niveauDigitalisation", label: "Niveau digitalisation", type: "text", order: 6, section: "Qualification" },
+
+  { key: "notes", label: "Notes", type: "text", order: 1, section: "Notes" },
+];
+
+const NATIVE_CONTACT_FIELDS: Array<{
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  order: number;
+  section: string;
+}> = [
+  { key: "prenom", label: "Prénom", type: "text", order: 1, section: "Identité" },
+  { key: "nom", label: "Nom", type: "text", order: 2, section: "Identité" },
+  { key: "fonction", label: "Fonction", type: "text", order: 3, section: "Identité" },
+  { key: "email", label: "Email", type: "text", order: 1, section: "Coordonnées" },
+  { key: "telephone", label: "Téléphone", type: "text", order: 2, section: "Coordonnées" },
+  { key: "linkedinUrl", label: "LinkedIn", type: "text", order: 3, section: "Coordonnées" },
+];
+
 // Starter outreach cadence (Phase-1 P1.2). Idempotent by name.
 const SEQUENCES: Array<{ name: string; steps: unknown[] }> = [
   {
@@ -41,6 +139,32 @@ const SEQUENCES: Array<{ name: string; steps: unknown[] }> = [
 ];
 
 async function main() {
+  for (const s of STAGES) {
+    await prisma.stageDefinition.upsert({
+      where: { key: s.key },
+      update: {
+        label: s.label,
+        order: s.order,
+        accentClass: s.accentClass,
+        badgeClass: s.badgeClass,
+        dotClass: s.dotClass,
+        isWon: s.isWon ?? false,
+        isLost: s.isLost ?? false,
+      },
+      create: {
+        key: s.key,
+        label: s.label,
+        order: s.order,
+        accentClass: s.accentClass,
+        badgeClass: s.badgeClass,
+        dotClass: s.dotClass,
+        isWon: s.isWon ?? false,
+        isLost: s.isLost ?? false,
+      },
+    });
+  }
+  console.log(`Seeded ${STAGES.length} pipeline stage definitions.`);
+
   for (const f of COMPANY_FIELDS) {
     await prisma.fieldDefinition.upsert({
       where: { entity_key: { entity: "COMPANY", key: f.key } },
@@ -50,6 +174,8 @@ async function main() {
         options: f.options ?? [],
         order: f.order,
         showInForm: true,
+        source: "CUSTOM",
+        section: "Champs personnalisés",
       },
       create: {
         entity: "COMPANY",
@@ -60,13 +186,72 @@ async function main() {
         required: false,
         showInForm: true,
         order: f.order,
+        source: "CUSTOM",
+        section: "Champs personnalisés",
       },
     });
   }
+  console.log(`Seeded ${COMPANY_FIELDS.length} CUSTOM COMPANY field definitions.`);
+
+  for (const f of NATIVE_COMPANY_FIELDS) {
+    await prisma.fieldDefinition.upsert({
+      where: { entity_key: { entity: "COMPANY", key: f.key } },
+      update: {
+        label: f.label,
+        type: f.type,
+        options: f.options ?? [],
+        required: f.required ?? false,
+        order: f.order,
+        showInForm: true,
+        source: "NATIVE",
+        section: f.section,
+      },
+      create: {
+        entity: "COMPANY",
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        options: f.options ?? [],
+        required: f.required ?? false,
+        showInForm: true,
+        order: f.order,
+        source: "NATIVE",
+        section: f.section,
+      },
+    });
+  }
+  console.log(`Seeded ${NATIVE_COMPANY_FIELDS.length} NATIVE COMPANY field definitions.`);
+
+  for (const f of NATIVE_CONTACT_FIELDS) {
+    await prisma.fieldDefinition.upsert({
+      where: { entity_key: { entity: "CONTACT", key: f.key } },
+      update: {
+        label: f.label,
+        type: f.type,
+        required: f.required ?? false,
+        order: f.order,
+        showInForm: true,
+        source: "NATIVE",
+        section: f.section,
+      },
+      create: {
+        entity: "CONTACT",
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        options: [],
+        required: f.required ?? false,
+        showInForm: true,
+        order: f.order,
+        source: "NATIVE",
+        section: f.section,
+      },
+    });
+  }
+  console.log(`Seeded ${NATIVE_CONTACT_FIELDS.length} NATIVE CONTACT field definitions.`);
+
   const count = await prisma.fieldDefinition.count();
-  console.log(
-    `Seeded ${COMPANY_FIELDS.length} COMPANY field definitions. Total: ${count}`,
-  );
+  console.log(`Total FieldDefinition rows: ${count}`);
 
   for (const seq of SEQUENCES) {
     const existing = await prisma.sequence.findFirst({ where: { name: seq.name } });

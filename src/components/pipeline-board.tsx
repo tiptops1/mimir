@@ -16,13 +16,11 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { PrioriteBadge, PotentielBadge } from "@/components/badges";
-import {
-  PIPELINE_STAGES,
-  PRIORITE_OPTIONS,
-  POTENTIEL_OPTIONS,
-  type StageValue,
-} from "@/lib/constants";
+import { PRIORITE_OPTIONS, POTENTIEL_OPTIONS } from "@/lib/constants";
+import type { StageDef } from "@/lib/stage-meta";
 import type { CardFieldKey, PipelineCardConfig } from "@/lib/tenant-config";
+
+type StageValue = string;
 
 export interface PipelineCard {
   id: string;
@@ -50,8 +48,6 @@ function touchChip(iso: string | null): { text: string; cls: string } | null {
 }
 
 type Board = Record<StageValue, PipelineCard[]>;
-
-const STAGE_VALUES = PIPELINE_STAGES.map((s) => s.value);
 
 function CardView({
   card,
@@ -129,7 +125,7 @@ function Column({
   highlighted,
   config,
 }: {
-  stage: (typeof PIPELINE_STAGES)[number];
+  stage: StageDef;
   cards: PipelineCard[];
   highlighted?: boolean;
   config: PipelineCardConfig;
@@ -191,12 +187,15 @@ export function PipelineBoard({
   total,
   highlight,
   cardConfig,
+  stages,
 }: {
   initial: Board;
   total: number;
   highlight?: StageValue | null;
   cardConfig: PipelineCardConfig;
+  stages: StageDef[];
 }) {
+  const STAGE_VALUES = stages.map((s) => s.value);
   const [board, setBoard] = useState<Board>(initial);
   const [activeCard, setActiveCard] = useState<PipelineCard | null>(null);
   const [fSociete, setFSociete] = useState("");
@@ -373,7 +372,7 @@ export function PipelineBoard({
         onDragEnd={onDragEnd}
       >
         <div className="thin-scroll flex h-[calc(100vh-220px)] gap-4 overflow-x-auto pb-2">
-          {PIPELINE_STAGES.map((stage) => (
+          {stages.map((stage) => (
             <Column
               key={stage.value}
               stage={stage}

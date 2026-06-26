@@ -30,8 +30,21 @@ Budget évoqué : ils sont ouverts mais prudents. Ils repartent voir leur associ
 Action convenue : on leur envoie une proposition chiffrée et on cale une démo la semaine prochaine.`,
   };
 
+  // Stage keys are config data now (StageDefinition) — this probe touches no DB,
+  // so it uses Chris's seeded defaults (see scripts/seed-config.ts).
+  const stageKeys = [
+    "A_QUALIFIER",
+    "A_CONTACTER",
+    "CONTACTE",
+    "RDV_OBTENU",
+    "DEMO_REALISEE",
+    "PROPOSITION_ENVOYEE",
+    "GAGNE",
+    "PERDU",
+  ];
+
   const t0 = Date.now();
-  const insight = await extractInsight(sample);
+  const insight = await extractInsight(sample, stageKeys);
   const ms = Date.now() - t0;
 
   if (!insight) {

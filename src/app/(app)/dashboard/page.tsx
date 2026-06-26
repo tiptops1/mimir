@@ -9,7 +9,8 @@ import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { TaskList, type TaskRow } from "@/components/task-list";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
-import { PIPELINE_STAGES, ACTIVITY_TYPES } from "@/lib/constants";
+import { ACTIVITY_TYPES } from "@/lib/constants";
+import { getStageDefs } from "@/lib/stage-config";
 import { getGoogleConnection } from "@/lib/integrations";
 
 const activityLabel = (t: string) =>
@@ -22,6 +23,7 @@ export default async function DashboardPage({
 }) {
   const session = await verifySession();
   const prisma = await getTenantDb();
+  const stageDefs = await getStageDefs();
   const googleStatus = (await searchParams).google;
 
   // Forward-looking windows for the worklist strip.
@@ -119,7 +121,7 @@ export default async function DashboardPage({
     { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-500", href: "/companies?stage=GAGNE" },
   ];
 
-  const maxStage = Math.max(1, ...PIPELINE_STAGES.map((s) => stageCounts.get(s.value) ?? 0));
+  const maxStage = Math.max(1, ...stageDefs.map((s) => stageCounts.get(s.value) ?? 0));
 
   return (
     <div>
@@ -189,7 +191,7 @@ export default async function DashboardPage({
                         Dernier contact {formatDate(c.dernierContact)}
                       </p>
                     </div>
-                    <StageBadge stage={c.stage} />
+                    <StageBadge stage={c.stage} stageDefs={stageDefs} />
                   </Link>
                 ))
               )}
@@ -227,7 +229,7 @@ export default async function DashboardPage({
               <CardTitle>Répartition du pipeline</CardTitle>
             </CardHeader>
             <CardBody className="space-y-2.5">
-              {PIPELINE_STAGES.map((s) => {
+              {stageDefs.map((s) => {
                 const count = stageCounts.get(s.value) ?? 0;
                 return (
                   <Link
@@ -305,7 +307,7 @@ export default async function DashboardPage({
                   <p className="text-sm font-medium">{companyName(c)}</p>
                   <p className="text-xs text-muted">{c.ville ?? "—"}</p>
                 </div>
-                <StageBadge stage={c.stage} />
+                <StageBadge stage={c.stage} stageDefs={stageDefs} />
               </Link>
             ))}
           </CardBody>

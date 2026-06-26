@@ -4,6 +4,7 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { CompanyForm } from "@/components/company-form";
 import { companyName } from "@/lib/display";
+import { getStageDefs } from "@/lib/stage-config";
 
 export default async function EditCompanyPage({
   params,
@@ -15,6 +16,7 @@ export default async function EditCompanyPage({
   const { id } = await params;
   const company = await prisma.company.findUnique({ where: { id } });
   if (!company) notFound();
+  const stages = await getStageDefs();
 
   return (
     <div>
@@ -23,7 +25,7 @@ export default async function EditCompanyPage({
         subtitle={company.siret}
       />
       <div className="mx-auto max-w-4xl p-6">
-        <CompanyForm mode="edit" company={company} />
+        <CompanyForm mode="edit" company={company} stages={stages} />
       </div>
     </div>
   );

@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Input, Select } from "@/components/ui";
 import { useUrlFilters } from "@/lib/use-url-filters";
 import {
-  PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   CANAL_PREFERE_OPTIONS,
   SPECIALTY_FIELDS,
 } from "@/lib/constants";
+import type { StageDef } from "@/lib/stage-meta";
 
 /** Live filter bar for Suivi (/companies) — narrows the list as you type/select. */
-export function CompaniesFilters() {
+export function CompaniesFilters({ stages }: { stages: StageDef[] }) {
   const f = useUrlFilters();
   // Free-text fields are local state for smooth typing; the URL updates debounced.
   // The three text filters combine (AND) with each other and with the selects.
@@ -71,7 +71,7 @@ export function CompaniesFilters() {
         className="w-52"
       >
         <option value="">Toutes les étapes</option>
-        {PIPELINE_STAGES.map((s) => (
+        {stages.map((s) => (
           <option key={s.value} value={s.value}>
             {s.label}
           </option>

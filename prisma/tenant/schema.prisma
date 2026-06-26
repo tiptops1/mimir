@@ -18,18 +18,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Pipeline stages — mirror the reference tab in the source sheet.
-enum PipelineStage {
-  A_QUALIFIER
-  A_CONTACTER
-  CONTACTE
-  RDV_OBTENU
-  DEMO_REALISEE
-  PROPOSITION_ENVOYEE
-  GAGNE
-  PERDU
-}
-
 enum Priorite {
   A
   B
@@ -81,8 +69,9 @@ model Company {
   priorite               Priorite?
   potentiel              Potentiel?
 
-  // Pipeline tracking
-  stage              PipelineStage @default(A_QUALIFIER)
+  // Pipeline tracking. Was a Prisma enum; now config-driven (StageDefinition) —
+  // Mongo always stored it as a plain string, so this is a type-only change.
+  stage              String        @default("A_QUALIFIER")
   canal              String?
   datePremierContact DateTime?
   dernierContact     DateTime?
@@ -139,21 +128,49 @@ model Deal {
 // Tenant-defined custom field on a CRM entity — the Phase-1 config store. New
 // fields are added here as DATA (not code) and read/written on each entity's
 // flexible `customFields` document, so adding a field needs no schema migration.
+//
+// `source` distinguishes the two kinds of field this collection now describes:
+// "CUSTOM" (read/written via the entity's flexible `customFields` Json, the
+// original Phase-1 design — user-deletable in Phase 2) vs "NATIVE" (metadata
+// about an existing scalar column, e.g. `nomSociete` — `key` is the Prisma
+// field name; read/written via the real column, never via `customFields`, and
+// never user-deletable since the column itself isn't config). `section` groups
+// fields for rendering (e.g. "Identité", "Coordonnées", "Qualification").
 model FieldDefinition {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   entity     String // COMPANY | CONTACT | DEAL
-  key        String // stable key stored inside customFields
+  key        String // stable key: customFields key (CUSTOM) or scalar column name (NATIVE)
   label      String
   type       String   @default("text") // text | number | select | bool | date
   options    String[] @default([]) // choices when type == "select"
   required   Boolean  @default(false)
   showInForm Boolean  @default(true)
   order      Int      @default(0)
+  source     String   @default("CUSTOM") // CUSTOM | NATIVE
+  section    String   @default("") // form grouping label, e.g. "Identité"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@unique([entity, key])
   @@index([entity])
+}
+
+// Pipeline stage, as config data (Phase-1 follow-up — was a Prisma enum +
+// hardcoded `PIPELINE_STAGES` array in src/lib/constants.ts). `key` is the
+// value stored in Company.stage / Deal.stage; `accentClass`/`badgeClass`/
+// `dotClass` are the Tailwind classes previously baked into StageMeta.
+model StageDefinition {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  key         String   @unique
+  label       String
+  order       Int      @default(0)
+  accentClass String   @default("")
+  badgeClass  String   @default("")
+  dotClass    String   @default("")
+  isWon       Boolean  @default(false)
+  isLost      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Multi-touch outreach cadence (config). `steps` is an ordered JSON array of

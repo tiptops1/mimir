@@ -4,8 +4,10 @@ import { PageHeader } from "@/components/page-header";
 import { LinkButton } from "@/components/ui";
 import { PipelineBoard, type PipelineCard } from "@/components/pipeline-board";
 import { companyName, contactName } from "@/lib/display";
-import { PIPELINE_STAGES, type StageValue } from "@/lib/constants";
+import { getStageDefs } from "@/lib/stage-config";
 import { getTenantConfig } from "@/lib/tenant-config";
+
+type StageValue = string;
 
 export default async function PipelinePage({
   searchParams,
@@ -14,9 +16,10 @@ export default async function PipelinePage({
 }) {
   await verifySession();
   const prisma = await getTenantDb();
+  const stageDefs = await getStageDefs();
   const sp = await searchParams;
   const rawStage = typeof sp.stage === "string" ? sp.stage : "";
-  const highlight = PIPELINE_STAGES.some((s) => s.value === rawStage)
+  const highlight = stageDefs.some((s) => s.value === rawStage)
     ? (rawStage as StageValue)
     : null;
 
@@ -47,7 +50,7 @@ export default async function PipelinePage({
   });
 
   const initial: Record<StageValue, PipelineCard[]> = Object.fromEntries(
-    PIPELINE_STAGES.map((s) => [s.value, [] as PipelineCard[]]),
+    stageDefs.map((s) => [s.value, [] as PipelineCard[]]),
   ) as Record<StageValue, PipelineCard[]>;
 
   for (const c of companies) {
@@ -82,7 +85,7 @@ export default async function PipelinePage({
           .toLowerCase(),
       },
     };
-    (initial[c.stage as StageValue] ?? initial.A_QUALIFIER).push(card);
+    (initial[c.stage] ?? initial[stageDefs[0].value]).push(card);
   }
 
   return (
@@ -98,6 +101,7 @@ export default async function PipelinePage({
         total={companies.length}
         highlight={highlight}
         cardConfig={getTenantConfig().pipelineCard}
+        stages={stageDefs}
       />
     </div>
   );

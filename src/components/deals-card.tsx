@@ -9,7 +9,7 @@ import {
   deleteDeal,
   type DealFormResult,
 } from "@/app/actions/deals";
-import { PIPELINE_STAGES } from "@/lib/constants";
+import type { StageDef } from "@/lib/stage-meta";
 
 export interface DealRow {
   id: string;
@@ -37,7 +37,15 @@ function fmtAmount(a: number | null): string | null {
   return `${a.toLocaleString("fr-FR")} €`;
 }
 
-function DealItem({ deal, companyId }: { deal: DealRow; companyId: string }) {
+function DealItem({
+  deal,
+  companyId,
+  stages,
+}: {
+  deal: DealRow;
+  companyId: string;
+  stages: StageDef[];
+}) {
   const [pending, start] = useTransition();
   const amount = fmtAmount(deal.amount);
   return (
@@ -73,7 +81,7 @@ function DealItem({ deal, companyId }: { deal: DealRow; companyId: string }) {
             }
             className="h-8 w-52 py-1 text-xs"
           >
-            {PIPELINE_STAGES.map((s) => (
+            {stages.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -104,9 +112,11 @@ function DealItem({ deal, companyId }: { deal: DealRow; companyId: string }) {
 export function DealsCard({
   companyId,
   deals,
+  stages,
 }: {
   companyId: string;
   deals: DealRow[];
+  stages: StageDef[];
 }) {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -127,7 +137,9 @@ export function DealsCard({
       {deals.length === 0 ? (
         <p className="text-sm text-muted">Aucune affaire.</p>
       ) : (
-        deals.map((d) => <DealItem key={d.id} deal={d} companyId={companyId} />)
+        deals.map((d) => (
+          <DealItem key={d.id} deal={d} companyId={companyId} stages={stages} />
+        ))
       )}
 
       {open ? (
@@ -152,8 +164,8 @@ export function DealsCard({
             </div>
             <div>
               <Label htmlFor="deal-stage">Étape</Label>
-              <Select id="deal-stage" name="stage" defaultValue="A_QUALIFIER">
-                {PIPELINE_STAGES.map((s) => (
+              <Select id="deal-stage" name="stage" defaultValue={stages[0]?.value}>
+                {stages.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>

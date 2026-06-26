@@ -1,12 +1,9 @@
 import { Badge } from "@/components/ui";
-import {
-  stageMeta,
-  PRIORITE_OPTIONS,
-  POTENTIEL_OPTIONS,
-} from "@/lib/constants";
+import { PRIORITE_OPTIONS, POTENTIEL_OPTIONS } from "@/lib/constants";
+import { stageMetaFrom, type StageDef } from "@/lib/stage-meta";
 
-export function StageBadge({ stage }: { stage: string }) {
-  const meta = stageMeta(stage);
+export function StageBadge({ stage, stageDefs }: { stage: string; stageDefs: StageDef[] }) {
+  const meta = stageMetaFrom(stageDefs, stage);
   return (
     <Badge className={meta.badge}>
       <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />

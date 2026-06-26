@@ -1,7 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { callModel } from "./ai-extract";
 import { fetchUniteLegale, discoverWebsiteFree } from "./enrich";
-import { SPECIALTY_FIELDS, STAGE_LABELS, type StageValue } from "./constants";
+import { SPECIALTY_FIELDS } from "./constants";
+import { loadStageDefs, stageLabelsFrom } from "./stage-config";
 import { companyName, contactName } from "./display";
 
 // "Research, then write." Two responsibilities:
@@ -102,7 +103,8 @@ export async function buildProspectDossier(
     (s) => (company as Record<string, unknown>)[s.key],
   ).map((s) => s.label);
   if (specialties.length) lines.push(`Spécialités : ${specialties.join(", ")}`);
-  lines.push(`Étape pipeline : ${STAGE_LABELS[company.stage as StageValue] ?? company.stage}`);
+  const stageLabels = stageLabelsFrom(await loadStageDefs(prisma));
+  lines.push(`Étape pipeline : ${stageLabels[company.stage] ?? company.stage}`);
   if (company.notes) lines.push(`Notes internes : ${company.notes}`);
 
   if (contact) {

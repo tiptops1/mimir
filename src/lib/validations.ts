@@ -72,18 +72,10 @@ export const companySchema = z.object({
   icpScore: optionalInt,
   priorite: z.enum(["A", "B", "C"]).nullable().optional().catch(null),
   potentiel: z.enum(["FAIBLE", "MOYEN", "FORT"]).nullable().optional().catch(null),
-  stage: z
-    .enum([
-      "A_QUALIFIER",
-      "A_CONTACTER",
-      "CONTACTE",
-      "RDV_OBTENU",
-      "DEMO_REALISEE",
-      "PROPOSITION_ENVOYEE",
-      "GAGNE",
-      "PERDU",
-    ])
-    .default("A_QUALIFIER"),
+  // Stages are config data (StageDefinition), not a fixed enum — the real
+  // allow-list check happens server-side in actions/companies.ts against
+  // getStageDefs(), so this only guards against an empty value.
+  stage: z.string().trim().min(1).default("A_QUALIFIER"),
   canal: optionalString,
   notes: optionalString,
   specialiteSante: checkbox,
@@ -106,17 +98,9 @@ export const contactSchema = z.object({
   linkedinUrl: optionalString,
 });
 
+// Real allow-list check happens against getStageDefs() in the API route.
 export const stageSchema = z.object({
-  stage: z.enum([
-    "A_QUALIFIER",
-    "A_CONTACTER",
-    "CONTACTE",
-    "RDV_OBTENU",
-    "DEMO_REALISEE",
-    "PROPOSITION_ENVOYEE",
-    "GAGNE",
-    "PERDU",
-  ]),
+  stage: z.string().trim().min(1),
 });
 
 export const activitySchema = z.object({

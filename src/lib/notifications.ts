@@ -1,4 +1,4 @@
-import type { PrismaClient, PipelineStage } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { companyName } from "./display";
 
 // "What needs my attention" — computed from existing data (no new model): open
@@ -30,7 +30,7 @@ export async function getNotificationSummary(
 
   const staleWhere = {
     dernierContact: { not: null, lt: staleBefore },
-    stage: { notIn: ["GAGNE", "PERDU"] as PipelineStage[] },
+    stage: { notIn: ["GAGNE", "PERDU"] },
   };
   const taskWhere = { done: false, dueDate: { not: null, lt: startOfTomorrow } };
 

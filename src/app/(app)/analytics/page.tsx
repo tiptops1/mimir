@@ -10,11 +10,11 @@ import {
 } from "@/components/charts";
 import { FunnelChart, type FunnelDatum } from "@/components/funnel-chart";
 import {
-  PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   SPECIALTY_FIELDS,
 } from "@/lib/constants";
+import { getStageDefs } from "@/lib/stage-config";
 
 const STAGE_HEX: Record<string, string> = {
   A_QUALIFIER: "#94a3b8",
@@ -67,6 +67,7 @@ function StatCard({
 export default async function AnalyticsPage() {
   await verifySession();
   const prisma = await getTenantDb();
+  const stageDefs = await getStageDefs();
 
   const companies = await prisma.company.findMany({
     select: {
@@ -92,7 +93,7 @@ export default async function AnalyticsPage() {
   const stageCounts = new Map<string, number>();
   for (const c of companies)
     stageCounts.set(c.stage, (stageCounts.get(c.stage) ?? 0) + 1);
-  const stageData: FunnelDatum[] = PIPELINE_STAGES.map((s) => ({
+  const stageData: FunnelDatum[] = stageDefs.map((s) => ({
     name: s.label,
     value: stageCounts.get(s.value) ?? 0,
     color: STAGE_HEX[s.value],

@@ -3,7 +3,7 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { getOptionalSession } from "@/lib/dal";
 import { stageSchema } from "@/lib/validations";
 import { mirrorStageToPrimaryDeal } from "@/lib/deals";
-import { STAGE_LABELS, type StageValue } from "@/lib/constants";
+import { getStageDefs, stageLabelsFrom } from "@/lib/stage-config";
 
 export async function PATCH(
   req: NextRequest,
@@ -22,7 +22,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid stage" }, { status: 400 });
   }
 
-  const stage = parsed.data.stage as StageValue;
+  const stage = parsed.data.stage;
+  const stageDefs = await getStageDefs();
+  if (!stageDefs.some((s) => s.value === stage)) {
+    return NextResponse.json({ error: "Unknown stage" }, { status: 400 });
+  }
 
   try {
     await prisma.company.update({
@@ -38,7 +42,7 @@ export async function PATCH(
       data: {
         companyId: id,
         type: "STAGE_CHANGE",
-        note: `Étape déplacée vers « ${STAGE_LABELS[stage]} »`,
+        note: `Étape déplacée vers « ${stageLabelsFrom(stageDefs)[stage]} »`,
         userId: session.userId,
       },
     });

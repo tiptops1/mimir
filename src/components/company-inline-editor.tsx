@@ -6,12 +6,12 @@ import { Check, X } from "lucide-react";
 import { updateCompany, type FormResult } from "@/app/actions/companies";
 import { Card, CardBody, CardHeader, CardTitle, Button } from "@/components/ui";
 import {
-  PIPELINE_STAGES,
   PRIORITE_OPTIONS,
   POTENTIEL_OPTIONS,
   SPECIALTY_FIELDS,
   CANAL_PREFERE_OPTIONS,
 } from "@/lib/constants";
+import type { StageDef } from "@/lib/stage-meta";
 import { formatDate } from "@/lib/utils";
 
 // Subtle "looks like text until you click it" styling for inline editing.
@@ -43,7 +43,13 @@ function Field({
   );
 }
 
-export function CompanyInlineEditor({ company }: { company: Company }) {
+export function CompanyInlineEditor({
+  company,
+  stages,
+}: {
+  company: Company;
+  stages: StageDef[];
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
 
@@ -196,7 +202,7 @@ export function CompanyInlineEditor({ company }: { company: Company }) {
                   defaultValue={company.stage}
                   className={selectCls}
                 >
-                  {PIPELINE_STAGES.map((s) => (
+                  {stages.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
