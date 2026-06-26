@@ -8,11 +8,11 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 1 — DONE (2026-06-26, code complete + seeded on prod Atlas, not yet
-committed/pushed to Railway).** Native-field config-driven rendering + pipeline-stages-as-config
-landed, closing out Phase 1's two `[~]` partial items. Next focus = **Phase 2** (self-serve UI for a
-tenant to add/edit their own fields + pipeline stages — the data model Phase 1 built is now there to
-edit) or finishing the per-tenant ingestion loop in **Phase 3**.
+**Current phase: Phase 2 — fields + stages self-serve UI DONE (2026-06-26, code complete,
+browser-verified against prod Atlas, not yet committed/pushed).** Christopher (ADMIN) can now add/
+edit/delete his own CUSTOM fields and pipeline stages from a `/settings` UI, with guardrails. "Saved
+views" remains open (deferred, undesigned — own pass). Next focus = saved views, or finishing the
+per-tenant ingestion loop in **Phase 3**.
 
 **Phase 0 — DONE & DEPLOYED to prod (2026-06-24).** The multi-tenant spine + the
 pulled-ahead Google OAuth slice are live on Railway (commit `d26b480`); all multi-tenant + `GOOGLE_*`
@@ -102,9 +102,11 @@ The product itself; Chris's CRM becomes one *config* of it.
 
 ## Phase 2 — Self-serve customization
 Proves the "fully editable" promise on a real user before selling it.
-- [ ] UI for a tenant to add/edit their own fields
-- [ ] UI for pipeline stages + saved views
-- [ ] Guardrails/validation so self-serve edits can't corrupt data
+- [x] UI for a tenant to add/edit their own fields — `/settings/fields`, ADMIN-only.
+- [x] UI for pipeline stages — `/settings/stages` (drag-reorder); **saved views still open** (deferred,
+      undesigned — needs its own pass: view model, per-user vs per-tenant, table-column config).
+- [x] Guardrails/validation so self-serve edits can't corrupt data — NATIVE fields undeletable,
+      in-use stages undeletable (count shown), duplicate keys rejected with friendly errors.
 
 ## Phase 3 — Integrations per-tenant
 The moat already exists single-tenant — make it multi-tenant.
@@ -133,6 +135,31 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-06-26 — **Phase 2: self-serve fields + stages UI (code complete, browser-verified on prod, not
+  yet committed/pushed).** New ADMIN-only `/settings` area (`(app)/settings/layout.tsx` gates via
+  `requireRole(["ADMIN"])`) with two tabs: **Champs** (`/settings/fields`) and **Étapes**
+  (`/settings/stages`). **Fields:** `src/app/actions/field-config.ts` (`createFieldDef`/
+  `updateFieldDef`/`deleteFieldDef`) + `field-defs-manager.tsx`/`field-def-form.tsx`. NATIVE fields
+  are read-only except label/section (can't delete or retype — they back a real Prisma column);
+  CUSTOM fields are fully editable/deletable. **Stages:** `src/app/actions/stage-config.ts`
+  (`createStageDef`/`updateStageDef`/`deleteStageDef`/`reorderStageDefs`) + `stage-editor-list.tsx`
+  (drag-reorder via existing `@dnd-kit` dep, vertical-list variant of the `pipeline-board.tsx` pattern)
+  /`stage-def-form.tsx`. Stage `key` is immutable post-creation (sidesteps in-use-key-rename entirely).
+  **Guardrails (server-side, in the actions):** delete rejected for NATIVE fields and for stages still
+  referenced by any Company/Deal (friendly error with a live count, e.g. "728 société(s) et 728
+  deal(s)"); duplicate `(entity,key)`/stage-key returns a friendly error instead of a Prisma P2002
+  crash; all writes gated by `requireRole(["ADMIN"])`. Sidebar gained a "Paramètres" link, ADMIN-only.
+  **Bug caught + fixed during browser verification:** both inline forms originally closed
+  unconditionally after submit (`await formAction(fd); onDone?.()`), which hid validation errors —
+  fixed to only close `onDone()` via a `useEffect` keyed on `state?.ok`, confirmed by reproducing a
+  duplicate-key error (stayed open, error visible) then a valid submit (closed, new row appeared).
+  **Verified live against prod Atlas:** created+edited+deleted a CUSTOM field (cleaned up after);
+  created a new stage, confirmed it appeared as a `/pipeline` column, deleted it, confirmed it
+  disappeared from both the settings list and `/pipeline`; tried deleting the in-use "À qualifier"
+  stage (728 companies/728 deals) — correctly blocked with the count in the error. **Scoped out**
+  (per plan, `docs/roadmap.md` Phase 2 box left open): saved views — no scaffolding exists, needs its
+  own design pass. `tsc` + `next build` clean. **Not yet committed** — committing locally this session,
+  not pushing to `main` without explicit go-ahead per `CLAUDE.md`.
 - 2026-06-26 — **Phase 1 closed out: native-field config-driven rendering + pipeline-stages-as-config.**
   Two-part build, each its own commit (local `main`, not yet pushed):
   **(A) Stages → config.** New `StageDefinition` model (key/label/order/colors/isWon/isLost);

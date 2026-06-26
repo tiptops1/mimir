@@ -10,6 +10,7 @@ import {
   KanbanSquare,
   BarChart3,
   Inbox,
+  Settings,
   LogOut,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
@@ -36,6 +37,9 @@ export function Sidebar({
   todoCount?: number;
 }) {
   const pathname = usePathname();
+  const nav = user.role === "ADMIN"
+    ? [...NAV, { href: "/settings", label: "Paramètres", icon: Settings }]
+    : NAV;
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card">
@@ -44,7 +48,7 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
