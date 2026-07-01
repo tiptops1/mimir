@@ -277,6 +277,9 @@ model Contact {
   linkedinUrl String?
   isDecisionMaker Boolean? @default(false)
   customFields Json?
+  // RGPD consent for prospecting outreach: "OPT_IN" | "OPT_OUT" | null (unknown).
+  consent   String?
+  consentAt DateTime?
   companyId   String     @db.ObjectId
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activities  Activity[]
@@ -400,6 +403,21 @@ model SyncCursor {
   source    String   @unique // "gmail" | "calendar"
   cursor    String?
   updatedAt DateTime @updatedAt
+}
+
+// Append-only audit trail (P2.4 RGPD): who did what to which record, written
+// by lib/audit.ts for destructive / PII-relevant actions (erase, export,
+// merges, deletions). Read-only viewer at /settings/audit.
+model AuditLog {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  at       DateTime @default(now())
+  userId   String? // control-plane user id
+  action   String // e.g. "RGPD_ERASE" | "RGPD_EXPORT" | "MERGE_COMPANIES" | "DELETE_COMPANY"
+  entity   String // "COMPANY" | "CONTACT" | …
+  entityId String?
+  details  String? // human-readable summary (never raw PII beyond what's needed)
+
+  @@index([at])
 }
 
 // Append-only log of pipeline stage transitions (P2.3 Analytics v2: stage

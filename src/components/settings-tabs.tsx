@@ -9,6 +9,7 @@ const TABS = [
   { href: "/settings/stages", label: "Étapes" },
   { href: "/settings/integrations", label: "Intégrations" },
   { href: "/settings/duplicates", label: "Doublons" },
+  { href: "/settings/audit", label: "Audit" },
 ];
 
 export function SettingsTabs() {

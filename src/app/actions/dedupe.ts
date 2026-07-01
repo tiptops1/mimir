@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
+import { logAudit } from "@/lib/audit";
 
 // Merge actions for the /settings/duplicates review page. ADMIN-only and
 // destructive by nature: the merged rows are deleted after their children are
@@ -82,7 +83,7 @@ export async function mergeCompanies(
   keepId: string,
   mergeIds: string[],
 ): Promise<MergeResult> {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN"]);
   const prisma = await getTenantDb();
 
   const ids = [...new Set(mergeIds)].filter((id) => id !== keepId).slice(0, 20);
@@ -150,6 +151,14 @@ export async function mergeCompanies(
   // 4. Drop the merged shells (children are already gone).
   await prisma.company.deleteMany({ where: { id: { in: ids } } });
 
+  await logAudit(prisma, {
+    userId: session.userId,
+    action: "MERGE_COMPANIES",
+    entity: "COMPANY",
+    entityId: keepId,
+    details: `${ids.length} fiche(s) fusionnée(s) dans ${keepId}`,
+  });
+
   revalidateLists();
   return { ok: true, merged: ids.length };
 }
@@ -168,7 +177,7 @@ export async function mergeContacts(
   keepId: string,
   mergeIds: string[],
 ): Promise<MergeResult> {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN"]);
   const prisma = await getTenantDb();
 
   const ids = [...new Set(mergeIds)].filter((id) => id !== keepId).slice(0, 20);
@@ -201,6 +210,14 @@ export async function mergeContacts(
 
   await prisma.contact.update({ where: { id: keepId }, data: patch });
   await prisma.contact.deleteMany({ where: { id: { in: ids } } });
+
+  await logAudit(prisma, {
+    userId: session.userId,
+    action: "MERGE_CONTACTS",
+    entity: "CONTACT",
+    entityId: keepId,
+    details: `${ids.length} contact(s) fusionné(s) dans ${keepId}`,
+  });
 
   revalidateLists();
   return { ok: true, merged: ids.length };

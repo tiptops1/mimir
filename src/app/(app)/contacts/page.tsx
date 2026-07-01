@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, EmptyState } from "@/components/ui";
 import { ContactsFilters } from "@/components/contacts-filters";
 import { SavedViews } from "@/components/saved-views";
+import { RgpdCell } from "@/components/rgpd-cell";
 import {
   companyName,
   contactName,
@@ -124,6 +125,7 @@ export default async function ContactsPage({
                     <th className="px-4 py-3 font-medium">Email</th>
                     <th className="px-4 py-3 font-medium">LinkedIn</th>
                     <th className="px-4 py-3 font-medium">Téléphone</th>
+                    <th className="px-4 py-3 font-medium">RGPD</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,6 +187,13 @@ export default async function ContactsPage({
                         </td>
                         <td className="px-4 py-3 text-muted">
                           {c.telephone ?? "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <RgpdCell
+                            contactId={c.id}
+                            consent={c.consent}
+                            isAdmin={session.role === "ADMIN"}
+                          />
                         </td>
                       </tr>
                     );

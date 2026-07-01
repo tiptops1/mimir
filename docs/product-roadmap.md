@@ -206,8 +206,18 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 - [ ] Per-rep **leaderboard** — once multi-user is actually in daily use (needs >1 active rep).
 
 ### P2.4 — RGPD / compliance *(legal table-stakes + a Phase 4 sales argument)*
-- [ ] FR insurance = sensitive data: per-contact **consent tracking**, **export/erase**, **audit log**.
-- [ ] Becomes a concrete selling point when replicating to customer #2.
+- [x] *(2026-07-01)* **Consent tracking** — `Contact.consent` (OPT_IN/OPT_OUT/null) + `consentAt`,
+      inline RGPD column on Contacts (`rgpd-cell.tsx`). **Export** (droit d'accès) —
+      `/api/rgpd/export?contactId=` (ADMIN, audited) returns contact + activités + tâches as JSON.
+      **Erase** (droit à l'effacement, ADMIN + confirm) — `eraseContact` deletes the contact, scrubs
+      its email off activities, unlinks tasks/enrollments, drops pending-inbox rows AND blocks the
+      address (`BlockedSender`) so a future sync can't silently recreate the erased person.
+      **Audit log** — append-only `AuditLog` (`lib/audit.ts`), written by RGPD actions + merges +
+      company deletion; viewer at `/settings/audit` (latest 200, author names from the control
+      plane). Verified live: consent round-trip + export 200 + entries visible in the journal.
+      *(`npm run db:push` pending for the AuditLog/consent indexes — collections lazy-create.)*
+- [x] Becomes a concrete selling point when replicating to customer #2 — documented here, demoable
+      from `/settings/audit`.
 
 ---
 

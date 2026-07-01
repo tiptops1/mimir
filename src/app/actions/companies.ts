@@ -8,6 +8,7 @@ import { companySchema, activitySchema } from "@/lib/validations";
 import { mirrorStageToPrimaryDeal } from "@/lib/deals";
 import { getStageDefs } from "@/lib/stage-config";
 import { recordStageChange } from "@/lib/stage-history";
+import { logAudit } from "@/lib/audit";
 
 export interface FormResult {
   error?: string;
@@ -261,8 +262,15 @@ export async function setCompanyNotes(
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-  await requireRole(["ADMIN", "MANAGER"]);
+  const session = await requireRole(["ADMIN", "MANAGER"]);
   const prisma = await getTenantDb();
+  await logAudit(prisma, {
+    userId: session.userId,
+    action: "DELETE_COMPANY",
+    entity: "COMPANY",
+    entityId: id,
+    details: "suppression société + contacts/activités/tâches liés",
+  });
   await prisma.activity.deleteMany({ where: { companyId: id } });
   await prisma.task.deleteMany({ where: { companyId: id } });
   await prisma.contact.deleteMany({ where: { companyId: id } });
