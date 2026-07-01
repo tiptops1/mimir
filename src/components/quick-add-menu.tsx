@@ -29,14 +29,14 @@ export function QuickAddMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-on-brand transition-colors hover:bg-brand-hover"
       >
         <Plus className="h-4 w-4" />
         <span className="hidden sm:inline">Nouveau</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+        <div className="animate-pop absolute right-0 top-full z-50 mt-1 w-52 rounded-lg border border-border bg-card p-1.5 shadow-lg">
           {ITEMS.map((item) => {
             const Icon = item.icon;
             return (

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import { Download } from "lucide-react";
 import { getTenantDb } from "@/lib/tenant-context";
+import { buildContactWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
 import { Card, EmptyState } from "@/components/ui";
 import { ContactsFilters } from "@/components/contacts-filters";
@@ -33,26 +34,8 @@ export default async function ContactsPage({
   const site = typeof sp.site === "string" ? sp.site : "";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
-  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
-  // Each active filter is one AND clause — "present" means non-null and non-empty.
-  // The three text filters combine with each other and with the dropdowns.
-  const and: Prisma.ContactWhereInput[] = [];
-  if (nom) and.push({ OR: [{ prenom: ci(nom) }, { nom: ci(nom) }, { fonction: ci(nom) }] });
-  if (contact)
-    and.push({ OR: [{ email: ci(contact) }, { telephone: { contains: contact } }] });
-  if (societe)
-    and.push({ company: { OR: [{ nomSociete: ci(societe) }, { enseigne: ci(societe) }] } });
-  if (role === "decideur") and.push({ isDecisionMaker: true });
-  if (has === "email") and.push({ email: { not: null } }, { email: { not: "" } });
-  if (has === "phone") and.push({ telephone: { not: null } }, { telephone: { not: "" } });
-  if (has === "linkedin")
-    and.push({ linkedinUrl: { not: null } }, { linkedinUrl: { not: "" } });
-  if (site === "with")
-    and.push({ company: { siteWeb: { not: null } } }, { company: { siteWeb: { not: "" } } });
-  if (site === "without")
-    and.push({ company: { OR: [{ siteWeb: null }, { siteWeb: "" }] } });
-
-  const where: Prisma.ContactWhereInput = and.length ? { AND: and } : {};
+  // Shared with /api/export so the CSV always matches the on-screen list.
+  const where = buildContactWhere(sp);
 
   const [contacts, total] = await Promise.all([
     prisma.contact.findMany({
@@ -97,7 +80,16 @@ export default async function ContactsPage({
       <PageHeader
         title="Contacts"
         subtitle={`${total} contact${total > 1 ? "s" : ""}`}
-      />
+      >
+        <a
+          href={`/api/export${qs({ type: "contacts" })}`}
+          download
+          className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-3.5 text-sm font-medium text-foreground shadow-xs transition-colors hover:border-border-strong hover:bg-surface-2"
+        >
+          <Download className="h-4 w-4 text-faint" />
+          Exporter
+        </a>
+      </PageHeader>
       <div className="p-6">
         <ContactsFilters />
 
@@ -203,7 +195,7 @@ export default async function ContactsPage({
               {page > 1 && (
                 <Link
                   href={qs({ page: page - 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-surface-2"
+                  className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:border-border-strong hover:bg-surface-2"
                 >
                   Précédent
                 </Link>
@@ -211,7 +203,7 @@ export default async function ContactsPage({
               {page < totalPages && (
                 <Link
                   href={qs({ page: page + 1 })}
-                  className="rounded-lg border border-border bg-white px-3 py-1.5 hover:bg-surface-2"
+                  className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium transition-colors hover:border-border-strong hover:bg-surface-2"
                 >
                   Suivant
                 </Link>

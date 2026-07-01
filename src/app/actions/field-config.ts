@@ -15,7 +15,7 @@ export interface FieldConfigResult {
   ok?: boolean;
 }
 
-const VALID_ENTITIES = ["COMPANY", "CONTACT", "DEAL"];
+const VALID_ENTITIES = ["COMPANY", "CONTACT", "DEAL", "FINANCE"];
 const VALID_TYPES = ["text", "number", "select", "bool", "date"];
 const KEY_RE = /^[a-z][a-zA-Z0-9]*$/;
 
@@ -23,6 +23,7 @@ function revalidateAll() {
   revalidatePath("/companies");
   revalidatePath("/contacts");
   revalidatePath("/pipeline");
+  revalidatePath("/finances");
   revalidatePath("/settings/fields");
 }
 

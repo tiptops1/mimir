@@ -1,6 +1,7 @@
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { Sidebar } from "@/components/sidebar";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import { GlobalSearch } from "@/components/global-search";
 import { QuickAddMenu } from "@/components/quick-add-menu";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -27,20 +28,28 @@ export default async function AppLayout({
     getNotificationSummary(prisma),
   ]);
 
+  const user = {
+    name: session.name,
+    email: session.email,
+    role: session.role,
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
+        className="hidden lg:flex"
         pendingCount={pendingCount}
         todoCount={todoCount}
-        user={{
-          name: session.name,
-          email: session.email,
-          role: session.role,
-        }}
+        user={user}
       />
       <main className="flex-1 overflow-y-auto bg-background">
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-6 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
-          <GlobalSearch />
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6">
+          <MobileSidebar
+            pendingCount={pendingCount}
+            todoCount={todoCount}
+            user={user}
+          />
+          <GlobalSearch isAdmin={session.role === "ADMIN"} />
           <div className="ml-auto flex items-center gap-2">
             <QuickAddMenu />
             <NotificationsBell summary={notifications} />

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import { Download } from "lucide-react";
 import { getTenantDb } from "@/lib/tenant-context";
+import { buildCompanyWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
 import { LinkButton, Card, EmptyState } from "@/components/ui";
 import { CompaniesFilters } from "@/components/companies-filters";
@@ -86,57 +87,8 @@ export default async function CompaniesPage({
   const all = sp.all === "1";
   const page = Math.max(1, Number.parseInt((sp.page as string) ?? "1", 10) || 1);
 
-  const where: Prisma.CompanyWhereInput = {};
-  // Suivi defaults to "hot" prospects — those Chris has actually engaged with
-  // (a logged activity, or a recorded first/last contact). `?all=1` lifts it.
-  const engagement: Prisma.CompanyWhereInput = {
-    OR: [
-      { activities: { some: {} } },
-      { dernierContact: { not: null } },
-      { datePremierContact: { not: null } },
-    ],
-  };
-  // Filters other than the engagement gate (so we can count what it hides).
-  const and: Prisma.CompanyWhereInput[] = [];
-  const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
-  // Société: company identity (name / enseigne / ville / SIRET / SIREN).
-  if (societe) {
-    and.push({
-      OR: [
-        { nomSociete: ci(societe) },
-        { enseigne: ci(societe) },
-        { ville: ci(societe) },
-        { siret: { contains: societe } },
-        { siren: { contains: societe } },
-      ],
-    });
-  }
-  // Nom + Contact match the SAME contact (one `some` with combined criteria),
-  // so "Nom: Dupont" + "Contact: @gmail" means a single contact matching both.
-  const contactAnd: Prisma.ContactWhereInput[] = [];
-  if (nom) contactAnd.push({ OR: [{ prenom: ci(nom) }, { nom: ci(nom) }] });
-  if (contact)
-    contactAnd.push({
-      OR: [{ email: ci(contact) }, { telephone: { contains: contact } }],
-    });
-  if (contactAnd.length) and.push({ contacts: { some: { AND: contactAnd } } });
-
-  if (stage) where.stage = stage as Prisma.CompanyWhereInput["stage"];
-  if (priorite) where.priorite = priorite as Prisma.CompanyWhereInput["priorite"];
-  if (potentiel) where.potentiel = potentiel as Prisma.CompanyWhereInput["potentiel"];
-  if (canal) where.canalPrefere = canal;
-  if (SPECIALTY_FIELDS.some((s) => s.key === specialite)) {
-    (where as Record<string, unknown>)[specialite] = true;
-  }
-  if (/^\d{2}$/.test(dept)) where.codePostal = { startsWith: dept };
-  // "Avec / sans site web" — treat empty strings the same as null.
-  if (site === "with") {
-    and.push({ siteWeb: { not: null } }, { siteWeb: { not: "" } });
-  } else if (site === "without") {
-    and.push({ OR: [{ siteWeb: null }, { siteWeb: "" }] });
-  }
-  // The engagement gate applies unless the user asked to see everything.
-  where.AND = all ? and : [engagement, ...and];
+  // Shared with /api/export so the CSV always matches the on-screen list.
+  const { where, and } = buildCompanyWhere(sp);
 
   const [companies, total, totalAll] = await Promise.all([
     prisma.company.findMany({
@@ -196,6 +148,14 @@ export default async function CompaniesPage({
             : `${total} prospect${total > 1 ? "s" : ""} engagé${total > 1 ? "s" : ""}`
         }
       >
+        <a
+          href={`/api/export${qs({ type: "companies" })}`}
+          download
+          className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-card px-3.5 text-sm font-medium text-foreground shadow-xs transition-colors hover:border-border-strong hover:bg-surface-2"
+        >
+          <Download className="h-4 w-4 text-faint" />
+          Exporter
+        </a>
         <LinkButton href="/contacts/new">+ Nouveau contact</LinkButton>
       </PageHeader>
 

@@ -7,6 +7,7 @@ const ENTITIES: { value: ConfigEntity; label: string }[] = [
   { value: "COMPANY", label: "Sociétés" },
   { value: "CONTACT", label: "Contacts" },
   { value: "DEAL", label: "Deals" },
+  { value: "FINANCE", label: "Finances" },
 ];
 
 export default async function SettingsFieldsPage() {

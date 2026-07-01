@@ -7,7 +7,7 @@ import { getTenantDb } from "./tenant-context";
 // `customFields` document. Memoized per request via React cache.
 
 export type FieldType = "text" | "number" | "select" | "bool" | "date";
-export type ConfigEntity = "COMPANY" | "CONTACT" | "DEAL";
+export type ConfigEntity = "COMPANY" | "CONTACT" | "DEAL" | "FINANCE";
 // CUSTOM = stored in the entity's flexible `customFields` document (original
 // Phase-1 design). NATIVE = metadata about an existing scalar column; `key` is
 // the Prisma field name and reads/writes go through that column, not customFields.

@@ -29,15 +29,19 @@ const NAV = [
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
 ];
 
+export type SidebarProps = {
+  user: { name: string; email: string; role: string };
+  pendingCount?: number;
+  todoCount?: number;
+  className?: string;
+};
+
 export function Sidebar({
   user,
   pendingCount = 0,
   todoCount = 0,
-}: {
-  user: { name: string; email: string; role: string };
-  pendingCount?: number;
-  todoCount?: number;
-}) {
+  className,
+}: SidebarProps) {
   const pathname = usePathname();
   const nav =
     user.role === "ADMIN"
@@ -45,7 +49,12 @@ export function Sidebar({
       : NAV;
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card">
+    <aside
+      className={cn(
+        "flex h-full w-60 shrink-0 flex-col border-r border-border bg-card",
+        className,
+      )}
+    >
       <div className="px-5 py-4">
         <BrandMark />
       </div>

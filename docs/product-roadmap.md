@@ -145,13 +145,27 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 
 ## P2 — Scale & polish
 
+> **Status: first slice shipped 2026-07-01** (responsive shell + command palette + CSV export — see
+> working log). Bulk actions, saved views, dedupe, PWA and dark mode remain open.
+
 ### P2.1 — Mobile & speed
-- [ ] **Responsive / PWA** — sidebar is fixed `w-60` with no collapse or mobile drawer; prospecting
-      happens on the phone / on the road.
-- [ ] **Command palette + keyboard shortcuts** for a daily power tool.
+- [x] **Responsive shell** *(2026-07-01)* — static sidebar hidden below `lg`, slide-over drawer
+      (`components/mobile-sidebar.tsx`) behind a topbar hamburger; closes on navigation (Esc/overlay
+      too); topbar + page-header padding responsive. Verified at 375px.
+- [x] **Command palette** *(2026-07-01)* — the ⌘K bar (`global-search.tsx`) is now a real palette:
+      page navigation + quick actions (nouvelle tâche / contact / société) + record search in one
+      keyboard-navigable list; accent-insensitive command filtering; "Paramètres" entry is ADMIN-only
+      (layout passes `isAdmin`).
+- [ ] **PWA** (manifest + offline shell) — still open.
+- [ ] **Dark mode** — token foundation is ready (`[data-theme="dark"]` swap in `globals.css`);
+      needs the dark palette + a toggle pass.
 
 ### P2.2 — Working at scale (731+ companies)
-- [ ] **Bulk actions** (select N → change stage / assign / export).
+- [x] **CSV export** *(2026-07-01)* — "Exporter" on Suivi + Contacts headers; `/api/export?type=
+      companies|contacts` honors the exact on-screen filters (where-builders extracted to
+      `lib/list-filters.ts`, shared by pages + route so they can't drift), UTF-8 BOM + `;` separator
+      (Excel FR), étape/priorité/potentiel resolved to labels, 5 000-row cap, authed.
+- [ ] **Bulk actions** (select N → change stage / assign).
 - [ ] **Saved views / segments.**
 - [ ] **Duplicate detection & merge.**
 
@@ -200,7 +214,9 @@ about to cost or pay), not a backward report.
 
 ### P3.3 — Config + follow-ons
 - [x] Categories seeded as config (`FieldDefinition` entity `FINANCE`), read by the page.
-- [ ] Surface entity `FINANCE` in the `/settings/fields` self-serve editor (custom finance fields).
+- [x] Surface entity `FINANCE` in the `/settings/fields` self-serve editor *(2026-07-01)* — new
+      "Finances" card (ConfigEntity + VALID_ENTITIES + settings page); the seeded Catégorie select is
+      NATIVE so its options are editable but the def can't be deleted; `/finances` revalidated on edits.
 - [ ] Out of scope (v1, each a clean follow-on): receipt/file upload + OCR, bank/Stripe import, TVA
       reporting, PDF invoice generation, multi-currency conversion.
 
@@ -224,6 +240,23 @@ online with Phase 3's per-tenant integration work.
 ---
 
 ## Working log (newest first)
+- 2026-07-01 — **P2 first slice: responsive shell + command palette + CSV export, plus the open P3.3
+  settings box (shipped & deployed).** (1) **Mobile:** static sidebar `hidden lg:flex`; new
+  `components/mobile-sidebar.tsx` slide-over drawer (hamburger in the topbar, closes on
+  navigation/Esc/overlay, `animate-drawer` keyframe in `globals.css`); Sidebar gained a `className`
+  prop; topbar + `page-header.tsx` padding responsive. (2) **Command palette:** `global-search.tsx`
+  rewritten — ⌘K now opens a palette with page navigation + quick actions + record search in one
+  keyboard-navigable list (accent-insensitive filtering; ADMIN-only "Paramètres"; off-token
+  `bg-white`/`indigo-*` classes swapped for tokens here and in `quick-add-menu.tsx`; fixed the
+  long-standing `react-hooks/set-state-in-effect` lint error via the adjust-during-render pattern).
+  (3) **CSV export:** Suivi/Contacts where-builders extracted to `lib/list-filters.ts` (pages + new
+  authed `/api/export` route share them so list and export can't drift); UTF-8 BOM + `;` for Excel FR;
+  stage/priorité/potentiel resolved to labels; "Exporter" buttons carry the live filter querystring.
+  (4) **P3.3:** FINANCE entity surfaced in `/settings/fields`. **Verified in-browser on live data:**
+  palette (empty-state commands, filtering, record search → Enter → fiche), drawer at 375px
+  (open/nav/close), both CSV endpoints (200, BOM bytes `EF BB BF`, filters honored, correct
+  filenames), Finances card in settings, desktop layout intact at 1280px, zero console errors.
+  `tsc` + `eslint` + full `next build` green. No schema changes — pure code, no `db:push` needed.
 - 2026-06-26 — **P3 Finances cockpit — shipped & deployed (new product track).** Evolved the CRM from a
   prospecting tool into a one-stop business cockpit by adding the **cost side** and tying it to revenue.
   **One flexible `FinanceEntry`** model (`direction` OUT/IN × `kind` SUBSCRIPTION/STAFF/EXPENSE/INVOICE;

@@ -173,3 +173,16 @@ h4 {
 .animate-pop {
   animation: pop-in 0.12s ease-out;
 }
+
+/* Mobile drawer slide-in (sidebar on small screens) */
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-drawer {
+  animation: drawer-in 0.18s ease-out;
+}
