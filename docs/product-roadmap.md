@@ -156,7 +156,11 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       page navigation + quick actions (nouvelle tâche / contact / société) + record search in one
       keyboard-navigable list; accent-insensitive command filtering; "Paramètres" entry is ADMIN-only
       (layout passes `isAdmin`).
-- [ ] **PWA** (manifest + offline shell) — still open.
+- [x] **PWA** *(2026-07-01)* — `src/app/manifest.ts` (installable, start_url `/dashboard`), brand
+      icons generated from the BrandMark by `scripts/generate-icons.mjs` (192/512/maskable +
+      apple-icon, via the bundled sharp), minimal `public/sw.js` (navigations network-first with
+      `offline.html` fallback; `/_next/static` cache-first; CRM data never cached), registered
+      production-only by `pwa-register.tsx` in the root layout.
 - [x] **Dark mode** *(2026-07-01)* — `[data-theme="dark"]` token swap in `globals.css` (surfaces/
       text/borders/brand/semantic/shadows/scrollbars, `color-scheme: dark`) + a **compat layer**
       remapping the literal hue utilities that live as DATA in the tenant DB (StageDefinition
