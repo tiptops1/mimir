@@ -7,6 +7,7 @@ import { verifySession, requireRole } from "@/lib/dal";
 import { companySchema, activitySchema } from "@/lib/validations";
 import { mirrorStageToPrimaryDeal } from "@/lib/deals";
 import { getStageDefs } from "@/lib/stage-config";
+import { recordStageChange } from "@/lib/stage-history";
 
 export interface FormResult {
   error?: string;
@@ -44,6 +45,12 @@ export async function createCompany(
   }
 
   const company = await prisma.company.create({ data: parsed.data });
+  // Entry point of the pipeline history (from: null = initial stage).
+  await recordStageChange(prisma, {
+    companyId: company.id,
+    from: null,
+    to: company.stage,
+  });
   revalidatePath("/companies");
   revalidatePath("/pipeline");
   redirect(`/companies/${company.id}`);
@@ -54,7 +61,7 @@ export async function updateCompany(
   _prev: FormResult | undefined,
   formData: FormData,
 ): Promise<FormResult> {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
   const parsed = dataFromForm(formData);
   if (!parsed.success) {
@@ -62,7 +69,19 @@ export async function updateCompany(
   }
   await ensureValidStage(parsed.data);
 
+  const before = await prisma.company.findUnique({
+    where: { id },
+    select: { stage: true },
+  });
   await prisma.company.update({ where: { id }, data: parsed.data });
+  if (before && before.stage !== parsed.data.stage) {
+    await recordStageChange(prisma, {
+      companyId: id,
+      from: before.stage,
+      to: parsed.data.stage,
+      userId: session.userId,
+    });
+  }
   revalidatePath("/companies");
   revalidatePath(`/companies/${id}`);
   revalidatePath("/pipeline");
@@ -126,7 +145,7 @@ export async function setCompanyEnum(
   field: EnumField,
   value: string,
 ): Promise<void> {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
   let next: string | null;
   if (field === "stage") {
@@ -144,10 +163,20 @@ export async function setCompanyEnum(
       return; // ignore invalid values rather than throwing
     }
   }
+  const before =
+    field === "stage"
+      ? await prisma.company.findUnique({ where: { id }, select: { stage: true } })
+      : null;
   await prisma.company.update({ where: { id }, data: { [field]: next } });
   // Keep the primary deal in sync when the pipeline stage changes inline.
   if (field === "stage" && next) {
     await mirrorStageToPrimaryDeal(prisma, id, next);
+    await recordStageChange(prisma, {
+      companyId: id,
+      from: before?.stage ?? null,
+      to: next,
+      userId: session.userId,
+    });
   }
   revalidatePath("/companies");
   revalidatePath(`/companies/${id}`);
@@ -164,7 +193,7 @@ export async function bulkSetCompanyEnum(
   field: EnumField,
   value: string,
 ): Promise<{ updated: number }> {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
   const unique = [...new Set(ids)].slice(0, 500); // safety cap
   if (unique.length === 0) return { updated: 0 };
@@ -186,6 +215,13 @@ export async function bulkSetCompanyEnum(
     }
   }
 
+  const before =
+    field === "stage"
+      ? await prisma.company.findMany({
+          where: { id: { in: unique } },
+          select: { id: true, stage: true },
+        })
+      : [];
   const res = await prisma.company.updateMany({
     where: { id: { in: unique } },
     data: { [field]: next },
@@ -193,6 +229,14 @@ export async function bulkSetCompanyEnum(
   if (field === "stage" && next) {
     for (const id of unique) {
       await mirrorStageToPrimaryDeal(prisma, id, next);
+    }
+    for (const b of before) {
+      await recordStageChange(prisma, {
+        companyId: b.id,
+        from: b.stage,
+        to: next,
+        userId: session.userId,
+      });
     }
   }
   revalidatePath("/companies");
@@ -222,6 +266,7 @@ export async function deleteCompany(id: string): Promise<void> {
   await prisma.activity.deleteMany({ where: { companyId: id } });
   await prisma.task.deleteMany({ where: { companyId: id } });
   await prisma.contact.deleteMany({ where: { companyId: id } });
+  await prisma.stageChange.deleteMany({ where: { companyId: id } });
   await prisma.company.delete({ where: { id } });
   revalidatePath("/companies");
   revalidatePath("/pipeline");

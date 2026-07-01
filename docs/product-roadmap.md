@@ -194,9 +194,16 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       Detection on live data surfaced 7 real company groups — merging them is Christopher's call.
 
 ### P2.3 — Analytics v2 *(time dimension + multi-user)*
-- [ ] Today's analytics are a point-in-time snapshot. Add: **stage velocity** (time stuck per stage),
-      conversion-between-stages, activity volume, win-rate **trend**, and per-rep **leaderboard** (once
-      multi-user is live).
+- [x] Time dimension *(2026-07-01)* — new **`StageChange`** transition log (from/to/at/userId,
+      written by `lib/stage-history.ts` from ALL six Company.stage write paths: create, form update,
+      inline EnumCell, bulk bar, pipeline drag PATCH, primary-deal setDealStage; dedupe-merge moves
+      rows, deleteCompany cleans them). `/analytics` gained a **"Dynamique du pipeline"** section
+      (`lib/analytics-v2.ts`): temps moyen dans l'étape (falls back to createdAt until history
+      accrues, exact thereafter), volume d'activités 12 semaines, conversions entre étapes 90 j,
+      gagnés vs perdus par mois (`DualBars`). History builds from deploy day — a hint says so until
+      the first real transition. **`npm run db:push` still needed** for the StageChange indexes
+      (collection itself is lazy-created; classifier blocked the prod migration this session).
+- [ ] Per-rep **leaderboard** — once multi-user is actually in daily use (needs >1 active rep).
 
 ### P2.4 — RGPD / compliance *(legal table-stakes + a Phase 4 sales argument)*
 - [ ] FR insurance = sensitive data: per-contact **consent tracking**, **export/erase**, **audit log**.

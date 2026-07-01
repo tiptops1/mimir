@@ -5,6 +5,7 @@ import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { statusForStage } from "@/lib/deals";
 import { getStageDefs } from "@/lib/stage-config";
+import { recordStageChange } from "@/lib/stage-history";
 
 // CRUD for opportunities (affaires) on the company fiche. The company's PRIMARY
 // deal mirrors the pipeline board (its stage write-throughs to Company.stage);
@@ -52,7 +53,7 @@ export async function setDealStage(
   companyId: string,
   stage: string,
 ): Promise<void> {
-  await verifySession();
+  const session = await verifySession();
   const prisma = await getTenantDb();
   const stageKeys = (await getStageDefs()).map((s) => s.value);
   if (!stageKeys.includes(stage)) return;
@@ -61,6 +62,10 @@ export async function setDealStage(
     data: { stage, status: statusForStage(stage) },
   });
   if (deal.isPrimary) {
+    const before = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { stage: true },
+    });
     await prisma.company.update({
       where: { id: companyId },
       data: {
@@ -68,6 +73,12 @@ export async function setDealStage(
         ...(stage === "DEMO_REALISEE" ? { demoRealisee: true } : {}),
         ...(stage === "PROPOSITION_ENVOYEE" ? { propositionEnvoyee: true } : {}),
       },
+    });
+    await recordStageChange(prisma, {
+      companyId,
+      from: before?.stage ?? null,
+      to: stage,
+      userId: session.userId,
     });
   }
   revalidatePath(`/companies/${companyId}`);

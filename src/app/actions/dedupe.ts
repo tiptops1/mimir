@@ -104,6 +104,7 @@ export async function mergeCompanies(
   await prisma.deal.updateMany(move);
   await prisma.enrollment.updateMany(move);
   await prisma.financeEntry.updateMany(move);
+  await prisma.stageChange.updateMany(move);
 
   // 2. Exactly one primary deal survives (the keeper's; else the oldest moved one).
   const primaries = await prisma.deal.findMany({

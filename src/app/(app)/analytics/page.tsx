@@ -5,9 +5,12 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import {
   HorizontalBars,
+  VerticalBars,
+  DualBars,
   Donut,
   type ChartDatum,
 } from "@/components/charts";
+import { computeAnalyticsV2 } from "@/lib/analytics-v2";
 import { FunnelChart, type FunnelDatum } from "@/components/funnel-chart";
 import {
   PRIORITE_OPTIONS,
@@ -68,6 +71,7 @@ export default async function AnalyticsPage() {
   await verifySession();
   const prisma = await getTenantDb();
   const stageDefs = await getStageDefs();
+  const v2 = await computeAnalyticsV2(prisma, stageDefs);
 
   const companies = await prisma.company.findMany({
     select: {
@@ -221,6 +225,79 @@ export default async function AnalyticsPage() {
             </CardHeader>
             <CardBody>
               <Donut data={potentielData2} />
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* — Analytics v2: the time dimension (StageChange transition log) — */}
+        <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-muted">
+          Dynamique du pipeline
+        </h2>
+        {!v2.hasHistory && (
+          <p className="-mt-4 text-xs text-faint">
+            L&apos;historique des changements d&apos;étape se construit à partir
+            d&apos;aujourd&apos;hui — vélocité et conversions s&apos;affinent au fil
+            des mouvements du pipeline.
+          </p>
+        )}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Temps moyen dans l&apos;étape (jours)</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <HorizontalBars
+                data={v2.dwell.map((d) => ({
+                  name: d.label,
+                  value: d.avgDays,
+                  color: STAGE_HEX[d.stage],
+                }))}
+              />
+            </CardBody>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Volume d&apos;activités (12 semaines)</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <VerticalBars data={v2.weeklyActivity} />
+            </CardBody>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conversions entre étapes (90 jours)</CardTitle>
+            </CardHeader>
+            <CardBody>
+              {v2.transitions.length > 0 ? (
+                <HorizontalBars
+                  data={v2.transitions.map((t) => ({
+                    name: t.label,
+                    value: t.count,
+                  }))}
+                />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted">
+                  Aucun changement d&apos;étape enregistré sur les 90 derniers
+                  jours.
+                </p>
+              )}
+            </CardBody>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gagnés vs perdus par mois</CardTitle>
+            </CardHeader>
+            <CardBody>
+              {v2.winTrend.length > 0 ? (
+                <DualBars data={v2.winTrend} />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted">
+                  Aucune issue (gagné/perdu) enregistrée sur les 6 derniers mois.
+                </p>
+              )}
             </CardBody>
           </Card>
         </div>

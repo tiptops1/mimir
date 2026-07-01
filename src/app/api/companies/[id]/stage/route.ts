@@ -4,6 +4,7 @@ import { getOptionalSession } from "@/lib/dal";
 import { stageSchema } from "@/lib/validations";
 import { mirrorStageToPrimaryDeal } from "@/lib/deals";
 import { getStageDefs, stageLabelsFrom } from "@/lib/stage-config";
+import { recordStageChange } from "@/lib/stage-history";
 
 export async function PATCH(
   req: NextRequest,
@@ -29,6 +30,10 @@ export async function PATCH(
   }
 
   try {
+    const before = await prisma.company.findUnique({
+      where: { id },
+      select: { stage: true },
+    });
     await prisma.company.update({
       where: { id },
       data: {
@@ -38,6 +43,12 @@ export async function PATCH(
       },
     });
     await mirrorStageToPrimaryDeal(prisma, id, stage);
+    await recordStageChange(prisma, {
+      companyId: id,
+      from: before?.stage ?? null,
+      to: stage,
+      userId: session.userId,
+    });
     await prisma.activity.create({
       data: {
         companyId: id,

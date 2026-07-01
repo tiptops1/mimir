@@ -111,6 +111,35 @@ export function HorizontalBars({ data }: { data: ChartDatum[] }) {
   );
 }
 
+export interface DualDatum {
+  name: string;
+  won: number;
+  lost: number;
+}
+
+/** Two-series monthly bars (gagnés vs perdus) for the win-rate trend. */
+export function DualBars({ data }: { data: DualDatum[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
+        <XAxis dataKey="name" tick={AXIS} interval={0} />
+        <YAxis tick={AXIS} allowDecimals={false} />
+        <Tooltip
+          cursor={{ fill: "rgba(79,70,229,0.06)" }}
+          contentStyle={{
+            borderRadius: 8,
+            border: "1px solid #e5e7eb",
+            fontSize: 12,
+          }}
+        />
+        <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+        <Bar dataKey="won" name="Gagnés" fill="#10b981" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="lost" name="Perdus" fill="#fb7185" radius={[6, 6, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function Donut({ data }: { data: ChartDatum[] }) {
   const drill = useDrill();
   const clickable = data.some((d) => d.href);

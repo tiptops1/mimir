@@ -93,6 +93,7 @@ model Company {
   deals       Deal[]
   enrollments Enrollment[]
   financeEntries FinanceEntry[]
+  stageChanges StageChange[]
 
   @@index([stage])
   @@index([ville])
@@ -399,6 +400,23 @@ model SyncCursor {
   source    String   @unique // "gmail" | "calendar"
   cursor    String?
   updatedAt DateTime @updatedAt
+}
+
+// Append-only log of pipeline stage transitions (P2.3 Analytics v2: stage
+// velocity, stage-to-stage conversion, win-rate trend). `from` is null for the
+// initial stage at creation. Written by lib/stage-history.ts from every path
+// that changes Company.stage.
+model StageChange {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String   @db.ObjectId
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  from      String?
+  to        String
+  at        DateTime @default(now())
+  userId    String? // control-plane user id, when a human made the change
+
+  @@index([companyId, at])
+  @@index([to, at])
 }
 
 // A saved filter set on a list page (P2.2 "saved views"). Per-user: the URL
