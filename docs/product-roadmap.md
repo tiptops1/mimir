@@ -185,7 +185,13 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       (active state), hover-x to delete, "Enregistrer la vue" appears when the current filters
       aren't saved. Actions in `actions/saved-views.ts` (owner-scoped delete, 20-view cap).
       Additive `db:push` run against prod (SavedView + index).
-- [ ] **Duplicate detection & merge.**
+- [x] **Duplicate detection & merge** *(2026-07-01)* — new ADMIN tab `/settings/duplicates`.
+      Conservative exact-key detection (`lib/dedupe.ts`): companies by normalized name (accents/
+      punctuation/legal forms stripped, ≥5 chars) or website domain; contacts by email. Merge
+      (`actions/dedupe.ts`) reattaches contacts/activities/tasks/deals/enrollments/finance entries
+      to the keeper, keeps exactly one primary deal, fills the keeper's blanks (earliest premier /
+      latest dernier contact, notes concatenated, customFields keeper-wins), then deletes the shells.
+      Detection on live data surfaced 7 real company groups — merging them is Christopher's call.
 
 ### P2.3 — Analytics v2 *(time dimension + multi-user)*
 - [ ] Today's analytics are a point-in-time snapshot. Add: **stage velocity** (time stuck per stage),

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/settings/fields", label: "Champs" },
   { href: "/settings/stages", label: "Étapes" },
   { href: "/settings/integrations", label: "Intégrations" },
+  { href: "/settings/duplicates", label: "Doublons" },
 ];
 
 export function SettingsTabs() {
