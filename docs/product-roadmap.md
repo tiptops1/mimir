@@ -179,7 +179,12 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       (`bulk-select.tsx`: BulkProvider context, page-local selection) with a floating bar (count,
       Étape/Priorité/Potentiel dropdowns, clear). `bulkSetCompanyEnum` in `actions/companies.ts`
       reuses the single-row validation incl. primary-deal stage write-through; 500-id safety cap.
-- [ ] **Saved views / segments.**
+- [x] **Saved views / segments** *(2026-07-01)* — new `SavedView` model (per-user, per page; stores
+      the live URL querystring verbatim, so applying = navigation and the filter schema isn't
+      duplicated). Chip row above the Suivi/Contacts filters (`saved-views.tsx`): click to apply
+      (active state), hover-x to delete, "Enregistrer la vue" appears when the current filters
+      aren't saved. Actions in `actions/saved-views.ts` (owner-scoped delete, 20-view cap).
+      Additive `db:push` run against prod (SavedView + index).
 - [ ] **Duplicate detection & merge.**
 
 ### P2.3 — Analytics v2 *(time dimension + multi-user)*

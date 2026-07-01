@@ -400,3 +400,17 @@ model SyncCursor {
   cursor    String?
   updatedAt DateTime @updatedAt
 }
+
+// A saved filter set on a list page (P2.2 "saved views"). Per-user: the URL
+// querystring of the page's live filters is stored verbatim, so applying a
+// view is just navigation — no filter schema duplicated here.
+model SavedView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String // control-plane user id (like Activity.userId)
+  page      String // "companies" | "contacts"
+  name      String
+  query     String // serialized querystring, e.g. "stage=RDV_PLANIFIE&priorite=A"
+  createdAt DateTime @default(now())
+
+  @@index([userId, page])
+}

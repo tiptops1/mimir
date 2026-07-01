@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
+import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { buildCompanyWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
@@ -20,6 +21,7 @@ import {
   BulkHeaderCheckbox,
   BulkRowCheckbox,
 } from "@/components/bulk-select";
+import { SavedViews } from "@/components/saved-views";
 
 const PRIORITE_CELL_OPTIONS = PRIORITE_OPTIONS.map((p) => ({
   value: p.value,
@@ -70,6 +72,7 @@ export default async function CompaniesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const session = await verifySession();
   const prisma = await getTenantDb();
   const stageDefs = await getStageDefs();
   const stageOptions = stageDefs.map((s) => ({
@@ -95,7 +98,7 @@ export default async function CompaniesPage({
   // Shared with /api/export so the CSV always matches the on-screen list.
   const { where, and } = buildCompanyWhere(sp);
 
-  const [companies, total, totalAll] = await Promise.all([
+  const [companies, total, totalAll, savedViews] = await Promise.all([
     prisma.company.findMany({
       where,
       orderBy: [{ updatedAt: "desc" }],
@@ -121,6 +124,11 @@ export default async function CompaniesPage({
     prisma.company.count({ where }),
     // Same filters, no engagement gate — lets us show how many are hidden.
     prisma.company.count({ where: { ...where, AND: and } }),
+    prisma.savedView.findMany({
+      where: { userId: session.userId, page: "companies" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, query: true },
+    }),
   ]);
 
   const hiddenCount = Math.max(0, totalAll - (all ? totalAll : total));
@@ -165,6 +173,7 @@ export default async function CompaniesPage({
       </PageHeader>
 
       <div className="p-6">
+        <SavedViews page="companies" views={savedViews} />
         <CompaniesFilters stages={stageDefs} />
 
         {all ? (

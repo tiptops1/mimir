@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
+import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { buildContactWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
 import { Card, EmptyState } from "@/components/ui";
 import { ContactsFilters } from "@/components/contacts-filters";
+import { SavedViews } from "@/components/saved-views";
 import {
   companyName,
   contactName,
@@ -24,6 +26,7 @@ export default async function ContactsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const session = await verifySession();
   const prisma = await getTenantDb();
   const sp = await searchParams;
   const societe = typeof sp.societe === "string" ? sp.societe : "";
@@ -37,7 +40,7 @@ export default async function ContactsPage({
   // Shared with /api/export so the CSV always matches the on-screen list.
   const where = buildContactWhere(sp);
 
-  const [contacts, total] = await Promise.all([
+  const [contacts, total, savedViews] = await Promise.all([
     prisma.contact.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -58,6 +61,11 @@ export default async function ContactsPage({
       },
     }),
     prisma.contact.count({ where }),
+    prisma.savedView.findMany({
+      where: { userId: session.userId, page: "contacts" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, query: true },
+    }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -91,6 +99,7 @@ export default async function ContactsPage({
         </a>
       </PageHeader>
       <div className="p-6">
+        <SavedViews page="contacts" views={savedViews} />
         <ContactsFilters />
 
         {contacts.length === 0 ? (
