@@ -157,8 +157,14 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       keyboard-navigable list; accent-insensitive command filtering; "Paramètres" entry is ADMIN-only
       (layout passes `isAdmin`).
 - [ ] **PWA** (manifest + offline shell) — still open.
-- [ ] **Dark mode** — token foundation is ready (`[data-theme="dark"]` swap in `globals.css`);
-      needs the dark palette + a toggle pass.
+- [x] **Dark mode** *(2026-07-01)* — `[data-theme="dark"]` token swap in `globals.css` (surfaces/
+      text/borders/brand/semantic/shadows/scrollbars, `color-scheme: dark`) + a **compat layer**
+      remapping the literal hue utilities that live as DATA in the tenant DB (StageDefinition
+      `badgeClass` strings like "bg-sky-100 text-sky-700") since those can't be tokenized in code.
+      Literal `bg-white`/`ring-indigo-100`/indigo fills in code swept to tokens (`bg-card`,
+      `ring-brand-subtle`, `brand-subtle` — visually identical in light). Toggle in the topbar
+      (`theme-toggle.tsx`, localStorage-persisted, pre-paint inline script in the root layout so no
+      flash; default stays light).
 
 ### P2.2 — Working at scale (731+ companies)
 - [x] **CSV export** *(2026-07-01)* — "Exporter" on Suivi + Contacts headers; `/api/export?type=

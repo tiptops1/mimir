@@ -61,7 +61,7 @@ function StatusCell({ row }: { row: FinanceRow }) {
         </Badge>
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-border bg-card p-1.5 shadow-lg">
           {options.map((o) => (
             <button
               key={o.value}
@@ -246,7 +246,7 @@ export function FinanceTable({
               onClick={() => setSegment(s.value)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 segment === s.value
-                  ? "bg-indigo-50 text-brand"
+                  ? "bg-brand-subtle text-brand"
                   : "text-muted hover:bg-surface-2"
               }`}
             >

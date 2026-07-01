@@ -79,7 +79,7 @@ export function EnumCell({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-border bg-card p-1.5 shadow-lg">
           {nullable && (
             <button
               type="button"

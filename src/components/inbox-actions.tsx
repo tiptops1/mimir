@@ -38,7 +38,7 @@ export function PendingRow({
   const [pending, startTransition] = useTransition();
 
   const selectClass =
-    "max-w-56 rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground disabled:opacity-50";
+    "max-w-56 rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50";
 
   const submitTask = () =>
     startTransition(async () => {
@@ -116,14 +116,14 @@ export function PendingRow({
             onChange={(e) => setTitle(e.target.value)}
             disabled={pending}
             placeholder="Intitulé de la tâche…"
-            className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs"
+            className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-xs"
           />
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
               disabled={pending}
-              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground"
+              className="rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground"
             >
               {TASK_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -136,7 +136,7 @@ export function PendingRow({
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               disabled={pending}
-              className="rounded-md border border-border bg-white px-2 py-1.5 text-xs text-foreground"
+              className="rounded-md border border-border bg-card px-2 py-1.5 text-xs text-foreground"
             />
             <Button
               type="button"

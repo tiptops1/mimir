@@ -19,7 +19,7 @@ function FieldRow({ entity, def }: { entity: ConfigEntity; def: FieldDefRow }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium">{def.label}</p>
@@ -27,7 +27,7 @@ function FieldRow({ entity, def }: { entity: ConfigEntity; def: FieldDefRow }) {
             className={
               def.source === "NATIVE"
                 ? "bg-surface-2 text-muted"
-                : "bg-indigo-50 text-brand"
+                : "bg-brand-subtle text-brand"
             }
           >
             {def.source === "NATIVE" ? "Natif" : "Personnalisé"}

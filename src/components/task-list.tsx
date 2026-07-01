@@ -44,7 +44,7 @@ function TaskItem({ task }: { task: TaskRow }) {
   if (done) return null;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-border bg-white p-3">
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
       <button
         type="button"
         disabled={pending}
@@ -94,7 +94,7 @@ function TaskItem({ task }: { task: TaskRow }) {
           <Clock className="h-4 w-4" />
         </button>
         {snoozeOpen && (
-          <div className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+          <div className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-border bg-card p-1.5 shadow-lg">
             {SNOOZE.map((s) => (
               <button
                 key={s.days}

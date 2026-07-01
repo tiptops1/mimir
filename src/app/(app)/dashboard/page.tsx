@@ -123,7 +123,7 @@ export default async function DashboardPage({
   const firstName = session.name?.split(" ")[0] || "";
 
   const kpis = [
-    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-600", tile: "bg-indigo-50", href: "/companies" },
+    { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-600", tile: "bg-brand-subtle", href: "/companies" },
     { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-600", tile: "bg-sky-50", href: "/contacts" },
     { label: "À contacter", value: aContacter, icon: Flame, color: "text-orange-600", tile: "bg-orange-50", href: "/companies?stage=A_CONTACTER" },
     { label: "Gagnés", value: gagne, icon: Trophy, color: "text-emerald-600", tile: "bg-emerald-50", href: "/companies?stage=GAGNE" },

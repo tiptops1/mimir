@@ -118,7 +118,7 @@ export function AddContactForm({
             <NativeFieldControl
               def={def}
               defaultValue=""
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand-subtle disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         ))}

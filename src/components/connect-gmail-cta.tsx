@@ -25,7 +25,7 @@ export function ConnectGmailCta({
       className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
         connected
           ? "border-emerald-200 bg-emerald-50"
-          : "border-indigo-200 bg-gradient-to-r from-indigo-50 to-white"
+          : "border-indigo-200 bg-gradient-to-r from-brand-subtle to-background"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -69,7 +69,7 @@ export function ConnectGmailCta({
           type="button"
           disabled={pending}
           onClick={() => startTransition(() => disconnectGoogle())}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 disabled:opacity-50"
         >
           {pending && <RefreshCw className="h-4 w-4 animate-spin" />}
           Déconnecter
@@ -77,7 +77,7 @@ export function ConnectGmailCta({
       ) : (
         <a
           href="/api/integrations/google/connect"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
         >
           <Mail className="h-4 w-4" />
           Connecter Google

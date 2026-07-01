@@ -113,7 +113,7 @@ export function EmailComposer({
           {genError ? <p className="text-sm text-rose-700">{genError}</p> : null}
 
           {sources.length > 0 && (
-            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[11px] text-muted">
+            <div className="rounded-md border border-indigo-100 bg-brand-subtle/50 px-2.5 py-2 text-[11px] text-muted">
               <span className="inline-flex items-center gap-1 font-medium text-brand">
                 <FileSearch className="h-3.5 w-3.5" /> Sources consultées
               </span>

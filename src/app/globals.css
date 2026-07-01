@@ -51,6 +51,100 @@
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.04);
   --shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.1), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
   --shadow-lg: 0 16px 40px -8px rgba(16, 24, 40, 0.16);
+
+  /* Scrollbars (swapped per theme) */
+  --scrollbar: #c7ccd4;
+  --scrollbar-hover: #aeb4bf;
+}
+
+/*
+ * Dark theme — same semantic names, swapped values. Activated by the toggle in
+ * the topbar (persisted in localStorage, applied pre-paint by the inline script
+ * in the root layout).
+ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #0e1116;
+  --surface: #151923;
+  --surface-2: #1d2330;
+  --card: var(--surface);
+
+  --foreground: #e6e9ef;
+  --muted: #99a1b0;
+  --faint: #667082;
+
+  --border: #262d3a;
+  --border-strong: #364052;
+
+  --brand: #6366f1;
+  --brand-hover: #7679f3;
+  --brand-active: #8f93f6;
+  --brand-subtle: rgba(99, 102, 241, 0.18);
+  --on-brand: #ffffff;
+  --ring: rgba(129, 140, 248, 0.45);
+
+  --success: #34d399;
+  --success-subtle: rgba(16, 185, 129, 0.15);
+  --warning: #fbbf24;
+  --warning-subtle: rgba(245, 158, 11, 0.15);
+  --danger: #fb7185;
+  --danger-subtle: rgba(244, 63, 94, 0.15);
+  --info: #38bdf8;
+  --info-subtle: rgba(14, 165, 233, 0.14);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+
+  --scrollbar: #3a4353;
+  --scrollbar-hover: #4b5568;
+}
+
+/*
+ * Dark compat layer for LITERAL Tailwind hue utilities. Stage/priority badge
+ * classes live as DATA in the tenant DB (StageDefinition.badgeClass etc. store
+ * strings like "bg-sky-100 text-sky-700"), so they can't be migrated to tokens
+ * in code — instead, remap the light -50/-100 fills and -600/-700/-800 inks to
+ * dark-appropriate values when the dark theme is active. Bounded to the hues
+ * the seeded config + components actually use.
+ */
+[data-theme="dark"] {
+  & .bg-slate-100 { background-color: rgba(148, 163, 184, 0.14); }
+  & .text-slate-700, & .text-slate-600 { color: #cbd5e1; }
+
+  & .bg-sky-50, & .bg-sky-100 { background-color: rgba(14, 165, 233, 0.16); }
+  & .text-sky-600, & .text-sky-700 { color: #7dd3fc; }
+
+  & .bg-violet-100 { background-color: rgba(139, 92, 246, 0.16); }
+  & .text-violet-700 { color: #c4b5fd; }
+
+  & .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15); }
+  & .text-amber-600, & .text-amber-700 { color: #fcd34d; }
+
+  & .bg-orange-50, & .bg-orange-100 { background-color: rgba(249, 115, 22, 0.15); }
+  & .text-orange-600, & .text-orange-700 { color: #fdba74; }
+
+  & .bg-emerald-50, & .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15); }
+  & .text-emerald-600, & .text-emerald-700, & .text-emerald-800 { color: #6ee7b9; }
+  & .border-emerald-200 { border-color: rgba(16, 185, 129, 0.35); }
+
+  & .bg-teal-100 { background-color: rgba(20, 184, 166, 0.15); }
+  & .text-teal-700 { color: #5eead4; }
+
+  & .bg-rose-50, & .bg-rose-100 { background-color: rgba(244, 63, 94, 0.15); }
+  & .text-rose-600, & .text-rose-700 { color: #fda4af; }
+  & .border-rose-200 { border-color: rgba(244, 63, 94, 0.35); }
+  & .hover\:bg-rose-50:hover { background-color: rgba(244, 63, 94, 0.15); }
+  & .hover\:text-rose-600:hover { color: #fda4af; }
+
+  & .bg-red-50 { background-color: rgba(239, 68, 68, 0.15); }
+  & .text-red-600, & .text-red-800 { color: #fca5a5; }
+  & .border-red-200 { border-color: rgba(239, 68, 68, 0.35); }
+
+  & .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.18); }
+  & .text-indigo-600, & .text-indigo-700 { color: #a5b4fc; }
 }
 
 @theme inline {
@@ -135,20 +229,20 @@ h4 {
 /* Thin, unobtrusive scrollbars app-wide (kanban + long lists) */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #c7ccd4 transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 *::-webkit-scrollbar {
   height: 9px;
   width: 9px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #c7ccd4;
+  background: var(--scrollbar);
   border: 2px solid transparent;
   background-clip: padding-box;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #aeb4bf;
+  background: var(--scrollbar-hover);
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-track {

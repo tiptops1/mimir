@@ -27,7 +27,7 @@ export function NotificationsBell({ summary }: { summary: NotificationSummary })
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-muted hover:bg-surface-2"
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted hover:bg-surface-2"
         aria-label="Notifications"
       >
         <Bell className="h-4 w-4" />

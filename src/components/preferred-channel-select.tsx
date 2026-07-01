@@ -33,7 +33,7 @@ export function PreferredChannelSelect({
         value={channel}
         disabled={pending}
         onChange={(e) => onChange(e.target.value)}
-        className="w-32 rounded-md border border-border bg-white px-2 py-1 text-xs text-foreground disabled:opacity-50"
+        className="w-32 rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground disabled:opacity-50"
       >
         <option value="">—</option>
         {CANAL_PREFERE_OPTIONS.map((o) => (

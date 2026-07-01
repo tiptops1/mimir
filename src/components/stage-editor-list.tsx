@@ -49,7 +49,7 @@ function StageRow({ def }: { def: StageDefRow }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3 ${
+      className={`flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 ${
         isDragging ? "opacity-50" : ""
       }`}
     >

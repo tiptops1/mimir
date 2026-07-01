@@ -158,7 +158,7 @@ export default async function CompanyDetailPage({
           href={company.siteWeb || companyLinkedInSearch(company)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-medium hover:bg-surface-2"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium hover:bg-surface-2"
         >
           <ExternalLink className="h-4 w-4 text-brand" />
           {company.siteWeb ? "Site web" : "LinkedIn"}
@@ -336,7 +336,7 @@ export default async function CompanyDetailPage({
                             (() => {
                               const actions = parseActionItems(a.actionItems);
                               return (
-                                <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-2.5 text-xs">
+                                <div className="mt-2 rounded-lg border border-indigo-100 bg-brand-subtle/50 p-2.5 text-xs">
                                   <div className="mb-1 flex items-center gap-1.5 font-medium text-brand">
                                     <Sparkles className="h-3.5 w-3.5" />
                                     Analyse IA

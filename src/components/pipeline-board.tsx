@@ -62,7 +62,7 @@ function CardView({
   const subtitle = card.fields[config.subtitleField] ?? "—";
   const touch = touchChip(card.lastTouch);
   return (
-    <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-tight">{title}</p>
         <PrioriteBadge priorite={card.priorite} />
@@ -163,9 +163,9 @@ function Column({
         ref={setNodeRef}
         className={`thin-scroll flex-1 space-y-2 overflow-y-auto rounded-xl border-2 border-t-4 ${stage.accent} p-2 transition-colors ${
           isOver
-            ? "border-brand bg-indigo-50/40"
+            ? "border-brand bg-brand-subtle/40"
             : highlighted
-              ? "border-brand bg-indigo-50/40 ring-2 ring-brand/40"
+              ? "border-brand bg-brand-subtle/40 ring-2 ring-brand/40"
               : "border-border bg-surface-2/60"
         }`}
       >
@@ -299,25 +299,25 @@ export function PipelineBoard({
             value={fNom}
             onChange={(e) => setFNom(e.target.value)}
             placeholder="Nom du contact…"
-            className="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-3 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand-subtle"
           />
         </div>
         <input
           value={fSociete}
           onChange={(e) => setFSociete(e.target.value)}
           placeholder="Société…"
-          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-40 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         />
         <input
           value={fContact}
           onChange={(e) => setFContact(e.target.value)}
           placeholder="Email / téléphone…"
-          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-40 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         />
         <select
           value={fPriorite}
           onChange={(e) => setFPriorite(e.target.value)}
-          className="w-40 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-40 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         >
           <option value="">Toutes priorités</option>
           {PRIORITE_OPTIONS.map((p) => (
@@ -329,7 +329,7 @@ export function PipelineBoard({
         <select
           value={fPotentiel}
           onChange={(e) => setFPotentiel(e.target.value)}
-          className="w-36 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-36 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         >
           <option value="">Tout potentiel</option>
           {POTENTIEL_OPTIONS.map((p) => (
@@ -341,7 +341,7 @@ export function PipelineBoard({
         <select
           value={fTask}
           onChange={(e) => setFTask(e.target.value)}
-          className="w-44 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-44 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         >
           <option value="">Relance : toutes</option>
           <option value="yes">Avec relance à faire</option>

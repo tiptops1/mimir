@@ -45,13 +45,13 @@ export function NotesCell({
           }}
           rows={3}
           placeholder="Notes ou prochaines étapes…"
-          className="w-full resize-none rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-indigo-100"
+          className="w-full resize-none rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand-subtle"
         />
         <div className="mt-1 flex items-center gap-2">
           <button
             type="button"
             onClick={save}
-            className="rounded-md bg-brand px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+            className="rounded-md bg-brand px-2 py-1 text-xs font-medium text-white hover:bg-brand-hover"
           >
             Enregistrer
           </button>

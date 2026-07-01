@@ -5,6 +5,7 @@ import { MobileSidebar } from "@/components/mobile-sidebar";
 import { GlobalSearch } from "@/components/global-search";
 import { QuickAddMenu } from "@/components/quick-add-menu";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getNotificationSummary } from "@/lib/notifications";
 
 export default async function AppLayout({
@@ -52,6 +53,7 @@ export default async function AppLayout({
           <GlobalSearch isAdmin={session.role === "ADMIN"} />
           <div className="ml-auto flex items-center gap-2">
             <QuickAddMenu />
+            <ThemeToggle />
             <NotificationsBell summary={notifications} />
           </div>
         </header>

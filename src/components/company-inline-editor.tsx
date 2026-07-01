@@ -18,9 +18,9 @@ import { formatDate } from "@/lib/utils";
 
 // Subtle "looks like text until you click it" styling for inline editing.
 const editCls =
-  "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-foreground transition-colors hover:bg-surface-2 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-100";
+  "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-foreground transition-colors hover:bg-surface-2 focus:border-brand focus:bg-card focus:outline-none focus:ring-1 focus:ring-brand-subtle";
 const selectCls =
-  "w-full rounded-md border border-border bg-white px-2 py-1 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-indigo-100";
+  "w-full rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand-subtle";
 
 function Field({
   label,
@@ -162,7 +162,7 @@ export function CompanyInlineEditor({
                 rows={3}
                 defaultValue={company.notes ?? ""}
                 placeholder="Ajouter des notes…"
-                className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-indigo-100"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand-subtle"
               />
             </div>
           </CardBody>
@@ -246,7 +246,7 @@ export function CompanyInlineEditor({
 
       {/* Save bar — appears only when something changed */}
       {dirty && (
-        <div className="sticky bottom-4 z-10 flex items-center gap-3 rounded-xl border border-border bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+        <div className="sticky bottom-4 z-10 flex items-center gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur">
           <Button type="submit" disabled={pending}>
             <Check className="h-4 w-4" />
             {pending ? "Enregistrement…" : "Enregistrer"}
