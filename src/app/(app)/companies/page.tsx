@@ -15,6 +15,11 @@ import { getStageDefs } from "@/lib/stage-config";
 import { SpecialtiesCell } from "@/components/specialties-cell";
 import { NotesCell } from "@/components/notes-cell";
 import { EnumCell } from "@/components/enum-cell";
+import {
+  BulkProvider,
+  BulkHeaderCheckbox,
+  BulkRowCheckbox,
+} from "@/components/bulk-select";
 
 const PRIORITE_CELL_OPTIONS = PRIORITE_OPTIONS.map((p) => ({
   value: p.value,
@@ -187,11 +192,18 @@ export default async function CompaniesPage({
             hint="Ajustez vos filtres ou ajoutez une nouvelle société."
           />
         ) : (
+          <BulkProvider
+            pageIds={companies.map((c) => c.id)}
+            stages={stageDefs.map((s) => ({ value: s.value, label: s.label }))}
+          >
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-surface-2/60 text-left text-[11px] uppercase tracking-wider text-faint">
+                    <th className="w-10 px-4 py-2.5">
+                      <BulkHeaderCheckbox />
+                    </th>
                     <th className="px-4 py-2.5 font-semibold">Contact</th>
                     <th className="px-4 py-2.5 font-semibold">Spécialités</th>
                     <th className="px-4 py-2.5 font-semibold">Notes / prochaines étapes</th>
@@ -216,6 +228,9 @@ export default async function CompaniesPage({
                         key={c.id}
                         className="border-b border-border last:border-0 align-top transition-colors hover:bg-surface-2/70"
                       >
+                        <td className="px-4 py-3">
+                          <BulkRowCheckbox id={c.id} />
+                        </td>
                         <td className="px-4 py-3">
                           <Link href={`/companies/${c.id}`} className="block">
                             <span className="font-medium text-foreground hover:text-brand">
@@ -272,6 +287,7 @@ export default async function CompaniesPage({
               </table>
             </div>
           </Card>
+          </BulkProvider>
         )}
 
         {totalPages > 1 && (

@@ -154,6 +154,52 @@ export async function setCompanyEnum(
   revalidatePath("/pipeline");
 }
 
+/**
+ * Bulk variant of setCompanyEnum: apply one enum change to a selection of
+ * companies (Suivi bulk bar). Same validation; stage changes mirror to each
+ * primary deal, same as the single-row path.
+ */
+export async function bulkSetCompanyEnum(
+  ids: string[],
+  field: EnumField,
+  value: string,
+): Promise<{ updated: number }> {
+  await verifySession();
+  const prisma = await getTenantDb();
+  const unique = [...new Set(ids)].slice(0, 500); // safety cap
+  if (unique.length === 0) return { updated: 0 };
+
+  let next: string | null;
+  if (field === "stage") {
+    const stageKeys = (await getStageDefs()).map((s) => s.value);
+    if (!stageKeys.includes(value)) return { updated: 0 };
+    next = value;
+  } else {
+    const def = ENUM_FIELDS[field];
+    if (!def) return { updated: 0 };
+    if (def.values.includes(value as never)) {
+      next = value;
+    } else if (def.nullable && value === "") {
+      next = null;
+    } else {
+      return { updated: 0 };
+    }
+  }
+
+  const res = await prisma.company.updateMany({
+    where: { id: { in: unique } },
+    data: { [field]: next },
+  });
+  if (field === "stage" && next) {
+    for (const id of unique) {
+      await mirrorStageToPrimaryDeal(prisma, id, next);
+    }
+  }
+  revalidatePath("/companies");
+  revalidatePath("/pipeline");
+  return { updated: res.count };
+}
+
 /** Inline-edit the free-text notes / next-steps field. */
 export async function setCompanyNotes(
   id: string,

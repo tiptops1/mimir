@@ -175,7 +175,10 @@ Where the auto-ingestion advantage turns into an outbound advantage.
       companies|contacts` honors the exact on-screen filters (where-builders extracted to
       `lib/list-filters.ts`, shared by pages + route so they can't drift), UTF-8 BOM + `;` separator
       (Excel FR), étape/priorité/potentiel resolved to labels, 5 000-row cap, authed.
-- [ ] **Bulk actions** (select N → change stage / assign).
+- [x] **Bulk actions** *(2026-07-01)* — checkbox column + select-all on the Suivi table
+      (`bulk-select.tsx`: BulkProvider context, page-local selection) with a floating bar (count,
+      Étape/Priorité/Potentiel dropdowns, clear). `bulkSetCompanyEnum` in `actions/companies.ts`
+      reuses the single-row validation incl. primary-deal stage write-through; 500-id safety cap.
 - [ ] **Saved views / segments.**
 - [ ] **Duplicate detection & merge.**
 
