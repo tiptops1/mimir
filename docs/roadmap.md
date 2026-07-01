@@ -8,10 +8,12 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 3 code-complete (2026-07-01, local — not yet pushed); Phase 1 + 2 deployed.**
-The per-tenant cron loop + per-tenant Fireflies credential closed Phase 3 (see the phase section +
-working log). Next = Phase 4 (self-serve onboarding) on the platform track, and the remaining P2
-items on the product track.
+**Current phase: Phase 3 DONE + Phase 4 onboarding box DONE (2026-07-01, local commits — not yet
+pushed); Phase 1 + 2 deployed.** The per-tenant cron loop, per-tenant Fireflies credential and the
+self-serve tenant-provisioning page closed everything code-shaped on this track. Remaining Phase 4
+boxes are business decisions (branding/subdomain, billing provider, customer #2). The product track's
+P2 also completed this session (see `docs/product-roadmap.md`). **Before deploy:** `npm run db:push`
+(StageChange/AuditLog/consent indexes), set `PLATFORM_ADMIN_EMAILS`, push to `main` on go-ahead.
 
 Previously: **Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
 (stages + native fields as config) and Phase 2 (fields + stages self-serve `/settings` UI) commits were
@@ -144,14 +146,35 @@ AI-insight provider swapped to Gemini but that code is not yet deployed.**
 
 ## Phase 4 — Productize & replicate
 Replication = "Phase 0 on demand."
-- [ ] Self-serve onboarding flow (create tenant → provision DB → seed config)
-- [ ] Per-tenant branding + subdomain
-- [ ] Billing
-- [ ] Onboard customer #2
+- [x] Self-serve onboarding flow (create tenant → provision DB → seed config) — *(2026-07-01)*
+      vendor-only **`/settings/tenants`** page (tenant list + "Nouveau tenant" form). Gate =
+      **`PLATFORM_ADMIN_EMAILS`** env (comma-separated vendor logins; tenant ADMINs like Christopher
+      deliberately can't provision). `src/lib/provision.ts` is the server-action-safe equivalent of
+      `scripts/provision-tenant.ts` (no `execSync db push`): ping the derived DB, create the
+      correctness-critical **unique indexes** via `$runCommandRaw` (Prisma db-push names, so a later
+      full `db push` no-ops on them), seed the default config (now shared in
+      `src/lib/default-config.ts`, also used by `config:seed`), register tenant + ADMIN in the
+      control plane, write the new tenant's first AuditLog entry. **Set `PLATFORM_ADMIN_EMAILS` on
+      Railway + locally to unlock; first real provisioning run still to be exercised.**
+- [ ] Per-tenant branding + subdomain — needs a domain/DNS decision (user-owned).
+- [ ] Billing — needs a provider + pricing decision (user-owned; Stripe recommended when ready).
+- [ ] Onboard customer #2 — sales, not code; the provisioning flow above is the technical half.
 
 ---
 
 ## Working log (newest first)
+- 2026-07-01 — **Phase 4 first box closed: self-serve tenant provisioning (local commit, not
+  pushed).** `/settings/tenants` (vendor-gated via new `PLATFORM_ADMIN_EMAILS` env — see
+  `.env.example`) lists tenants and provisions new ones from the app: `lib/provision.ts` (ping →
+  unique indexes via `$runCommandRaw` → seed config → control-plane registration → audit entry).
+  Seed data extracted to `lib/default-config.ts`, shared with `scripts/seed-config.ts`
+  (`config:seed` behavior unchanged). Gate verified in-browser (page reserved + tab hidden when
+  env unset); a real provisioning run against the cluster is the remaining live test. Same
+  session also shipped the product-track P2 completion — dark mode, PWA, bulk actions, saved
+  views, dedupe+merge, analytics v2, RGPD — see `docs/product-roadmap.md` working log.
+  **User-owned before deploy:** `npm run db:push` (SavedView was pushed; StageChange/AuditLog
+  indexes + Contact.consent still pending — collections lazy-create so code works), set
+  `PLATFORM_ADMIN_EMAILS` on Railway, then push to `main` on explicit go-ahead.
 - 2026-07-01 — **Phase 3 closed: per-tenant ingestion loop + per-tenant Fireflies credential (local
   commit, not pushed).** `/api/cron` now iterates every ACTIVE tenant (`src/lib/tenant-cron.ts`):
   per tenant it resolves the data DB through the control plane, the Google OAuth client

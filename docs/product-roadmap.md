@@ -145,8 +145,12 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 
 ## P2 — Scale & polish
 
-> **Status: first slice shipped 2026-07-01** (responsive shell + command palette + CSV export — see
-> working log). Bulk actions, saved views, dedupe, PWA and dark mode remain open.
+> **Status: ✅ COMPLETE (2026-07-01, second slice — local commits, not yet pushed).** First slice
+> (responsive shell + command palette + CSV export) shipped earlier that day; the second slice closed
+> everything else: dark mode, PWA, bulk actions, saved views, dedupe+merge, analytics v2 (StageChange
+> log), RGPD (consent/export/erase/audit). Only P2.3's per-rep leaderboard waits on real multi-user
+> usage. **Before deploy:** `npm run db:push` for the new indexes (SavedView already pushed;
+> StageChange/AuditLog/Contact.consent pending — collections lazy-create so code works).
 
 ### P2.1 — Mobile & speed
 - [x] **Responsive shell** *(2026-07-01)* — static sidebar hidden below `lg`, slide-over drawer

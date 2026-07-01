@@ -12,11 +12,15 @@ const TABS = [
   { href: "/settings/audit", label: "Audit" },
 ];
 
-export function SettingsTabs() {
+// Vendor-only tab (PLATFORM_ADMIN_EMAILS) — the layout decides visibility.
+const TENANTS_TAB = { href: "/settings/tenants", label: "Tenants" };
+
+export function SettingsTabs({ showTenants = false }: { showTenants?: boolean }) {
   const pathname = usePathname();
+  const tabs = showTenants ? [...TABS, TENANTS_TAB] : TABS;
   return (
-    <nav className="flex gap-4">
-      {TABS.map((tab) => {
+    <nav className="flex gap-4 overflow-x-auto">
+      {tabs.map((tab) => {
         const active = pathname.startsWith(tab.href);
         return (
           <Link
