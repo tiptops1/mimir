@@ -10,6 +10,7 @@ import { encrypt, decrypt } from "@/lib/crypto";
 // style: thin helpers the routes / cron / scripts call, never a bare client.
 
 const GOOGLE = "google";
+const FIREFLIES = "fireflies";
 
 /** A Google integration with its refresh token already decrypted, ready to use. */
 export interface GoogleCredential {
@@ -93,5 +94,63 @@ export async function touchGoogleLastSynced(tenantId: string): Promise<void> {
   await controlPrisma.integration.updateMany({
     where: { tenantId, provider: GOOGLE },
     data: { lastSyncedAt: new Date() },
+  });
+}
+
+// ————— Fireflies —————
+// Same Integration row, different provider: the API key is stored encrypted in
+// the `refreshToken` column (it's the row's "secret material" slot), and
+// `accountEmail` carries the optional owner-email hint used to skip the owner
+// among meeting attendees.
+
+/** Public view of the Fireflies connection for the UI (no secret material). */
+export interface FirefliesConnection {
+  connectedAt: Date;
+  lastSyncedAt: Date | null;
+}
+
+export async function getFirefliesConnection(
+  tenantId: string,
+): Promise<FirefliesConnection | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: { tenantId_provider: { tenantId, provider: FIREFLIES } },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return { connectedAt: row.connectedAt, lastSyncedAt: row.lastSyncedAt };
+}
+
+/** The decrypted Fireflies API key for server-side sync calls, or null. */
+export async function getFirefliesKey(tenantId: string): Promise<string | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: { tenantId_provider: { tenantId, provider: FIREFLIES } },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return decrypt(row.refreshToken);
+}
+
+/** Create or replace the Fireflies connection (encrypts the API key). */
+export async function upsertFirefliesIntegration(args: {
+  tenantId: string;
+  apiKey: string;
+}): Promise<void> {
+  const data = {
+    accountEmail: "",
+    refreshToken: encrypt(args.apiKey),
+    scopes: [] as string[],
+    status: "ACTIVE",
+  };
+  await controlPrisma.integration.upsert({
+    where: {
+      tenantId_provider: { tenantId: args.tenantId, provider: FIREFLIES },
+    },
+    update: data,
+    create: { tenantId: args.tenantId, provider: FIREFLIES, ...data },
+  });
+}
+
+/** Remove the Fireflies connection for a tenant. */
+export async function deleteFirefliesIntegration(tenantId: string): Promise<void> {
+  await controlPrisma.integration.deleteMany({
+    where: { tenantId, provider: FIREFLIES },
   });
 }

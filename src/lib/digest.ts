@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { getNotificationSummary } from "./notifications";
-import { resolveTenant1Google } from "./google-oauth";
+import { resolveTenant1Google, type GoogleOAuthClient } from "./google-oauth";
 import { sendGmail } from "./gmail-send";
 import { getTenantConfig } from "./tenant-config";
 
@@ -16,8 +16,18 @@ function todayKey(d = new Date()): string {
   return d.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 }
 
+export interface DigestGoogle {
+  client: GoogleOAuthClient;
+  accountEmail: string;
+}
+
 export async function sendDailyDigest(
   prisma: PrismaClient,
+  // Per-tenant callers (the cron loop) pass their own Google connection — or
+  // explicit `null` for "this tenant has none". Legacy callers (sync-all script)
+  // omit it and we resolve tenant #1's, as before. `ownerName` overrides the
+  // single-tenant config greeting for tenants that aren't Christopher.
+  opts: { google?: DigestGoogle | null; ownerName?: string } = {},
 ): Promise<{ sent: boolean; reason?: string }> {
   const today = todayKey();
   const cursor = await prisma.syncCursor.findUnique({ where: { source: CURSOR } });
@@ -39,10 +49,11 @@ export async function sendDailyDigest(
     return { sent: false, reason: "nothing to report" };
   }
 
-  const google = await resolveTenant1Google();
+  const google =
+    opts.google !== undefined ? opts.google : await resolveTenant1Google();
   if (!google) return { sent: false, reason: "google not connected" };
 
-  const owner = getTenantConfig().owner.name;
+  const owner = opts.ownerName ?? getTenantConfig().owner.name;
   const body = [
     `Bonjour ${owner},`,
     "",

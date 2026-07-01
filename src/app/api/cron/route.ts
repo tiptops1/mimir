@@ -1,36 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getTenant1Prisma } from "@/lib/tenant-db";
-import { runImapSync } from "@/lib/imap-sync";
-import { runGmailSync } from "@/lib/gmail-sync";
-import { syncCalendar } from "@/lib/calendar-sync";
-import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
-import { resolveTenant1Google } from "@/lib/google-oauth";
-import { touchGoogleLastSynced } from "@/lib/integrations";
-import { syncFireflies } from "@/lib/fireflies";
-import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
-import { advanceSequences } from "@/lib/sequences";
-import { advanceFinanceAlerts } from "@/lib/finance-alerts";
-import { sendDailyDigest } from "@/lib/digest";
+import {
+  listActiveTenants,
+  runCronForTenant,
+  settle,
+} from "@/lib/tenant-cron";
 
-// Scheduled entry point: pull from every connected source, then run the Claude
-// insight pass once. Hit it from Railway's cron (or any external scheduler):
+// Scheduled entry point: for EVERY active tenant, pull from its connected
+// sources, then run the AI insight pass, sequences, finance alerts and the
+// daily digest. Hit it from any external scheduler:
 //
 //   curl -H "Authorization: Bearer $CRON_SECRET" https://<app>/api/cron
 //
-// Each source is isolated so one failure (or a missing key) can't block the
-// others. Long-running but fine on Railway (the app is a persistent Node server).
+// Phase 3: ingestion is routed per tenant through the control plane
+// (src/lib/tenant-cron.ts). Each tenant — and each source within a tenant — is
+// isolated so one failure (or a missing credential) can't block the others.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-async function settle<T>(label: string, fn: () => Promise<T>) {
-  try {
-    return { source: label, ok: true, result: await fn() };
-  } catch (e) {
-    return { source: label, ok: false, error: (e as Error).message };
-  }
-}
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -45,52 +32,18 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Phase 0: ingestion is single-tenant (tenant #1). Phase 3 routes per tenant.
-  const prisma = getTenant1Prisma();
-
-  // Prefer the OAuth Google connection if tenant #1 has connected one; otherwise
-  // fall back to the legacy IMAP/ICS env config so the live app never goes dark
-  // before Christopher clicks Connect.
-  const google = await resolveTenant1Google();
-
-  const sources = [
-    google
-      ? await settle("email", () =>
-          runGmailSync(prisma, google.client, google.accountEmail, {}),
-        )
-      : await settle("email", () => runImapSync(prisma, {})),
-    google
-      ? await settle("calendar", () =>
-          runGoogleCalendarSync(prisma, google.client, google.accountEmail, {}),
-        )
-      : await settle("calendar", () => syncCalendar(prisma, {})),
-    await settle("fireflies", () => syncFireflies(prisma, {})),
-  ];
-
-  if (google) await touchGoogleLastSynced(google.tenantId);
-
-  const ai = aiEnabled()
-    ? await settle("ai-insight", () => enrichActivities(prisma, { limit: 80 }))
-    : { source: "ai-insight", ok: false, error: "no GEMINI_API_KEY or ANTHROPIC_API_KEY" };
-
-  // Materialize any due sequence steps into the task worklist.
-  const sequences = await settle("sequences", () => advanceSequences(prisma));
-
-  // Materialize finance échéances (trial-ends / renewals / invoices due) into tasks.
-  const financeAlerts = await settle("finance-alerts", () =>
-    advanceFinanceAlerts(prisma),
-  );
-
-  // At most one prospecting digest email per day (guarded internally).
-  const digest = await settle("digest", () => sendDailyDigest(prisma));
+  const tenants = await listActiveTenants();
+  const results = [];
+  for (const tenant of tenants) {
+    // Sequential on purpose: tenants share the AI-provider rate limit and the
+    // Node process; a failed tenant is reported, not thrown.
+    const r = await settle(tenant.slug, () => runCronForTenant(tenant));
+    results.push(r.ok ? r.result : { tenant: tenant.slug, error: r.error });
+  }
 
   return NextResponse.json({
     ranAt: new Date().toISOString(),
-    sources,
-    ai,
-    sequences,
-    financeAlerts,
-    digest,
+    tenants: results,
   });
 }
 

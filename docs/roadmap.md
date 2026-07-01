@@ -8,7 +8,12 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
+**Current phase: Phase 3 code-complete (2026-07-01, local — not yet pushed); Phase 1 + 2 deployed.**
+The per-tenant cron loop + per-tenant Fireflies credential closed Phase 3 (see the phase section +
+working log). Next = Phase 4 (self-serve onboarding) on the platform track, and the remaining P2
+items on the product track.
+
+Previously: **Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
 (stages + native fields as config) and Phase 2 (fields + stages self-serve `/settings` UI) commits were
 **committed + pushed to `main` (`a4eed07`)** → Railway auto-deploy, on the owner's explicit go-ahead,
 alongside the new **Finances cockpit** product track (see `docs/product-roadmap.md` P3). Christopher
@@ -111,17 +116,26 @@ Proves the "fully editable" promise on a real user before selling it.
 - [x] Guardrails/validation so self-serve edits can't corrupt data — NATIVE fields undeletable,
       in-use stages undeletable (count shown), duplicate keys rejected with friendly errors.
 
-## Phase 3 — Integrations per-tenant
+## Phase 3 — Integrations per-tenant ✅ *(2026-07-01: per-tenant cron loop + Fireflies credential landed)*
 The moat already exists single-tenant — make it multi-tenant.
-- [~] Move integration credentials to per-tenant, encrypted in control plane — **DONE for Google,
-      single-tenant.** New control-plane `Integration` model (refresh token AES-256-GCM encrypted via
-      `crypto.ts`); helpers in `src/lib/integrations.ts`. Fireflies + AI (Gemini/Claude) creds still env-based.
-- [ ] Route `/api/cron` ingestion (Gmail/Calendar/Fireflies + AI insight) to the right tenant DB —
-      cron still `getTenant1Prisma()`; it now resolves tenant #1's Google credential (by `TENANT1_SLUG`)
-      but does **not** iterate tenants yet. The real per-tenant loop is still open. *(Single-tenant cron
-      is now scheduled live — every 4h via cron-job.org → `/api/cron` with the `CRON_SECRET` Bearer.)*
-- [~] Per-tenant connect/disconnect UI for each source — **DONE for Google, tenant #1.** Seamless OAuth
-      connect/disconnect on the dashboard. Fireflies/Calendar-ICS still env-only.
+- [x] Move integration credentials to per-tenant, encrypted in control plane — Google (refresh token)
+      AND Fireflies (API key, same `Integration` model, provider "fireflies", secret in the
+      `refreshToken` slot) both AES-256-GCM encrypted via `crypto.ts`; helpers in
+      `src/lib/integrations.ts`. AI (Gemini/Claude) keys stay env-based **by design** — they're the
+      platform's own provider account, not a tenant credential.
+- [x] Route `/api/cron` ingestion (Gmail/Calendar/Fireflies + AI insight) to the right tenant DB —
+      new `src/lib/tenant-cron.ts`: `listActiveTenants()` (control plane) × `runCronForTenant()`
+      (tenant DB via `decrypt(connectionString)` → `getTenantPrisma`, Google via
+      `authedClientForTenant`, Fireflies via `getFirefliesKey`; runs email/calendar/fireflies/AI/
+      sequences/finance-alerts/digest per tenant, each `settle()`-isolated). Legacy env fallbacks
+      (IMAP/ICS/`FIREFLIES_API_KEY`) apply **only to tenant #1** so another tenant can never ingest
+      Christopher's mailbox. Digest is per-tenant (greeting derived from the connected account for
+      non-#1 tenants). *(Cron stays scheduled every 4h via cron-job.org → `/api/cron`, `CRON_SECRET`
+      Bearer; the response shape is now `{ ranAt, tenants: [...] }`.)*
+- [x] Per-tenant connect/disconnect UI for each source — new **`/settings/integrations`** tab: Google
+      (reuses the OAuth CTA) + Fireflies (paste-a-key form → encrypted control-plane row, disconnect
+      button). Calendar rides the Google OAuth; the legacy ICS path stays env-only as a tenant-#1
+      fallback.
 
 **Pulled-ahead slice (2026-06-24):** seamless Google (Gmail + Calendar) OAuth — see working log.
 **Deployed to prod** (`d26b480`); replaces the manual IMAP App-Password + secret-iCal setup for tenant
@@ -138,6 +152,18 @@ Replication = "Phase 0 on demand."
 ---
 
 ## Working log (newest first)
+- 2026-07-01 — **Phase 3 closed: per-tenant ingestion loop + per-tenant Fireflies credential (local
+  commit, not pushed).** `/api/cron` now iterates every ACTIVE tenant (`src/lib/tenant-cron.ts`):
+  per tenant it resolves the data DB through the control plane, the Google OAuth client
+  (`authedClientForTenant`) and the Fireflies key (new encrypted `Integration` row, provider
+  "fireflies"), then runs email/calendar/fireflies/AI-insight/sequences/finance-alerts/digest —
+  tenant- and source-isolated via `settle()`. Legacy env fallbacks (IMAP/ICS/`FIREFLIES_API_KEY`)
+  gated to tenant #1 only. `sendDailyDigest` accepts an explicit per-tenant Google connection
+  (legacy no-arg call in `scripts/sync-all.ts` unchanged). New ADMIN tab **`/settings/integrations`**
+  (Google CTA reused + `fireflies-card.tsx` paste-a-key form; actions in
+  `src/app/actions/integrations.ts`). No schema change (Integration model already tenant-scoped);
+  no new env vars. `tsc` + `eslint` clean. Cron response shape changed to `{ ranAt, tenants: [...] }`
+  — update anything that parses it (the cron-job.org monitor only checks HTTP 200, so no action).
 - 2026-06-26 — **DEPLOYED the held-back Phase 1 + Phase 2 commits to prod (`a4eed07` → `main`).** The
   three previously-uncommitted/unpushed commits — Phase 1 stages-as-config (`baca810`), Phase 1 native
   fields from config (`0962e60`), and Phase 2 self-serve `/settings` UI (`03ce648`) — were pushed to
