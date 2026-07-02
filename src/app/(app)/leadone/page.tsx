@@ -178,6 +178,7 @@ export default async function LeadOnePage() {
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-2 font-medium">Société</th>
+                  <th className="px-4 py-2 font-medium">Contact</th>
                   <th className="px-4 py-2 font-medium">Site web</th>
                   <th className="px-4 py-2 font-medium">Email</th>
                   <th className="px-4 py-2 font-medium">Téléphone</th>
@@ -208,21 +209,34 @@ export default async function LeadOnePage() {
                         >
                           Registre · vérifier ORIAS
                         </a>
-                        {dirigeants.map((d, i) => {
-                          const name = [d.prenom, d.nom].filter(Boolean).join(" ");
-                          if (!name) return null;
-                          return (
-                            <a
-                              key={i}
-                              href={linkedinSearchUrl(d, companyName)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block text-xs text-muted hover:text-brand"
-                            >
-                              {name} · LinkedIn
-                            </a>
-                          );
-                        })}
+                      </td>
+                      <td className="px-4 py-2">
+                        {dirigeants.length === 0 ? (
+                          <span className="text-faint">—</span>
+                        ) : (
+                          dirigeants.map((d, i) => {
+                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
+                            if (!name) return null;
+                            return (
+                              <div key={i} className="whitespace-nowrap">
+                                <span>{name}</span>
+                                {d.qualite && (
+                                  <span className="ml-1 text-xs text-muted">
+                                    ({d.qualite})
+                                  </span>
+                                )}
+                                <a
+                                  href={linkedinSearchUrl(d, companyName)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="ml-1.5 text-xs text-muted hover:text-brand"
+                                >
+                                  LinkedIn
+                                </a>
+                              </div>
+                            );
+                          })
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         {c.siteWeb ? (
