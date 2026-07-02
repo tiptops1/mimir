@@ -3,6 +3,7 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { quotaSnapshot } from "@/lib/leadone/quota";
 import { approveCandidate, rejectCandidate } from "@/app/actions/leadone";
 import { PageHeader } from "@/components/page-header";
+import { SPECIALTY_FIELDS } from "@/lib/constants";
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui";
 
 // Lead One — review queue for the automated lead-gen pipeline
@@ -20,16 +21,24 @@ const STATUS_LABELS: Array<{ key: string; label: string }> = [
   { key: "REJECTED", label: "Écartés" },
 ];
 
-const SPECIALITY_LABELS: Record<string, string> = {
-  sante: "Santé",
-  prevoyance: "Prévoyance",
-  iard: "IARD",
-  auto: "Auto",
-  rcPro: "RC Pro",
-  entreprises: "Entreprises",
-  collectives: "Collectives",
-  particuliers: "Particuliers",
+// LeadCandidate.specialites keys → Company specialite* field keys, so the
+// badges reuse the exact same colors as the Suivi (companies) page.
+const SPECIALITY_FIELD_KEY: Record<string, string> = {
+  sante: "specialiteSante",
+  prevoyance: "specialitePrevoyance",
+  iard: "specialiteIard",
+  auto: "specialiteAuto",
+  rcPro: "specialiteRcPro",
+  entreprises: "specialiteEntreprises",
+  collectives: "specialiteCollectives",
+  particuliers: "specialiteParticuliers",
 };
+
+function specialityMeta(key: string) {
+  const fieldKey = SPECIALITY_FIELD_KEY[key];
+  return SPECIALTY_FIELDS.find((f) => f.key === fieldKey);
+}
+
 
 const PROVIDER_LABELS: Record<string, string> = {
   google_cse: "Google CSE (jour)",
@@ -157,6 +166,43 @@ export default async function LeadOnePage() {
         </Card>
       </div>
 
+      {/* Legend */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Comment lire ce tableau</CardTitle>
+        </CardHeader>
+        <CardBody className="grid gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <p className="font-medium">Score</p>
+            <p className="text-muted">
+              Confiance 0–100 : +25 site web, +20 téléphone, +20 email (+15 si
+              MX valide, +10 si nominatif), +10 spécialité détectée.{" "}
+              <Badge tone="success">≥ 80</Badge> fiable ·{" "}
+              <Badge tone="brand">≥ 60</Badge> correct ·{" "}
+              <Badge tone="neutral">&lt; 60</Badge> à vérifier.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium">MX</p>
+            <p className="text-muted">
+              <Badge tone="success">MX ✓</Badge> le domaine de l&apos;email a un
+              vrai serveur de messagerie — l&apos;adresse est probablement
+              livrable. <Badge tone="warning">syntaxe</Badge> ressemble à un
+              email valide mais le domaine n&apos;a pas pu être confirmé.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium">Registre · vérifier ORIAS</p>
+            <p className="text-muted">
+              Lien vers la fiche officielle de l&apos;entreprise (Annuaire des
+              Entreprises). L&apos;ORIAS n&apos;a pas d&apos;API gratuite : ce
+              lien sert à vérifier manuellement l&apos;inscription au registre
+              des courtiers/agents d&apos;assurance avant d&apos;intégrer le lead.
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+
       {/* Review queue */}
       <Card>
         <CardHeader>
@@ -178,11 +224,12 @@ export default async function LeadOnePage() {
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-2 font-medium">Société</th>
-                  <th className="px-4 py-2 font-medium">Contact</th>
                   <th className="px-4 py-2 font-medium">Site web</th>
+                  <th className="px-4 py-2 font-medium">Contact</th>
                   <th className="px-4 py-2 font-medium">Email</th>
+                  <th className="px-4 py-2 font-medium">LinkedIn</th>
                   <th className="px-4 py-2 font-medium">Téléphone</th>
-                  <th className="px-4 py-2 font-medium">Spécialités</th>
+                  <th className="min-w-[300px] px-4 py-2 font-medium">Spécialités</th>
                   <th className="px-4 py-2 font-medium">Score</th>
                   <th className="px-4 py-2 font-medium" />
                 </tr>
@@ -190,7 +237,7 @@ export default async function LeadOnePage() {
               <tbody>
                 {queue.map((c) => {
                   const spec = (c.specialites ?? {}) as Record<string, boolean>;
-                  const specKeys = Object.keys(SPECIALITY_LABELS).filter(
+                  const specKeys = Object.keys(SPECIALITY_FIELD_KEY).filter(
                     (k) => spec[k],
                   );
                   const companyName = c.enseigne || c.nomSociete || "";
@@ -211,34 +258,6 @@ export default async function LeadOnePage() {
                         </a>
                       </td>
                       <td className="px-4 py-2">
-                        {dirigeants.length === 0 ? (
-                          <span className="text-faint">—</span>
-                        ) : (
-                          dirigeants.map((d, i) => {
-                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
-                            if (!name) return null;
-                            return (
-                              <div key={i} className="whitespace-nowrap">
-                                <span>{name}</span>
-                                {d.qualite && (
-                                  <span className="ml-1 text-xs text-muted">
-                                    ({d.qualite})
-                                  </span>
-                                )}
-                                <a
-                                  href={linkedinSearchUrl(d, companyName)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="ml-1.5 text-xs text-muted hover:text-brand"
-                                >
-                                  LinkedIn
-                                </a>
-                              </div>
-                            );
-                          })
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
                         {c.siteWeb ? (
                           <a
                             href={c.siteWeb}
@@ -253,8 +272,28 @@ export default async function LeadOnePage() {
                         )}
                       </td>
                       <td className="px-4 py-2">
+                        {dirigeants.length === 0 ? (
+                          <span className="text-faint">—</span>
+                        ) : (
+                          dirigeants.map((d, i) => {
+                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
+                            if (!name) return null;
+                            return (
+                              <div key={i} className="whitespace-nowrap">
+                                <span>{name}</span>
+                                {d.qualite && (
+                                  <span className="ml-1 text-xs text-muted">
+                                    ({d.qualite})
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
                         {c.email ? (
-                          <span className="inline-flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                             {c.email}
                             <Badge
                               tone={
@@ -270,21 +309,45 @@ export default async function LeadOnePage() {
                           <span className="text-faint">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 tnum">
+                      <td className="px-4 py-2">
+                        {dirigeants.length === 0 ? (
+                          <span className="text-faint">—</span>
+                        ) : (
+                          dirigeants.map((d, i) => {
+                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
+                            if (!name) return null;
+                            return (
+                              <a
+                                key={i}
+                                href={linkedinSearchUrl(d, companyName)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block whitespace-nowrap text-brand hover:underline"
+                              >
+                                {name.split(" ")[0]} · LinkedIn
+                              </a>
+                            );
+                          })
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2 tnum">
                         {c.telephone ?? <span className="text-faint">—</span>}
                       </td>
-                      <td className="px-4 py-2">
-                        <span className="flex flex-wrap gap-1">
-                          {specKeys.length ? (
-                            specKeys.map((k) => (
-                              <Badge key={k} tone="info">
-                                {SPECIALITY_LABELS[k]}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-faint">—</span>
-                          )}
-                        </span>
+                      <td className="min-w-[300px] px-4 py-2">
+                        {specKeys.length ? (
+                          <span className="flex flex-wrap gap-1">
+                            {specKeys.map((k) => {
+                              const meta = specialityMeta(k);
+                              return (
+                                <Badge key={k} className={meta?.badge}>
+                                  {meta?.label ?? k}
+                                </Badge>
+                              );
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-faint">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         <Badge
