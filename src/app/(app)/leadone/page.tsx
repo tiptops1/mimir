@@ -1,6 +1,6 @@
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
-import { quotaSnapshot } from "@/lib/leadone/quota";
+import { quotaSnapshot, QUOTA_DEFAULTS } from "@/lib/leadone/quota";
 import { approveCandidate, rejectCandidate } from "@/app/actions/leadone";
 import { PageHeader } from "@/components/page-header";
 import { SPECIALTY_FIELDS } from "@/lib/constants";
@@ -50,6 +50,16 @@ const PROVIDER_LABELS: Record<string, string> = {
   hunter: "Hunter.io (mois)",
   serpapi: "SerpApi LinkedIn (mois)",
 };
+
+// GitHub Actions cron is "15 8 * * *" (UTC, see .github/workflows/leadone.yml).
+function nextScheduledRun(): Date {
+  const now = new Date();
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8, 15, 0),
+  );
+  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next;
+}
 
 interface Dirigeant {
   nom?: string;
@@ -151,6 +161,17 @@ export default async function LeadOnePage({
     label: specialityMeta(key)?.label ?? key,
   }));
 
+  // Always show every configured provider, even before its first pipeline
+  // run has created a LeadOneQuota row (e.g. SerpApi right after setup).
+  const quotaByProvider = new Map(quotas.map((q) => [q.provider, q]));
+  const displayQuotas = Object.entries(QUOTA_DEFAULTS).map(([provider, def]) => ({
+    provider,
+    used: quotaByProvider.get(provider)?.used ?? 0,
+    limit: quotaByProvider.get(provider)?.limit ?? def.limit,
+  }));
+
+  const nextRun = nextScheduledRun();
+
   const countByStatus = new Map(
     statusCounts.map((s) => [s.status, s._count._all]),
   );
@@ -183,31 +204,25 @@ export default async function LeadOnePage({
             <CardTitle>Quotas gratuits</CardTitle>
           </CardHeader>
           <CardBody className="space-y-3">
-            {quotas.length === 0 ? (
-              <p className="text-sm text-muted">
-                Aucun quota initialisé — le premier run du pipeline s&apos;en charge.
-              </p>
-            ) : (
-              quotas.map((q) => {
-                const pct = Math.min(100, Math.round((q.used / q.limit) * 100));
-                return (
-                  <div key={q.provider}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{PROVIDER_LABELS[q.provider] ?? q.provider}</span>
-                      <span className="text-muted tnum">
-                        {q.used} / {q.limit}
-                      </span>
-                    </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-surface-2">
-                      <div
-                        className={`h-1.5 rounded-full ${pct >= 100 ? "bg-danger" : "bg-brand"}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+            {displayQuotas.map((q) => {
+              const pct = Math.min(100, Math.round((q.used / q.limit) * 100));
+              return (
+                <div key={q.provider}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{PROVIDER_LABELS[q.provider] ?? q.provider}</span>
+                    <span className="text-muted tnum">
+                      {q.used} / {q.limit}
+                    </span>
                   </div>
-                );
-              })
-            )}
+                  <div className="mt-1 h-1.5 rounded-full bg-surface-2">
+                    <div
+                      className={`h-1.5 rounded-full ${pct >= 100 ? "bg-danger" : "bg-brand"}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </CardBody>
         </Card>
 
@@ -216,14 +231,11 @@ export default async function LeadOnePage({
           <CardHeader>
             <CardTitle>Dernier run</CardTitle>
           </CardHeader>
-          <CardBody>
+          <CardBody className="space-y-2 text-sm">
             {!lastRun ? (
-              <p className="text-sm text-muted">
-                Aucun run pour l&apos;instant — le pipeline tourne chaque jour à
-                09h15 (Paris) via GitHub Actions.
-              </p>
+              <p className="text-muted">Aucun run pour l&apos;instant.</p>
             ) : (
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1">
                 <p>
                   <span className="text-muted">Déclenché&nbsp;:</span>{" "}
                   {lastRun.startedAt.toLocaleString("fr-FR")} (
@@ -239,54 +251,18 @@ export default async function LeadOnePage({
                 </p>
               </div>
             )}
+            <p className="border-t border-border pt-2">
+              <span className="text-muted">Prochain run prévu&nbsp;:</span>{" "}
+              {nextRun.toLocaleString("fr-FR", {
+                timeZone: "Europe/Paris",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}{" "}
+              (chaque jour, automatique)
+            </p>
           </CardBody>
         </Card>
       </div>
-
-      {/* Legend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Comment lire ce tableau</CardTitle>
-        </CardHeader>
-        <CardBody className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="font-medium">LinkedIn</p>
-            <p className="text-muted">
-              <span className="font-medium text-brand">Bleu ✓</span> profil
-              retrouvé et vérifié (nom confirmé sur la page). <span className="text-muted">Gris</span>{" "}
-              lien de recherche LinkedIn — non vérifié, à confirmer soi-même.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">Score</p>
-            <p className="text-muted">
-              Confiance 0–100 : +25 site web, +20 téléphone, +20 email (+15 si
-              MX valide, +10 si nominatif), +10 spécialité détectée.{" "}
-              <Badge tone="success">≥ 80</Badge> fiable ·{" "}
-              <Badge tone="brand">≥ 60</Badge> correct ·{" "}
-              <Badge tone="neutral">&lt; 60</Badge> à vérifier.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">MX</p>
-            <p className="text-muted">
-              <Badge tone="success">MX ✓</Badge> le domaine de l&apos;email a un
-              vrai serveur de messagerie — l&apos;adresse est probablement
-              livrable. <Badge tone="warning">syntaxe</Badge> ressemble à un
-              email valide mais le domaine n&apos;a pas pu être confirmé.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">Registre · vérifier ORIAS</p>
-            <p className="text-muted">
-              Lien vers la fiche officielle de l&apos;entreprise (Annuaire des
-              Entreprises). L&apos;ORIAS n&apos;a pas d&apos;API gratuite : ce
-              lien sert à vérifier manuellement l&apos;inscription au registre
-              des courtiers/agents d&apos;assurance avant d&apos;intégrer le lead.
-            </p>
-          </div>
-        </CardBody>
-      </Card>
 
       {/* Review queue */}
       <Card>
@@ -471,6 +447,49 @@ export default async function LeadOnePage({
               </table>
             </div>
           )}
+        </CardBody>
+      </Card>
+
+      {/* Legend */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Comment lire ce tableau</CardTitle>
+        </CardHeader>
+        <CardBody className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="font-medium">LinkedIn</p>
+            <p className="text-muted">
+              <span className="font-medium text-brand">Bleu</span> = vrai profil
+              trouvé et confirmé. <span className="text-muted">Gris</span> = pas
+              confirmé, le lien ouvre juste une recherche à vérifier soi-même.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium">Score</p>
+            <p className="text-muted">
+              Note de fiabilité du lead sur 100.{" "}
+              <Badge tone="success">≥ 80</Badge> fiable ·{" "}
+              <Badge tone="brand">≥ 60</Badge> correct ·{" "}
+              <Badge tone="neutral">&lt; 60</Badge> à vérifier avant de contacter.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium">MX</p>
+            <p className="text-muted">
+              Indique si l&apos;email a des chances d&apos;être valide.{" "}
+              <Badge tone="success">MX ✓</Badge> l&apos;adresse est fiable.{" "}
+              <Badge tone="warning">syntaxe</Badge> l&apos;adresse a la bonne
+              forme mais n&apos;a pas pu être vérifiée.
+            </p>
+          </div>
+          <div>
+            <p className="font-medium">Registre · vérifier ORIAS</p>
+            <p className="text-muted">
+              Ouvre la fiche officielle de l&apos;entreprise. Servez-vous-en pour
+              vérifier vous-même qu&apos;elle est bien inscrite au registre
+              ORIAS avant d&apos;intégrer le lead.
+            </p>
+          </div>
         </CardBody>
       </Card>
     </div>
