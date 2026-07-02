@@ -5,13 +5,17 @@ import { approveCandidate, rejectCandidate } from "@/app/actions/leadone";
 import { PageHeader } from "@/components/page-header";
 import { SPECIALTY_FIELDS } from "@/lib/constants";
 import { buildLinkedinSearchUrl } from "@/lib/leadone/linkedin";
+import { LeadOneFilters } from "@/components/leadone-filters";
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui";
+import type { Prisma } from "@prisma/client";
 
 // Lead One — review queue for the automated lead-gen pipeline
 // (scripts/leadone/, daily GitHub Actions run). Humans approve VALIDATED
 // candidates into the CRM; everything upstream is machine-driven.
 
 export const dynamic = "force-dynamic";
+
+const QUEUE_FETCH_CAP = 300;
 
 const STATUS_LABELS: Array<{ key: string; label: string }> = [
   { key: "SOURCED", label: "Sourcés" },
@@ -40,7 +44,6 @@ function specialityMeta(key: string) {
   return SPECIALTY_FIELDS.find((f) => f.key === fieldKey);
 }
 
-
 const PROVIDER_LABELS: Record<string, string> = {
   google_cse: "Google CSE (jour)",
   exa: "Exa.ai (mois)",
@@ -56,20 +59,97 @@ interface Dirigeant {
   linkedinChecked?: boolean;
 }
 
-export default async function LeadOnePage() {
+export default async function LeadOnePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await verifySession();
   const prisma = await getTenantDb();
 
-  const [statusCounts, quotas, lastRun, queue] = await Promise.all([
+  const sp = await searchParams;
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
+  const fContact = str("contact");
+  const fSociete = str("societe");
+  const fEmail = str("email");
+  const fSiteweb = str("siteweb"); // "with" | "without"
+  const fTelephone = str("telephone"); // "with" | "without"
+  const fLinkedin = str("linkedin"); // "verified" | "unverified"
+  const fSpecialite = str("specialite");
+  const fScore = str("score"); // "80" | "60" | "low"
+
+  const where: Prisma.LeadCandidateWhereInput = {
+    status: "VALIDATED",
+    ...(fSociete
+      ? {
+          OR: [
+            { nomSociete: { contains: fSociete, mode: "insensitive" } },
+            { enseigne: { contains: fSociete, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(fEmail ? { email: { contains: fEmail, mode: "insensitive" } } : {}),
+    ...(fSiteweb === "with"
+      ? { siteWeb: { not: null } }
+      : fSiteweb === "without"
+        ? { siteWeb: null }
+        : {}),
+    ...(fTelephone === "with"
+      ? { telephone: { not: null } }
+      : fTelephone === "without"
+        ? { telephone: null }
+        : {}),
+    ...(fScore === "80"
+      ? { confidence: { gte: 80 } }
+      : fScore === "60"
+        ? { confidence: { gte: 60, lt: 80 } }
+        : fScore === "low"
+          ? { confidence: { lt: 60 } }
+          : {}),
+  };
+
+  const [statusCounts, quotas, lastRun, rawQueue] = await Promise.all([
     prisma.leadCandidate.groupBy({ by: ["status"], _count: { _all: true } }),
     quotaSnapshot(prisma),
     prisma.leadOneRun.findFirst({ orderBy: { startedAt: "desc" } }),
     prisma.leadCandidate.findMany({
-      where: { status: "VALIDATED" },
+      where,
       orderBy: { confidence: "desc" },
-      take: 100,
+      take: QUEUE_FETCH_CAP,
     }),
   ]);
+
+  // Filters on dirigeants/specialites (JSON fields — not filterable in the
+  // Mongo `where` above) apply here instead. The queue is a bounded review
+  // inbox, not a paginated list, so filtering the fetched batch is enough.
+  let queue = rawQueue;
+  if (fContact) {
+    const needle = fContact.toLowerCase();
+    queue = queue.filter((c) =>
+      ((c.dirigeants ?? []) as Dirigeant[]).some((d) =>
+        `${d.prenom ?? ""} ${d.nom ?? ""}`.toLowerCase().includes(needle),
+      ),
+    );
+  }
+  if (fSpecialite) {
+    queue = queue.filter((c) => {
+      const spec = (c.specialites ?? {}) as Record<string, boolean>;
+      return Boolean(spec[fSpecialite]);
+    });
+  }
+  if (fLinkedin) {
+    queue = queue.filter((c) => {
+      const anyVerified = ((c.dirigeants ?? []) as Dirigeant[]).some((d) =>
+        Boolean(d.linkedinUrl),
+      );
+      return fLinkedin === "verified" ? anyVerified : !anyVerified;
+    });
+  }
+
+  const specialtyOptions = Object.keys(SPECIALITY_FIELD_KEY).map((key) => ({
+    value: key,
+    label: specialityMeta(key)?.label ?? key,
+  }));
 
   const countByStatus = new Map(
     statusCounts.map((s) => [s.status, s._count._all]),
@@ -213,9 +293,12 @@ export default async function LeadOnePage() {
         <CardHeader>
           <CardTitle>
             File de validation ({queue.length}
-            {queue.length === 100 ? "+" : ""})
+            {rawQueue.length === QUEUE_FETCH_CAP ? "+" : ""})
           </CardTitle>
         </CardHeader>
+        <CardBody className="p-4 pb-0">
+          <LeadOneFilters specialtyOptions={specialtyOptions} />
+        </CardBody>
         <CardBody className="p-0">
           {queue.length === 0 ? (
             <div className="p-6">
@@ -225,174 +308,177 @@ export default async function LeadOnePage() {
               />
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-2 font-medium">Société</th>
-                  <th className="px-4 py-2 font-medium">Site web</th>
-                  <th className="px-4 py-2 font-medium">Contact</th>
-                  <th className="px-4 py-2 font-medium">Email</th>
-                  <th className="px-4 py-2 font-medium">LinkedIn</th>
-                  <th className="px-4 py-2 font-medium">Téléphone</th>
-                  <th className="min-w-[300px] px-4 py-2 font-medium">Spécialités</th>
-                  <th className="px-4 py-2 font-medium">Score</th>
-                  <th className="px-4 py-2 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map((c) => {
-                  const spec = (c.specialites ?? {}) as Record<string, boolean>;
-                  const specKeys = Object.keys(SPECIALITY_FIELD_KEY).filter(
-                    (k) => spec[k],
-                  );
-                  const companyName = c.enseigne || c.nomSociete || "";
-                  const dirigeants = (c.dirigeants ?? []) as Dirigeant[];
-                  return (
-                    <tr key={c.id} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2">
-                        <p className="font-medium">
-                          {companyName || c.siret}
-                        </p>
-                        <a
-                          href={`https://annuaire-entreprises.data.gouv.fr/entreprise/${c.siren ?? c.siret.slice(0, 9)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-muted hover:text-brand"
-                        >
-                          Registre · vérifier ORIAS
-                        </a>
-                      </td>
-                      <td className="px-4 py-2">
-                        {c.siteWeb ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                    <th className="px-3 py-2 font-medium">Société</th>
+                    <th className="px-3 py-2 font-medium">Site web</th>
+                    <th className="px-3 py-2 font-medium">Contact</th>
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">Téléphone</th>
+                    <th className="px-3 py-2 font-medium">Spécialités</th>
+                    <th className="px-3 py-2 font-medium">Score</th>
+                    <th className="px-3 py-2 font-medium" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.map((c) => {
+                    const spec = (c.specialites ?? {}) as Record<string, boolean>;
+                    const specKeys = Object.keys(SPECIALITY_FIELD_KEY).filter(
+                      (k) => spec[k],
+                    );
+                    const companyName = c.enseigne || c.nomSociete || "";
+                    const dirigeants = (c.dirigeants ?? []) as Dirigeant[];
+                    const shownSpecs = specKeys.slice(0, 2);
+                    const extraSpecs = specKeys.slice(2);
+                    return (
+                      <tr key={c.id} className="border-b border-border last:border-0">
+                        <td className="max-w-[140px] px-3 py-2">
+                          <p className="truncate font-medium" title={companyName || c.siret}>
+                            {companyName || c.siret}
+                          </p>
                           <a
-                            href={c.siteWeb}
+                            href={`https://annuaire-entreprises.data.gouv.fr/entreprise/${c.siren ?? c.siret.slice(0, 9)}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-brand hover:underline"
+                            className="text-xs text-muted hover:text-brand"
                           >
-                            {c.siteWeb.replace(/^https?:\/\/(www\.)?/, "")}
+                            Registre · vérifier ORIAS
                           </a>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {dirigeants.length === 0 ? (
-                          <span className="text-faint">—</span>
-                        ) : (
-                          dirigeants.map((d, i) => {
-                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
-                            if (!name) return null;
-                            return (
-                              <div key={i} className="whitespace-nowrap">
-                                <span>{name}</span>
-                                {d.qualite && (
-                                  <span className="ml-1 text-xs text-muted">
-                                    ({d.qualite})
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {c.email ? (
-                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                            {c.email}
-                            <Badge
-                              tone={
-                                c.emailStatus === "MX_VALID"
-                                  ? "success"
-                                  : "warning"
-                              }
+                        </td>
+                        <td className="max-w-[130px] px-3 py-2">
+                          {c.siteWeb ? (
+                            <a
+                              href={c.siteWeb}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={c.siteWeb}
+                              className="block truncate text-brand hover:underline"
                             >
-                              {c.emailStatus === "MX_VALID" ? "MX ✓" : "syntaxe"}
-                            </Badge>
-                          </span>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {dirigeants.length === 0 ? (
-                          <span className="text-faint">—</span>
-                        ) : (
-                          dirigeants.map((d, i) => {
-                            const name = [d.prenom, d.nom].filter(Boolean).join(" ");
-                            if (!name) return null;
-                            const verified = Boolean(d.linkedinUrl);
-                            const href = verified
-                              ? d.linkedinUrl!
-                              : buildLinkedinSearchUrl(name, companyName);
-                            return (
-                              <a
-                                key={i}
-                                href={href}
-                                target="_blank"
-                                rel="noreferrer"
-                                title={verified ? "Profil vérifié" : "Recherche LinkedIn (non vérifié)"}
-                                className={`block whitespace-nowrap hover:underline ${
-                                  verified ? "text-brand font-medium" : "text-muted"
-                                }`}
-                              >
-                                {name.split(" ")[0]} · LinkedIn{verified ? " ✓" : ""}
-                              </a>
-                            );
-                          })
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2 tnum">
-                        {c.telephone ?? <span className="text-faint">—</span>}
-                      </td>
-                      <td className="min-w-[300px] px-4 py-2">
-                        {specKeys.length ? (
-                          <span className="flex flex-wrap gap-1">
-                            {specKeys.map((k) => {
-                              const meta = specialityMeta(k);
+                              {c.siteWeb.replace(/^https?:\/\/(www\.)?/, "")}
+                            </a>
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
+                        </td>
+                        <td className="max-w-[170px] px-3 py-2">
+                          {dirigeants.length === 0 ? (
+                            <span className="text-faint">—</span>
+                          ) : (
+                            dirigeants.map((d, i) => {
+                              const name = [d.prenom, d.nom].filter(Boolean).join(" ");
+                              if (!name) return null;
+                              const verified = Boolean(d.linkedinUrl);
+                              const href = verified
+                                ? d.linkedinUrl!
+                                : buildLinkedinSearchUrl(name, companyName);
                               return (
-                                <Badge key={k} className={meta?.badge}>
-                                  {meta?.label ?? k}
-                                </Badge>
+                                <div key={i} className="truncate" title={`${name}${d.qualite ? ` (${d.qualite})` : ""}`}>
+                                  <span>{name}</span>
+                                  {d.qualite && (
+                                    <span className="ml-1 text-xs text-muted">
+                                      ({d.qualite})
+                                    </span>
+                                  )}{" "}
+                                  <a
+                                    href={href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={verified ? "Profil vérifié" : "Recherche LinkedIn (non vérifié)"}
+                                    className={`hover:underline ${
+                                      verified ? "font-medium text-brand" : "text-muted"
+                                    }`}
+                                  >
+                                    · LinkedIn{verified ? " ✓" : ""}
+                                  </a>
+                                </div>
                               );
-                            })}
-                          </span>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        <Badge
-                          tone={
-                            c.confidence >= 80
-                              ? "success"
-                              : c.confidence >= 60
-                                ? "brand"
-                                : "neutral"
-                          }
-                        >
-                          {c.confidence}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex justify-end gap-2">
-                          <form action={approveCandidate.bind(null, c.id)}>
-                            <Button size="sm" type="submit">
-                              Intégrer
-                            </Button>
-                          </form>
-                          <form action={rejectCandidate.bind(null, c.id)}>
-                            <Button size="sm" variant="ghost" type="submit">
-                              Écarter
-                            </Button>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            })
+                          )}
+                        </td>
+                        <td className="max-w-[150px] px-3 py-2">
+                          {c.email ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="truncate" title={c.email}>
+                                {c.email}
+                              </span>
+                              <Badge
+                                tone={
+                                  c.emailStatus === "MX_VALID"
+                                    ? "success"
+                                    : "warning"
+                                }
+                              >
+                                {c.emailStatus === "MX_VALID" ? "MX ✓" : "syntaxe"}
+                              </Badge>
+                            </span>
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 tnum">
+                          {c.telephone ?? <span className="text-faint">—</span>}
+                        </td>
+                        <td className="max-w-[140px] px-3 py-2">
+                          {specKeys.length ? (
+                            <span className="flex flex-wrap items-center gap-1">
+                              {shownSpecs.map((k) => {
+                                const meta = specialityMeta(k);
+                                return (
+                                  <Badge key={k} className={meta?.badge}>
+                                    {meta?.label ?? k}
+                                  </Badge>
+                                );
+                              })}
+                              {extraSpecs.length > 0 && (
+                                <Badge
+                                  tone="neutral"
+                                  title={extraSpecs
+                                    .map((k) => specialityMeta(k)?.label ?? k)
+                                    .join(", ")}
+                                >
+                                  +{extraSpecs.length}
+                                </Badge>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge
+                            tone={
+                              c.confidence >= 80
+                                ? "success"
+                                : c.confidence >= 60
+                                  ? "brand"
+                                  : "neutral"
+                            }
+                          >
+                            {c.confidence}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex justify-end gap-2">
+                            <form action={approveCandidate.bind(null, c.id)}>
+                              <Button size="sm" type="submit">
+                                Intégrer
+                              </Button>
+                            </form>
+                            <form action={rejectCandidate.bind(null, c.id)}>
+                              <Button size="sm" variant="ghost" type="submit">
+                                Écarter
+                              </Button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardBody>
       </Card>
