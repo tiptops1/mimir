@@ -18,6 +18,7 @@ interface DirigeantJson {
   nom?: string | null;
   prenom?: string | null;
   qualite?: string | null;
+  linkedinUrl?: string | null;
 }
 
 export async function promoteCandidate(
@@ -112,6 +113,7 @@ export async function promoteCandidate(
         nom,
         prenom,
         fonction: d.qualite?.trim() || "Dirigeant",
+        linkedinUrl: d.linkedinUrl?.trim() || null,
         // consent stays null (unknown) — RGPD status is set by outreach flows.
       },
     });

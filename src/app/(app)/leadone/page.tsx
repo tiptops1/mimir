@@ -4,6 +4,7 @@ import { quotaSnapshot } from "@/lib/leadone/quota";
 import { approveCandidate, rejectCandidate } from "@/app/actions/leadone";
 import { PageHeader } from "@/components/page-header";
 import { SPECIALTY_FIELDS } from "@/lib/constants";
+import { buildLinkedinSearchUrl } from "@/lib/leadone/linkedin";
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState } from "@/components/ui";
 
 // Lead One — review queue for the automated lead-gen pipeline
@@ -44,19 +45,15 @@ const PROVIDER_LABELS: Record<string, string> = {
   google_cse: "Google CSE (jour)",
   exa: "Exa.ai (mois)",
   hunter: "Hunter.io (mois)",
+  serpapi: "SerpApi LinkedIn (mois)",
 };
 
 interface Dirigeant {
   nom?: string;
   prenom?: string;
   qualite?: string;
-}
-
-function linkedinSearchUrl(d: Dirigeant, companyName: string): string {
-  const terms = [d.prenom, d.nom, companyName, "assurance"]
-    .filter(Boolean)
-    .join(" ");
-  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(terms)}`;
+  linkedinUrl?: string;
+  linkedinChecked?: boolean;
 }
 
 export default async function LeadOnePage() {
@@ -171,7 +168,15 @@ export default async function LeadOnePage() {
         <CardHeader>
           <CardTitle>Comment lire ce tableau</CardTitle>
         </CardHeader>
-        <CardBody className="grid gap-3 text-sm sm:grid-cols-3">
+        <CardBody className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="font-medium">LinkedIn</p>
+            <p className="text-muted">
+              <span className="font-medium text-brand">Bleu ✓</span> profil
+              retrouvé et vérifié (nom confirmé sur la page). <span className="text-muted">Gris</span>{" "}
+              lien de recherche LinkedIn — non vérifié, à confirmer soi-même.
+            </p>
+          </div>
           <div>
             <p className="font-medium">Score</p>
             <p className="text-muted">
@@ -316,15 +321,22 @@ export default async function LeadOnePage() {
                           dirigeants.map((d, i) => {
                             const name = [d.prenom, d.nom].filter(Boolean).join(" ");
                             if (!name) return null;
+                            const verified = Boolean(d.linkedinUrl);
+                            const href = verified
+                              ? d.linkedinUrl!
+                              : buildLinkedinSearchUrl(name, companyName);
                             return (
                               <a
                                 key={i}
-                                href={linkedinSearchUrl(d, companyName)}
+                                href={href}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="block whitespace-nowrap text-brand hover:underline"
+                                title={verified ? "Profil vérifié" : "Recherche LinkedIn (non vérifié)"}
+                                className={`block whitespace-nowrap hover:underline ${
+                                  verified ? "text-brand font-medium" : "text-muted"
+                                }`}
                               >
-                                {name.split(" ")[0]} · LinkedIn
+                                {name.split(" ")[0]} · LinkedIn{verified ? " ✓" : ""}
                               </a>
                             );
                           })

@@ -6,7 +6,7 @@ import type { PrismaClient } from "@prisma/client";
 // refreshes" mechanic. Single-writer by design (GH Actions concurrency group
 // "leadone" + the UI never spends quota), so read-then-update is safe.
 
-export type Provider = "google_cse" | "exa" | "hunter";
+export type Provider = "google_cse" | "exa" | "hunter" | "serpapi";
 
 export const QUOTA_DEFAULTS: Record<
   Provider,
@@ -15,6 +15,7 @@ export const QUOTA_DEFAULTS: Record<
   google_cse: { limit: 100, window: "DAILY" }, // resets midnight Pacific
   exa: { limit: 1000, window: "MONTHLY" }, // exa.ai free tier, calendar month
   hunter: { limit: 25, window: "MONTHLY" },
+  serpapi: { limit: 100, window: "MONTHLY" }, // serpapi.com free tier — LinkedIn profile verification only
 };
 
 // Key identifying the window a timestamp belongs to. Google CSE resets at

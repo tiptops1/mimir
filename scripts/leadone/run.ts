@@ -6,6 +6,7 @@ import { runSource } from "./source";
 import { runEnrichWebsite } from "./enrich-website";
 import { runEnrichContact } from "./enrich-contact";
 import { runValidate } from "./validate";
+import { runVerifyLinkedin } from "./verify-linkedin";
 
 // Lead One orchestrator — the single entry point GitHub Actions runs daily.
 // Stages run sequentially under one global time budget (LEADONE_MAX_MINUTES,
@@ -89,6 +90,13 @@ async function main() {
       stats.validate = await runValidate(prisma, { deadline });
     } catch (e) {
       errors.push(`validate: ${(e as Error).message}`);
+    }
+
+    // 5) LinkedIn verification for the review queue (serpapi.com, 100/month).
+    try {
+      stats.linkedin = await runVerifyLinkedin(prisma, { deadline });
+    } catch (e) {
+      errors.push(`linkedin: ${(e as Error).message}`);
     }
 
     stats.quota = await quotaSnapshot(prisma);
