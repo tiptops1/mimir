@@ -437,6 +437,70 @@ model StageChange {
   @@index([to, at])
 }
 
+// ── Lead One — automated lead-gen pipeline (staging, kept OUT of Company) ────
+// Raw leads sourced from recherche-entreprises (NAF 66.22Z), enriched by the
+// quota-gated website search + site crawler, validated, then promoted into
+// Company/Contact via lib/leadone/promote. Deliberately minimal fields: no
+// address/city/legal metadata (departement is only the sourcing segment key).
+model LeadCandidate {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  siren      String?
+  siret      String  @unique // dedup key, same as Company
+  nomSociete String?
+  enseigne   String?
+  departement String? // 2-char sourcing segment — never surfaced, never promoted
+
+  siteWeb     String?
+  email       String?
+  emailKind   String? // NOMINATIVE | GENERIC | NONE
+  emailStatus String? // MX_VALID | SYNTAX_ONLY | INVALID
+  telephone   String? // normalized FR format
+  dirigeants  Json? // [{ nom, prenom, qualite }] from the registry
+  specialites Json? // { sante, prevoyance, iard, auto, rcPro, entreprises, collectives, particuliers }
+
+  // SOURCED → ENRICHED_WEBSITE → ENRICHED_CONTACT → VALIDATED → PROMOTED | REJECTED
+  status     String @default("SOURCED")
+  confidence Int    @default(0) // 0–100 (lib/leadone/validate scoreCandidate)
+  provenance Json? // per-field source+timestamp, e.g. { siteWeb: { src: "google_cse", at } }
+  attempts   Json? // { website: n, contact: n } — reject after 3 dead-end tries
+  lastError  String?
+
+  promotedCompanyId String? @db.ObjectId // loose ref, set on promotion
+  reviewedBy        String? // control-plane user id (loose, like Activity.userId)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([departement])
+  @@index([confidence])
+}
+
+// Per-provider free-tier budget. The orchestrator consumes via takeQuota() and
+// resets `used` when the window (DAILY / MONTHLY) has elapsed — this is what
+// makes the pipeline auto-resume when a free tier refreshes.
+model LeadOneQuota {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  provider    String   @unique // "google_cse" | "brave" | "hunter"
+  used        Int      @default(0)
+  limit       Int // 100 (CSE/day) | 2000 (Brave/mo) | 25 (Hunter/mo)
+  window      String // "DAILY" | "MONTHLY"
+  windowStart DateTime
+  updatedAt   DateTime @updatedAt
+}
+
+// One row per pipeline execution — observability for the /leadone page and CI.
+model LeadOneRun {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  trigger    String    @default("CRON") // CRON | MANUAL
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  stats      Json? // { sourced, websitesFound, crawled, validated, promoted, purged, quota }
+  error      String?
+
+  @@index([startedAt])
+}
+
 // A saved filter set on a list page (P2.2 "saved views"). Per-user: the URL
 // querystring of the page's live filters is stored verbatim, so applying a
 // view is just navigation — no filter schema duplicated here.

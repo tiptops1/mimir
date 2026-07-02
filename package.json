@@ -31,6 +31,12 @@
     "import:200-1802": "tsx scripts/dedup-and-import.ts",
     "dedup:names": "tsx scripts/dedup-by-name.ts",
     "enrich:full": "tsx scripts/enrich-full.ts",
+    "leadone:run": "tsx scripts/leadone/run.ts",
+    "leadone:source": "tsx scripts/leadone/source.ts",
+    "leadone:website": "tsx scripts/leadone/enrich-website.ts",
+    "leadone:contact": "tsx scripts/leadone/enrich-contact.ts",
+    "leadone:validate": "tsx scripts/leadone/validate.ts",
+    "leadone:promote": "tsx scripts/leadone/promote.ts",
     "enrich:dirigeants": "tsx scripts/enrich-dirigeants.ts",
     "cleanup:unnamed": "tsx scripts/delete-unnamed.ts"
   },

@@ -49,6 +49,7 @@ async function main() {
     try {
       const r = await fetchUniteLegale(c.siren!);
       const persons = (r?.dirigeants ?? []).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (d: any) => d.type_dirigeant === "personne physique" || (d.nom && !d.denomination),
       );
 

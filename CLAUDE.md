@@ -34,4 +34,19 @@ This is Next.js 16, which post-dates training data — read `node_modules/next/d
 - **Start each phase in plan mode**, then execute.
 - **Reference files by path; don't paste them.** Let subagents do broad searches.
 - **`docs/roadmap.md` is the cross-session memory** — tick boxes / update status as you go.
-- **Push to `main` only when I explicitly say so.**
+- **Push to `main` only when I explicitly say so.** When I do say "push" / "push to prod",
+  run the whole `/ship` chain without asking again turn-by-turn.
+
+## Ship ritual (when I say push — use the `/ship` skill)
+`npm run lint` → `npm run build` → commit → `git push` (Railway auto-deploys) →
+`npm run db:push` **only if** `prisma/` changed → update `docs/roadmap.md`.
+**No smoke tests, no status checks, no dev server** unless I ask. Prod on Railway doubles
+as Christopher's test server — there is no separate staging.
+
+## UI conventions (re-stated too many times — just follow them)
+- Every list page gets **comprehensive filters**, and the filter bar is in the **same order
+  everywhere: contact name, company, email**, then the rest.
+- **City is irrelevant** — don't surface it anywhere.
+- Contact-field priority order: company, revenue, website, decision-maker, email,
+  linkedin, phone.
+- Selecting/clicking things must never scroll the page.

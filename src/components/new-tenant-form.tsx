@@ -13,9 +13,8 @@ export function NewTenantForm() {
     FormData
   >(createTenant, undefined);
 
-  useEffect(() => {
-    if (state?.ok) setOpen(false);
-  }, [state]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (state?.ok) setOpen(false); }, [state]);
 
   if (!open) {
     return (

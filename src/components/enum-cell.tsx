@@ -38,6 +38,7 @@ export function EnumCell({
   const ref = useRef<HTMLDivElement>(null);
 
   // Keep in sync if the server sends a fresh value after revalidation.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setCurrent(value), [value]);
 
   // Close on outside click.

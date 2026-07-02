@@ -19,6 +19,7 @@ export function ThemeToggle() {
   // Server render assumes light; sync to the real attribute after mount so the
   // icon matches what the pre-paint script applied.
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setTheme(appliedTheme()), []);
 
   const toggle = () => {

@@ -110,7 +110,7 @@ function domainLabel(host: string): string {
 }
 
 // Does this host's domain label match the company name strongly enough to keep?
-function hostMatchesName(host: string, name: string): boolean {
+export function hostMatchesName(host: string, name: string): boolean {
   const label = deburr(domainLabel(host));
   const toks = nameTokens(name);
   if (toks.length === 0) return false;
@@ -129,7 +129,7 @@ function hostMatchesName(host: string, name: string): boolean {
   return false;
 }
 
-function hostsFromUrls(urls: string[]): string[] {
+export function hostsFromUrls(urls: string[]): string[] {
   const out: string[] = [];
   for (const u of urls) {
     try {
@@ -186,7 +186,7 @@ async function ddgLiteSearch(query: string): Promise<string[]> {
 }
 
 // Brave Search API — free tier (2k/month) with a key. Best quality if present.
-async function braveSearch(query: string): Promise<string[]> {
+export async function braveSearch(query: string): Promise<string[]> {
   const key = process.env.BRAVE_API_KEY;
   if (!key) return [];
   try {
@@ -238,14 +238,14 @@ export async function discoverWebsiteFree(
 const BAD_EMAIL =
   /(example|sentry|wixpress|cloudflare|\.png|\.jpg|\.gif|@2x|sentry\.io|votre@|nom@|email@|@domaine)/i;
 
-function extractEmail(html: string): string | null {
+export function extractEmail(html: string): string | null {
   const matches =
     html.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) ?? [];
   for (const m of matches) if (!BAD_EMAIL.test(m)) return m.toLowerCase();
   return null;
 }
 
-function normalizeFrPhone(raw: string): string | null {
+export function normalizeFrPhone(raw: string): string | null {
   let d = raw.replace(/[^0-9+]/g, "");
   if (d.startsWith("+33")) d = "0" + d.slice(3);
   else if (d.startsWith("0033")) d = "0" + d.slice(4);
@@ -253,7 +253,7 @@ function normalizeFrPhone(raw: string): string | null {
   return d.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
 }
 
-function extractPhone(html: string): string | null {
+export function extractPhone(html: string): string | null {
   const candidates: string[] = [];
   for (const m of html.matchAll(/tel:([+0-9 .\-()]{6,})/gi))
     candidates.push(m[1]);

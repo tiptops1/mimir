@@ -1,0 +1,35 @@
+# Lead One — daily lead-gen pipeline (see scripts/leadone/run.ts).
+# 08:15 UTC is just past midnight Pacific year-round, i.e. right after the
+# Google CSE daily quota resets, so the run starts with a full budget.
+# Writes directly to Atlas (tenant #1) via the DATABASE_URL secret.
+name: Lead One pipeline
+
+on:
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: leadone
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # postinstall generates both Prisma clients (generate needs no env vars)
+      - run: npm ci
+      - run: npx tsx scripts/leadone/run.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+          GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
+          GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
+          HUNTER_API_KEY: ${{ secrets.HUNTER_API_KEY }}
+          LEADONE_MAX_MINUTES: "35"
