@@ -330,8 +330,6 @@ export default async function LeadOnePage({
                     );
                     const companyName = c.enseigne || c.nomSociete || "";
                     const dirigeants = (c.dirigeants ?? []) as Dirigeant[];
-                    const shownSpecs = specKeys.slice(0, 2);
-                    const extraSpecs = specKeys.slice(2);
                     return (
                       <tr key={c.id} className="border-b border-border last:border-0">
                         <td className="max-w-[140px] px-3 py-2">
@@ -373,20 +371,23 @@ export default async function LeadOnePage({
                               const href = verified
                                 ? d.linkedinUrl!
                                 : buildLinkedinSearchUrl(name, companyName);
+                              const label = `${name}${d.qualite ? ` (${d.qualite})` : ""}`;
                               return (
-                                <div key={i} className="truncate" title={`${name}${d.qualite ? ` (${d.qualite})` : ""}`}>
-                                  <span>{name}</span>
-                                  {d.qualite && (
-                                    <span className="ml-1 text-xs text-muted">
-                                      ({d.qualite})
-                                    </span>
-                                  )}{" "}
+                                <div key={i} className="flex items-center gap-1">
+                                  <span className="min-w-0 truncate" title={label}>
+                                    {name}
+                                    {d.qualite && (
+                                      <span className="ml-1 text-xs text-muted">
+                                        ({d.qualite})
+                                      </span>
+                                    )}
+                                  </span>
                                   <a
                                     href={href}
                                     target="_blank"
                                     rel="noreferrer"
                                     title={verified ? "Profil vérifié" : "Recherche LinkedIn (non vérifié)"}
-                                    className={`hover:underline ${
+                                    className={`shrink-0 hover:underline ${
                                       verified ? "font-medium text-brand" : "text-muted"
                                     }`}
                                   >
@@ -420,10 +421,10 @@ export default async function LeadOnePage({
                         <td className="whitespace-nowrap px-3 py-2 tnum">
                           {c.telephone ?? <span className="text-faint">—</span>}
                         </td>
-                        <td className="max-w-[140px] px-3 py-2">
+                        <td className="min-w-[220px] px-3 py-2">
                           {specKeys.length ? (
-                            <span className="flex flex-wrap items-center gap-1">
-                              {shownSpecs.map((k) => {
+                            <span className="flex flex-wrap gap-1">
+                              {specKeys.map((k) => {
                                 const meta = specialityMeta(k);
                                 return (
                                   <Badge key={k} className={meta?.badge}>
@@ -431,16 +432,6 @@ export default async function LeadOnePage({
                                   </Badge>
                                 );
                               })}
-                              {extraSpecs.length > 0 && (
-                                <Badge
-                                  tone="neutral"
-                                  title={extraSpecs
-                                    .map((k) => specialityMeta(k)?.label ?? k)
-                                    .join(", ")}
-                                >
-                                  +{extraSpecs.length}
-                                </Badge>
-                              )}
                             </span>
                           ) : (
                             <span className="text-faint">—</span>
