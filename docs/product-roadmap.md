@@ -145,12 +145,12 @@ Where the auto-ingestion advantage turns into an outbound advantage.
 
 ## P2 — Scale & polish
 
-> **Status: ✅ COMPLETE (2026-07-01, second slice — local commits, not yet pushed).** First slice
+> **Status: ✅ COMPLETE & DEPLOYED (2026-07-01, `91350b9` → `main` → Railway).** First slice
 > (responsive shell + command palette + CSV export) shipped earlier that day; the second slice closed
 > everything else: dark mode, PWA, bulk actions, saved views, dedupe+merge, analytics v2 (StageChange
 > log), RGPD (consent/export/erase/audit). Only P2.3's per-rep leaderboard waits on real multi-user
-> usage. **Before deploy:** `npm run db:push` for the new indexes (SavedView already pushed;
-> StageChange/AuditLog/Contact.consent pending — collections lazy-create so code works).
+> usage. **`npm run db:push` run against prod** (SavedView + StageChange collections/indexes;
+> AuditLog + Contact.consent lazy-create on first write).
 
 ### P2.1 — Mobile & speed
 - [x] **Responsive shell** *(2026-07-01)* — static sidebar hidden below `lg`, slide-over drawer

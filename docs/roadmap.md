@@ -8,12 +8,14 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 3 DONE + Phase 4 onboarding box DONE (2026-07-01, local commits — not yet
-pushed); Phase 1 + 2 deployed.** The per-tenant cron loop, per-tenant Fireflies credential and the
-self-serve tenant-provisioning page closed everything code-shaped on this track. Remaining Phase 4
-boxes are business decisions (branding/subdomain, billing provider, customer #2). The product track's
-P2 also completed this session (see `docs/product-roadmap.md`). **Before deploy:** `npm run db:push`
-(StageChange/AuditLog/consent indexes), set `PLATFORM_ADMIN_EMAILS`, push to `main` on go-ahead.
+**Current phase: Phase 3 DONE + Phase 4 onboarding box DONE & DEPLOYED (2026-07-01, `91350b9` →
+`main` → Railway); Phase 1 + 2 already deployed.** The per-tenant cron loop, per-tenant Fireflies
+credential and the self-serve tenant-provisioning page closed everything code-shaped on this track.
+Remaining Phase 4 boxes are business decisions (branding/subdomain, billing provider, customer #2).
+The product track's P2 also completed + deployed this session (see `docs/product-roadmap.md`).
+**`npm run db:push` was run against prod** (StageChange collection + indexes; AuditLog lazy-creates).
+**Still user-owned:** set `PLATFORM_ADMIN_EMAILS` on Railway to unlock `/settings/tenants`, then
+exercise a first real tenant provisioning run.
 
 Previously: **Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
 (stages + native fields as config) and Phase 2 (fields + stages self-serve `/settings` UI) commits were
