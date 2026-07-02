@@ -96,9 +96,9 @@ pipeline. Personal director contact data is left manual (GDPR).
 ### Free website discovery
 
 Fills each company's `siteWeb` for free — no API key needed — by searching **Bing** (and, as a
-bonus, **DuckDuckGo Lite**; plus **Brave** if you set `BRAVE_API_KEY`) and keeping only a domain
-whose name strongly matches the company. It errs on the side of leaving the field blank rather than
-saving a wrong URL (a wrong website is worse than none in a CRM).
+bonus, **DuckDuckGo Lite**) and keeping only a domain whose name strongly matches the company.
+It errs on the side of leaving the field blank rather than saving a wrong URL (a wrong website
+is worse than none in a CRM).
 
 ```bash
 npm run enrich:websites              # fill every empty siteWeb

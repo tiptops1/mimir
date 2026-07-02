@@ -185,43 +185,13 @@ async function ddgLiteSearch(query: string): Promise<string[]> {
   }
 }
 
-// Brave Search API — free tier (2k/month) with a key. Best quality if present.
-export async function braveSearch(query: string): Promise<string[]> {
-  const key = process.env.BRAVE_API_KEY;
-  if (!key) return [];
-  try {
-    const res = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&country=fr`,
-      {
-        headers: {
-          accept: "application/json",
-          "Accept-Encoding": "gzip",
-          "X-Subscription-Token": key,
-        },
-        signal: AbortSignal.timeout(8000),
-      },
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      web?: { results?: { url?: string }[] };
-    };
-    return (data.web?.results ?? [])
-      .map((r) => r.url)
-      .filter((u): u is string => Boolean(u));
-  } catch {
-    return [];
-  }
-}
-
 export async function discoverWebsiteFree(
   name: string,
   ville?: string | null,
 ): Promise<string | null> {
   if (!name.trim()) return null;
   const query = `${name} ${ville ?? ""} assurance`.trim();
-  // Gather candidates from all available sources (Brave only if keyed).
   const hosts = [
-    ...hostsFromUrls(await braveSearch(query)),
     ...hostsFromUrls(await bingSearch(query)),
     ...hostsFromUrls(await ddgLiteSearch(query)),
   ];

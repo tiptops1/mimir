@@ -4,7 +4,7 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 import { discoverWebsiteQuotaed } from "../../src/lib/leadone/search";
 
 // Lead One stage 2 — website discovery for SOURCED candidates, gated by the
-// LeadOneQuota ledger (Google CSE 100/day, then Brave 2000/mo). One search
+// LeadOneQuota ledger (Google CSE 100/day, then Exa.ai 1000/mo). One search
 // query per candidate per attempt; 3 dead-end attempts (with query variants)
 // → REJECTED. Stops cleanly when every provider's budget is spent — the next
 // scheduled run resumes after the quota window resets.
@@ -63,7 +63,7 @@ export async function runEnrichWebsite(
     const r = await discoverWebsiteQuotaed(prisma, name, tries);
     if (r.noProvider) {
       console.warn(
-        "No search provider configured (GOOGLE_CSE_KEY/GOOGLE_CSE_CX, BRAVE_API_KEY " +
+        "No search provider configured (GOOGLE_CSE_KEY/GOOGLE_CSE_CX, EXA_API_KEY " +
           "or LEADONE_KEYLESS=1) — skipping website stage.",
       );
       break; // don't burn candidates' attempts when nothing could run
@@ -102,7 +102,7 @@ export async function runEnrichWebsite(
             : { attempts: { ...attempts, website: next } },
         });
     }
-    await sleep(1100); // Brave free tier is 1 req/s; CSE tolerates this fine
+    await sleep(1100); // polite delay between search-provider calls
   }
   return stats;
 }

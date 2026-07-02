@@ -481,9 +481,9 @@ model LeadCandidate {
 // makes the pipeline auto-resume when a free tier refreshes.
 model LeadOneQuota {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  provider    String   @unique // "google_cse" | "brave" | "hunter"
+  provider    String   @unique // "google_cse" | "exa" | "hunter"
   used        Int      @default(0)
-  limit       Int // 100 (CSE/day) | 2000 (Brave/mo) | 25 (Hunter/mo)
+  limit       Int // 100 (CSE/day) | 1000 (Exa/mo) | 25 (Hunter/mo)
   window      String // "DAILY" | "MONTHLY"
   windowStart DateTime
   updatedAt   DateTime @updatedAt

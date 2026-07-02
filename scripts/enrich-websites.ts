@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 import { discoverWebsiteFree } from "../src/lib/enrich";
 
 // Free, keyless website enrichment for companies that don't have a siteWeb yet.
-// Uses Bing HTML (+ DuckDuckGo Lite, + Brave if BRAVE_API_KEY is set) and only
-// saves a domain that strongly matches the company name. Best run LOCALLY from
-// a residential IP — datacenter IPs get blocked by the search engines.
+// Uses Bing HTML + DuckDuckGo Lite and only saves a domain that strongly
+// matches the company name. Best run LOCALLY from a residential IP —
+// datacenter IPs get blocked by the search engines.
 //
 // Usage:
 //   npm run enrich:websites               -> fill every empty siteWeb
