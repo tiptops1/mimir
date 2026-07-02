@@ -21,11 +21,12 @@ export default async function AppLayout({
   startOfTomorrow.setHours(0, 0, 0, 0);
   startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-  const [pendingCount, todoCount, notifications] = await Promise.all([
+  const [pendingCount, todoCount, leadOneCount, notifications] = await Promise.all([
     prisma.pendingContact.count({ where: { status: "PENDING" } }),
     prisma.task.count({
       where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
     }),
+    prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
     getNotificationSummary(prisma),
   ]);
 
@@ -41,6 +42,7 @@ export default async function AppLayout({
         className="hidden lg:flex"
         pendingCount={pendingCount}
         todoCount={todoCount}
+        leadOneCount={leadOneCount}
         user={user}
       />
       <main className="flex-1 overflow-y-auto bg-background">
@@ -48,6 +50,7 @@ export default async function AppLayout({
           <MobileSidebar
             pendingCount={pendingCount}
             todoCount={todoCount}
+            leadOneCount={leadOneCount}
             user={user}
           />
           <GlobalSearch isAdmin={session.role === "ADMIN"} />

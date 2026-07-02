@@ -35,6 +35,7 @@ export type SidebarProps = {
   user: { name: string; email: string; role: string };
   pendingCount?: number;
   todoCount?: number;
+  leadOneCount?: number;
   className?: string;
 };
 
@@ -42,6 +43,7 @@ export function Sidebar({
   user,
   pendingCount = 0,
   todoCount = 0,
+  leadOneCount = 0,
   className,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -71,7 +73,9 @@ export function Sidebar({
               ? pendingCount
               : item.href === "/todo"
                 ? todoCount
-                : 0;
+                : item.href === "/leadone"
+                  ? leadOneCount
+                  : 0;
           return (
             <Link
               key={item.href}
