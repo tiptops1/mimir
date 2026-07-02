@@ -33,9 +33,22 @@ const SPECIALITY_LABELS: Record<string, string> = {
 
 const PROVIDER_LABELS: Record<string, string> = {
   google_cse: "Google CSE (jour)",
-  brave: "Brave Search (mois)",
+  exa: "Exa.ai (mois)",
   hunter: "Hunter.io (mois)",
 };
+
+interface Dirigeant {
+  nom?: string;
+  prenom?: string;
+  qualite?: string;
+}
+
+function linkedinSearchUrl(d: Dirigeant, companyName: string): string {
+  const terms = [d.prenom, d.nom, companyName, "assurance"]
+    .filter(Boolean)
+    .join(" ");
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(terms)}`;
+}
 
 export default async function LeadOnePage() {
   await verifySession();
@@ -179,11 +192,13 @@ export default async function LeadOnePage() {
                   const specKeys = Object.keys(SPECIALITY_LABELS).filter(
                     (k) => spec[k],
                   );
+                  const companyName = c.enseigne || c.nomSociete || "";
+                  const dirigeants = (c.dirigeants ?? []) as Dirigeant[];
                   return (
                     <tr key={c.id} className="border-b border-border last:border-0">
                       <td className="px-4 py-2">
                         <p className="font-medium">
-                          {c.enseigne || c.nomSociete || c.siret}
+                          {companyName || c.siret}
                         </p>
                         <a
                           href={`https://annuaire-entreprises.data.gouv.fr/entreprise/${c.siren ?? c.siret.slice(0, 9)}`}
@@ -193,6 +208,21 @@ export default async function LeadOnePage() {
                         >
                           Registre · vérifier ORIAS
                         </a>
+                        {dirigeants.map((d, i) => {
+                          const name = [d.prenom, d.nom].filter(Boolean).join(" ");
+                          if (!name) return null;
+                          return (
+                            <a
+                              key={i}
+                              href={linkedinSearchUrl(d, companyName)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-xs text-muted hover:text-brand"
+                            >
+                              {name} · LinkedIn
+                            </a>
+                          );
+                        })}
                       </td>
                       <td className="px-4 py-2">
                         {c.siteWeb ? (

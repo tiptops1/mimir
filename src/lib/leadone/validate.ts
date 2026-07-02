@@ -3,8 +3,8 @@ import type { LeadCandidate } from "@prisma/client";
 
 // Lead One validation: free, in-process checks only. Email syntax + a DNS MX
 // lookup (no paid verification API), then a 0–100 confidence score. A lead is
-// review-ready (VALIDATED) only when it is actually actionable: a phone number
-// or an MX-valid email.
+// review-ready (VALIDATED) as soon as any contact signal is present: website,
+// phone, or email — even if only one is found.
 
 const EMAIL_SYNTAX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
@@ -40,9 +40,6 @@ export function scoreCandidate(c: Scorable): number {
   return score;
 }
 
-export function isValidated(c: Scorable, score: number): boolean {
-  const actionable = Boolean(
-    c.telephone || (c.email && c.emailStatus === "MX_VALID"),
-  );
-  return actionable && score >= 50;
+export function isValidated(c: Scorable): boolean {
+  return Boolean(c.siteWeb || c.telephone || c.email);
 }

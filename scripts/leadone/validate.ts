@@ -33,7 +33,7 @@ export async function runValidate(
     const emailStatus = c.email ? await validateEmail(c.email) : null;
     const scored = { ...c, emailStatus };
     const confidence = scoreCandidate(scored);
-    const ok = isValidated(scored, confidence);
+    const ok = isValidated(scored);
     if (ok) stats.validated++;
     else stats.rejected++;
     console.log(
