@@ -5,7 +5,7 @@ import { verifyLinkedinProfile } from "../../src/lib/leadone/linkedin";
 
 // Lead One stage 5 — LinkedIn profile verification for dirigeants of already
 // VALIDATED candidates (the ones actually shown in the /leadone review queue).
-// Quota-gated by serpapi.com's free tier (100/month) — a scarce budget, so it
+// Quota-gated by serpapi.com's free tier (250/month) — a scarce budget, so it
 // only ever spends on candidates a human is about to see, highest confidence
 // first, and each dirigeant is looked up at most once ever (`linkedinChecked`).
 //

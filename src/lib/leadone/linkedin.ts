@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import { takeQuota } from "./quota";
 
 // LinkedIn has no free API, so we only ever get a real profile URL via a
-// quota-gated search (SerpApi free tier, 100/month, spent only on already
+// quota-gated search (SerpApi free tier, 250/month, spent only on already
 // VALIDATED candidates). When that budget is exhausted or the person can't be
 // confidently matched, the UI falls back to a plain search-results link —
 // never a guess passed off as a verified profile.

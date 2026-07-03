@@ -92,7 +92,7 @@ async function main() {
       errors.push(`validate: ${(e as Error).message}`);
     }
 
-    // 5) LinkedIn verification for the review queue (serpapi.com, 100/month).
+    // 5) LinkedIn verification for the review queue (serpapi.com, 250/month).
     try {
       stats.linkedin = await runVerifyLinkedin(prisma, { deadline });
     } catch (e) {

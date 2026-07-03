@@ -15,7 +15,7 @@ export const QUOTA_DEFAULTS: Record<
   google_cse: { limit: 100, window: "DAILY" }, // resets midnight Pacific
   exa: { limit: 1000, window: "MONTHLY" }, // exa.ai free tier, calendar month
   hunter: { limit: 25, window: "MONTHLY" },
-  serpapi: { limit: 100, window: "MONTHLY" }, // serpapi.com free tier — LinkedIn profile verification only
+  serpapi: { limit: 250, window: "MONTHLY" }, // serpapi.com free tier — LinkedIn profile verification only
 };
 
 // Key identifying the window a timestamp belongs to. Google CSE resets at
