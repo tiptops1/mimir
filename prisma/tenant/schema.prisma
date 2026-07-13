@@ -92,6 +92,7 @@ model Company {
   tasks       Task[]
   deals       Deal[]
   enrollments Enrollment[]
+  outreachMessages OutreachMessage[]
   financeEntries FinanceEntry[]
   stageChanges StageChange[]
 
@@ -234,14 +235,20 @@ model StageDefinition {
 }
 
 // Multi-touch outreach cadence (config). `steps` is an ordered JSON array of
-// { offsetDays, channel (EMAIL|APPEL|LINKEDIN), title }. Companies are enrolled
-// (Enrollment); the cron materializes each due step as a Task in the worklist.
+// { offsetDays, channel (EMAIL|APPEL|LINKEDIN), title, subject?, body? }.
+// Companies are enrolled (Enrollment). `mode` decides who owns due steps:
+//   TASKS      — the cron materializes each due step as a Task (original behavior)
+//   AUTO_EMAIL — the outreach send engine emails EMAIL steps itself (subject/body
+//                templates; delays are in BUSINESS days) and only materializes
+//                the non-email channels (APPEL/LINKEDIN) as Tasks.
 model Sequence {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  steps       Json // [{ offsetDays, channel, title }]
+  steps       Json // [{ offsetDays, channel, title, subject?, body? }]
+  mode        String       @default("TASKS") // TASKS | AUTO_EMAIL
   active      Boolean      @default(true)
   enrollments Enrollment[]
+  outreachMessages OutreachMessage[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -249,6 +256,8 @@ model Sequence {
 // A company's progression through a Sequence. `currentStep` is the index of the
 // next step to materialize; `nextDueAt` is when it's due (anchored on createdAt +
 // the step's offsetDays). The cron advances ACTIVE enrollments whose step is due.
+// AUTO_EMAIL terminal statuses: REPLIED (prospect answered — immediate exit),
+// BOUNCED (address dead), OPTED_OUT (unsubscribe link clicked).
 model Enrollment {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   companyId   String    @db.ObjectId
@@ -256,14 +265,67 @@ model Enrollment {
   contactId   String?   @db.ObjectId
   sequenceId  String    @db.ObjectId
   sequence    Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  status      String    @default("ACTIVE") // ACTIVE | PAUSED | DONE
+  status      String    @default("ACTIVE") // ACTIVE | PAUSED | DONE | REPLIED | BOUNCED | OPTED_OUT
   currentStep Int       @default(0)
   nextDueAt   DateTime?
+  outreachMessages OutreachMessage[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([status, nextDueAt])
   @@index([companyId])
+}
+
+// One row per cold email actually sent by the outreach engine — the engine's
+// source of truth (threading, caps, metrics). Each send is ALSO logged as an
+// OUTBOUND EMAIL Activity for the human timeline; this ledger keeps the fields
+// the engine needs that Activity doesn't carry (RFC Message-ID chain for
+// In-Reply-To/References, Gmail threadId for reply matching, bounce status).
+model OutreachMessage {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  enrollmentId   String     @db.ObjectId
+  enrollment     Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  companyId      String     @db.ObjectId
+  company        Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId      String?    @db.ObjectId
+  sequenceId     String     @db.ObjectId
+  sequence       Sequence   @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  stepIndex      Int
+  toEmail        String
+  subject        String
+  body           String
+  messageId      String // RFC Message-ID we stamped (threading + sync dedupe)
+  gmailMessageId String?
+  gmailThreadId  String?
+  status         String     @default("SENT") // SENT | BOUNCED
+  sentAt         DateTime   @default(now())
+
+  @@index([gmailThreadId])
+  @@index([sentAt])
+  @@index([enrollmentId])
+  @@index([companyId])
+}
+
+// Outreach engine settings — one row per tenant (upserted by key-less singleton
+// convention: first row wins, created with defaults on first read). Typed model
+// rather than Setting key/value rows because the send engine reads all of it on
+// every run and the numbers gate real-world sending behavior.
+model OutreachConfig {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  dailyCap            Int       @default(25) // hard ceiling, post warm-up
+  rampStartDate       DateTime? // when warm-up began; null = no ramp, use dailyCap
+  rampStartCap        Int       @default(5) // cap during week 1 of the ramp
+  rampWeeklyIncrement Int       @default(5) // cap += this per elapsed week
+  sendWindowStart     String    @default("09:00") // Europe/Paris, business days only
+  sendWindowEnd       String    @default("17:30")
+  skipHolidays        Boolean   @default(true) // French public holidays
+  bounceThresholdPct  Int       @default(5) // trailing-7d bounce % that trips the breaker
+  paused              Boolean   @default(false)
+  pausedReason        String?
+  pausedAt            DateTime?
+  autoEnrollSequenceId String?  @db.ObjectId // Lead One approve → auto-enroll target
+  unsubscribeText     String    @default("Pour ne plus recevoir nos messages :")
+  updatedAt           DateTime  @updatedAt
 }
 
 // People attached to a company (dirigeants).
@@ -273,6 +335,10 @@ model Contact {
   prenom      String?
   fonction    String?
   email       String?
+  // Deliverability verdict on `email`, set by the outreach engine: "INVALID"
+  // after a hard bounce (mirrors LeadCandidate.emailStatus vocabulary). Null =
+  // never tested. Enrollment guards refuse INVALID addresses.
+  emailStatus String?
   telephone   String?
   linkedinUrl String?
   isDecisionMaker Boolean? @default(false)
@@ -461,7 +527,7 @@ model LeadCandidate {
   // SOURCED → ENRICHED_WEBSITE → ENRICHED_CONTACT → VALIDATED → PROMOTED | REJECTED
   status     String @default("SOURCED")
   confidence Int    @default(0) // 0–100 (lib/leadone/validate scoreCandidate)
-  provenance Json? // per-field source+timestamp, e.g. { siteWeb: { src: "google_cse", at } }
+  provenance Json? // per-field source+timestamp, e.g. { siteWeb: { src: "tavily", at } } — legacy rows may carry "google_cse"
   attempts   Json? // { website: n, contact: n } — reject after 3 dead-end tries
   lastError  String?
 
@@ -481,9 +547,9 @@ model LeadCandidate {
 // makes the pipeline auto-resume when a free tier refreshes.
 model LeadOneQuota {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  provider    String   @unique // "google_cse" | "exa" | "hunter"
+  provider    String   @unique // "tavily" | "exa" | "hunter" | "serpapi"
   used        Int      @default(0)
-  limit       Int // 100 (CSE/day) | 1000 (Exa/mo) | 25 (Hunter/mo)
+  limit       Int // 1000 (Tavily/mo) | 1000 (Exa/mo) | 25 (Hunter/mo) | 250 (SerpApi/mo)
   window      String // "DAILY" | "MONTHLY"
   windowStart DateTime
   updatedAt   DateTime @updatedAt

@@ -19,7 +19,7 @@ import { runVerifyLinkedin } from "./verify-linkedin";
 const PURGE_REJECTED_DAYS = 90;
 const PURGE_PROMOTED_DAYS = 30;
 // Backpressure: don't burn search quota widening a crawl backlog we can't
-// keep up with — the daily CSE quota is better spent once the backlog drains.
+// keep up with — the monthly search budget is better spent once the backlog drains.
 const MAX_CRAWL_BACKLOG = 500;
 
 async function main() {

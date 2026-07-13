@@ -63,7 +63,7 @@ export async function runEnrichWebsite(
     const r = await discoverWebsiteQuotaed(prisma, name, tries);
     if (r.noProvider) {
       console.warn(
-        "No search provider configured (GOOGLE_CSE_KEY/GOOGLE_CSE_CX, EXA_API_KEY " +
+        "No search provider configured (TAVILY_API_KEY, EXA_API_KEY " +
           "or LEADONE_KEYLESS=1) — skipping website stage.",
       );
       break; // don't burn candidates' attempts when nothing could run

@@ -45,7 +45,7 @@ function specialityMeta(key: string) {
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
-  google_cse: "Google CSE (jour)",
+  tavily: "Tavily (mois)",
   exa: "Exa.ai (mois)",
   hunter: "Hunter.io (mois)",
   serpapi: "SerpApi LinkedIn (mois)",

@@ -6,21 +6,21 @@ import type { PrismaClient } from "@prisma/client";
 // refreshes" mechanic. Single-writer by design (GH Actions concurrency group
 // "leadone" + the UI never spends quota), so read-then-update is safe.
 
-export type Provider = "google_cse" | "exa" | "hunter" | "serpapi";
+export type Provider = "tavily" | "exa" | "hunter" | "serpapi";
 
 export const QUOTA_DEFAULTS: Record<
   Provider,
   { limit: number; window: "DAILY" | "MONTHLY" }
 > = {
-  google_cse: { limit: 100, window: "DAILY" }, // resets midnight Pacific
+  tavily: { limit: 1000, window: "MONTHLY" }, // tavily.com free tier, calendar month
   exa: { limit: 1000, window: "MONTHLY" }, // exa.ai free tier, calendar month
   hunter: { limit: 25, window: "MONTHLY" },
   serpapi: { limit: 250, window: "MONTHLY" }, // serpapi.com free tier — LinkedIn profile verification only
 };
 
-// Key identifying the window a timestamp belongs to. Google CSE resets at
-// midnight America/Los_Angeles (covers PST/PDT); monthly quotas reset per
-// calendar month (UTC is close enough for billing-cycle quotas).
+// Key identifying the window a timestamp belongs to. DAILY resets at midnight
+// America/Los_Angeles (kept for any future daily-quota provider); monthly
+// quotas reset per calendar month (UTC is close enough for billing-cycle quotas).
 function windowKey(window: string, at: Date): string {
   if (window === "DAILY") {
     // en-CA locale formats as YYYY-MM-DD
@@ -30,6 +30,11 @@ function windowKey(window: string, at: Date): string {
 }
 
 export async function seedQuotas(prisma: PrismaClient): Promise<void> {
+  // Drop ledger rows for providers we no longer use (e.g. google_cse after
+  // Google shut the API down) so the quota snapshot stays truthful.
+  await prisma.leadOneQuota.deleteMany({
+    where: { provider: { notIn: Object.keys(QUOTA_DEFAULTS) } },
+  });
   for (const [provider, def] of Object.entries(QUOTA_DEFAULTS)) {
     await prisma.leadOneQuota.upsert({
       where: { provider },

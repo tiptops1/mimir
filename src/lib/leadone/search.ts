@@ -9,22 +9,31 @@ import { takeQuota } from "./quota";
 // instead. Only API providers here: keyless Bing/DDG get blocked from
 // datacenter IPs (GH Actions), so they stay in enrich.ts for local runs.
 
-async function googleCseSearch(query: string): Promise<string[] | null> {
-  const key = process.env.GOOGLE_CSE_KEY;
-  const cx = process.env.GOOGLE_CSE_CX;
-  if (!key || !cx) return null;
+async function tavilySearch(query: string): Promise<string[] | null> {
+  const key = process.env.TAVILY_API_KEY;
+  if (!key) return null;
   try {
-    const url =
-      `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}` +
-      `&q=${encodeURIComponent(query)}&num=5&gl=fr&hl=fr`;
-    const res = await fetch(url, {
-      headers: { accept: "application/json" },
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      // search_depth "basic" = 1 credit; "advanced" would cost 2 for no gain
+      // here — we only need candidate URLs, not extracted content.
+      body: JSON.stringify({
+        query,
+        search_depth: "basic",
+        max_results: 5,
+        country: "france",
+      }),
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { items?: { link?: string }[] };
-    return (data.items ?? [])
-      .map((i) => i.link)
+    const data = (await res.json()) as { results?: { url?: string }[] };
+    return (data.results ?? [])
+      .map((r) => r.url)
       .filter((u): u is string => Boolean(u));
   } catch {
     return null;
@@ -57,7 +66,7 @@ async function exaSearch(query: string): Promise<string[] | null> {
 
 export interface DiscoverOutcome {
   site: string | null;
-  provider: "google_cse" | "exa" | "keyless" | null;
+  provider: "tavily" | "exa" | "keyless" | null;
   // Distinguishes "budget spent, resume next window" from "nothing configured".
   quotaExhausted: boolean;
   noProvider: boolean;
@@ -80,17 +89,18 @@ export async function discoverWebsiteQuotaed(
     return { site: null, provider: null, quotaExhausted: false, noProvider: false };
   const query = buildQuery(name, attempt);
 
-  // Provider preference: Google CSE first (daily quota — use it or lose it),
-  // then Exa (monthly budget lasts longer, keep it as overflow).
+  // Provider preference: Tavily first (its 1000/month is dedicated to this
+  // stage), then Exa as overflow. Both quotas are monthly since Google CSE
+  // (the old daily primary) was shut down.
   const providers: Array<{
-    id: "google_cse" | "exa";
+    id: "tavily" | "exa";
     run: (q: string) => Promise<string[] | null>;
     configured: boolean;
   }> = [
     {
-      id: "google_cse",
-      run: googleCseSearch,
-      configured: Boolean(process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX),
+      id: "tavily",
+      run: tavilySearch,
+      configured: Boolean(process.env.TAVILY_API_KEY),
     },
     {
       id: "exa",

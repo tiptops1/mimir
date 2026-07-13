@@ -1,6 +1,7 @@
 # Lead One — daily lead-gen pipeline (see scripts/leadone/run.ts).
-# 08:15 UTC is just past midnight Pacific year-round, i.e. right after the
-# Google CSE daily quota resets, so the run starts with a full budget.
+# 08:15 UTC was chosen for the old Google CSE daily-quota reset; the current
+# providers (Tavily + Exa) are monthly, so the hour no longer matters — kept
+# as a quiet early-morning slot for Europe.
 # Writes directly to Atlas (tenant #1) via the DATABASE_URL secret.
 name: Lead One pipeline
 
@@ -28,9 +29,8 @@ jobs:
       - run: npx tsx scripts/leadone/run.ts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
-          GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
-          GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
           HUNTER_API_KEY: ${{ secrets.HUNTER_API_KEY }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           LEADONE_MAX_MINUTES: "35"
