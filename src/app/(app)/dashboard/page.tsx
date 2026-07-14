@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
 import { ConnectGmailCta } from "@/components/connect-gmail-cta";
+import { OutreachPausedBanner } from "@/components/outreach/paused-banner";
 import { TaskList, type TaskRow } from "@/components/task-list";
 import { FinanceKpiStrip } from "@/components/finance-kpi-strip";
 import { companyName } from "@/lib/display";
@@ -98,9 +99,11 @@ export default async function DashboardPage({
       }),
     ]);
 
-  const [financeCockpit, financeCash] = await Promise.all([
+  const [financeCockpit, financeCash, outreachConfig] = await Promise.all([
     computeFinanceCockpit(prisma),
     getNumberSetting(prisma, SETTINGS.cashOnHand),
+    // findFirst, not the creating getter: the banner must not seed config rows.
+    prisma.outreachConfig.findFirst(),
   ]);
 
   const todayTasks: TaskRow[] = todayTasksRaw.map((t) => ({
@@ -144,6 +147,15 @@ export default async function DashboardPage({
       </PageHeader>
 
       <div className="space-y-6 p-6">
+        {outreachConfig?.paused && (
+          <OutreachPausedBanner
+            reason={outreachConfig.pausedReason}
+            pausedAt={
+              outreachConfig.pausedAt ? formatDate(outreachConfig.pausedAt) : null
+            }
+            canResume={session.role === "ADMIN"}
+          />
+        )}
         {googleStatus === "connected" && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
             Compte Google connecté. La synchronisation démarre au prochain cycle.

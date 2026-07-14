@@ -98,7 +98,7 @@ export default async function CompaniesPage({
   // Shared with /api/export so the CSV always matches the on-screen list.
   const { where, and } = buildCompanyWhere(sp);
 
-  const [companies, total, totalAll, savedViews] = await Promise.all([
+  const [companies, total, totalAll, savedViews, activeSequences] = await Promise.all([
     prisma.company.findMany({
       where,
       orderBy: [{ updatedAt: "desc" }],
@@ -129,7 +129,18 @@ export default async function CompaniesPage({
       orderBy: { createdAt: "asc" },
       select: { id: true, name: true, query: true },
     }),
+    // Bulk bar's "Enrôler dans une séquence" picker — active sequences only,
+    // both modes (TASKS creates worklist items, AUTO_EMAIL sends).
+    prisma.sequence.findMany({
+      where: { active: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, mode: true },
+    }),
   ]);
+  const bulkSequences = activeSequences.map((s) => ({
+    id: s.id,
+    label: s.mode === "AUTO_EMAIL" ? `${s.name} · envoi auto` : s.name,
+  }));
 
   const hiddenCount = Math.max(0, totalAll - (all ? totalAll : total));
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -204,6 +215,7 @@ export default async function CompaniesPage({
           <BulkProvider
             pageIds={companies.map((c) => c.id)}
             stages={stageDefs.map((s) => ({ value: s.value, label: s.label }))}
+            sequences={bulkSequences}
           >
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">

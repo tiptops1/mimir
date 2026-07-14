@@ -12,6 +12,12 @@ import { encrypt, decrypt } from "@/lib/crypto";
 const GOOGLE = "google";
 const FIREFLIES = "fireflies";
 
+// A tenant can hold TWO Google connections, told apart by `purpose`:
+// MAIN = the owner's real mailbox (ingestion, digest) — the historical default;
+// OUTREACH = the cold-email sender inbox on the secondary domain. Every helper
+// below defaults to MAIN so pre-outreach call sites are unchanged.
+export type GooglePurpose = "MAIN" | "OUTREACH";
+
 /** A Google integration with its refresh token already decrypted, ready to use. */
 export interface GoogleCredential {
   tenantId: string;
@@ -32,9 +38,12 @@ export interface GoogleConnection {
 /** Connection status for a tenant, safe to pass to a client component. */
 export async function getGoogleConnection(
   tenantId: string,
+  purpose: GooglePurpose = "MAIN",
 ): Promise<GoogleConnection | null> {
   const row = await controlPrisma.integration.findUnique({
-    where: { tenantId_provider: { tenantId, provider: GOOGLE } },
+    where: {
+      tenantId_provider_purpose: { tenantId, provider: GOOGLE, purpose },
+    },
   });
   if (!row || row.status !== "ACTIVE") return null;
   return {
@@ -48,9 +57,12 @@ export async function getGoogleConnection(
 /** The credential incl. decrypted refresh token, for server-side API calls. */
 export async function getGoogleCredential(
   tenantId: string,
+  purpose: GooglePurpose = "MAIN",
 ): Promise<GoogleCredential | null> {
   const row = await controlPrisma.integration.findUnique({
-    where: { tenantId_provider: { tenantId, provider: GOOGLE } },
+    where: {
+      tenantId_provider_purpose: { tenantId, provider: GOOGLE, purpose },
+    },
   });
   if (!row || row.status !== "ACTIVE") return null;
   return {
@@ -62,13 +74,15 @@ export async function getGoogleCredential(
   };
 }
 
-/** Create or replace the Google connection for a tenant (encrypts the token). */
+/** Create or replace a Google connection for a tenant (encrypts the token). */
 export async function upsertGoogleIntegration(args: {
   tenantId: string;
   accountEmail: string;
   refreshToken: string;
   scopes: string[];
+  purpose?: GooglePurpose;
 }): Promise<void> {
+  const purpose = args.purpose ?? "MAIN";
   const data = {
     accountEmail: args.accountEmail,
     refreshToken: encrypt(args.refreshToken),
@@ -76,23 +90,35 @@ export async function upsertGoogleIntegration(args: {
     status: "ACTIVE",
   };
   await controlPrisma.integration.upsert({
-    where: { tenantId_provider: { tenantId: args.tenantId, provider: GOOGLE } },
+    where: {
+      tenantId_provider_purpose: {
+        tenantId: args.tenantId,
+        provider: GOOGLE,
+        purpose,
+      },
+    },
     update: data,
-    create: { tenantId: args.tenantId, provider: GOOGLE, ...data },
+    create: { tenantId: args.tenantId, provider: GOOGLE, purpose, ...data },
   });
 }
 
-/** Remove the Google connection for a tenant (after revoking at Google). */
-export async function deleteGoogleIntegration(tenantId: string): Promise<void> {
+/** Remove a Google connection for a tenant (after revoking at Google). */
+export async function deleteGoogleIntegration(
+  tenantId: string,
+  purpose: GooglePurpose = "MAIN",
+): Promise<void> {
   await controlPrisma.integration.deleteMany({
-    where: { tenantId, provider: GOOGLE },
+    where: { tenantId, provider: GOOGLE, purpose },
   });
 }
 
 /** Stamp lastSyncedAt after a successful ingestion run. */
-export async function touchGoogleLastSynced(tenantId: string): Promise<void> {
+export async function touchGoogleLastSynced(
+  tenantId: string,
+  purpose: GooglePurpose = "MAIN",
+): Promise<void> {
   await controlPrisma.integration.updateMany({
-    where: { tenantId, provider: GOOGLE },
+    where: { tenantId, provider: GOOGLE, purpose },
     data: { lastSyncedAt: new Date() },
   });
 }
@@ -113,7 +139,13 @@ export async function getFirefliesConnection(
   tenantId: string,
 ): Promise<FirefliesConnection | null> {
   const row = await controlPrisma.integration.findUnique({
-    where: { tenantId_provider: { tenantId, provider: FIREFLIES } },
+    where: {
+      tenantId_provider_purpose: {
+        tenantId,
+        provider: FIREFLIES,
+        purpose: "MAIN",
+      },
+    },
   });
   if (!row || row.status !== "ACTIVE") return null;
   return { connectedAt: row.connectedAt, lastSyncedAt: row.lastSyncedAt };
@@ -122,7 +154,13 @@ export async function getFirefliesConnection(
 /** The decrypted Fireflies API key for server-side sync calls, or null. */
 export async function getFirefliesKey(tenantId: string): Promise<string | null> {
   const row = await controlPrisma.integration.findUnique({
-    where: { tenantId_provider: { tenantId, provider: FIREFLIES } },
+    where: {
+      tenantId_provider_purpose: {
+        tenantId,
+        provider: FIREFLIES,
+        purpose: "MAIN",
+      },
+    },
   });
   if (!row || row.status !== "ACTIVE") return null;
   return decrypt(row.refreshToken);
@@ -141,7 +179,11 @@ export async function upsertFirefliesIntegration(args: {
   };
   await controlPrisma.integration.upsert({
     where: {
-      tenantId_provider: { tenantId: args.tenantId, provider: FIREFLIES },
+      tenantId_provider_purpose: {
+        tenantId: args.tenantId,
+        provider: FIREFLIES,
+        purpose: "MAIN",
+      },
     },
     update: data,
     create: { tenantId: args.tenantId, provider: FIREFLIES, ...data },

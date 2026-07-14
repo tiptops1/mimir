@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { controlPrisma } from "@/lib/control-db";
-import { getGoogleCredential } from "@/lib/integrations";
+import { getGoogleCredential, type GooglePurpose } from "@/lib/integrations";
 
 // No "server-only" guard (like crypto.ts / integrations.ts): the session-less
 // sync scripts (tsx) reuse these helpers.
@@ -36,8 +36,22 @@ function env(name: string): string {
   return v;
 }
 
-/** A bare OAuth2 client bound to our app credentials + redirect URI. */
-export function oauthClient(): GoogleOAuthClient {
+/**
+ * A bare OAuth2 client bound to our app credentials + redirect URI.
+ *
+ * OUTREACH prefers a dedicated OAuth app (GOOGLE_OUTREACH_*): an Internal-consent
+ * client owned by the outreach Workspace org has no 7-day refresh-token expiry —
+ * the main app is External/Testing, whose weekly token death is unacceptable for
+ * an autonomous sender. Falls back to the main app when the vars aren't set.
+ */
+export function oauthClient(purpose: GooglePurpose = "MAIN"): GoogleOAuthClient {
+  if (purpose === "OUTREACH" && process.env.GOOGLE_OUTREACH_CLIENT_ID) {
+    return new google.auth.OAuth2(
+      env("GOOGLE_OUTREACH_CLIENT_ID"),
+      env("GOOGLE_OUTREACH_CLIENT_SECRET"),
+      env("GOOGLE_OUTREACH_REDIRECT_URI"),
+    );
+  }
   return new google.auth.OAuth2(
     env("GOOGLE_CLIENT_ID"),
     env("GOOGLE_CLIENT_SECRET"),
@@ -46,8 +60,8 @@ export function oauthClient(): GoogleOAuthClient {
 }
 
 /** The Google consent URL. `state` is the CSRF token echoed back to the callback. */
-export function authUrl(state: string): string {
-  return oauthClient().generateAuthUrl({
+export function authUrl(state: string, purpose: GooglePurpose = "MAIN"): string {
+  return oauthClient(purpose).generateAuthUrl({
     access_type: "offline", // ask for a refresh token
     prompt: "consent", // force the refresh token to be returned every time
     scope: GOOGLE_SCOPES,
@@ -63,8 +77,11 @@ export interface ExchangedCredential {
 }
 
 /** Exchange the callback `code` for tokens and resolve the connected account. */
-export async function exchangeCode(code: string): Promise<ExchangedCredential> {
-  const client = oauthClient();
+export async function exchangeCode(
+  code: string,
+  purpose: GooglePurpose = "MAIN",
+): Promise<ExchangedCredential> {
+  const client = oauthClient(purpose);
   const { tokens } = await client.getToken(code);
   if (!tokens.refresh_token) {
     // Happens if the user previously consented and Google withholds the refresh
@@ -99,6 +116,21 @@ export async function authedClientForTenant(
 }
 
 /**
+ * Same as authedClientForTenant but for the tenant's OUTREACH connection (the
+ * cold-email sender inbox). Null when no outreach account is connected — the
+ * send engine treats that as "outreach not configured" and does nothing.
+ */
+export async function authedClientForOutreach(
+  tenantId: string,
+): Promise<{ client: GoogleOAuthClient; accountEmail: string } | null> {
+  const cred = await getGoogleCredential(tenantId, "OUTREACH");
+  if (!cred) return null;
+  const client = oauthClient("OUTREACH");
+  client.setCredentials({ refresh_token: cred.refreshToken });
+  return { client, accountEmail: cred.accountEmail };
+}
+
+/**
  * Session-less resolver for tenant #1's Google client, used by the cron route
  * and the CLI sync scripts (which have no session). Resolves tenant #1 by slug
  * (TENANT1_SLUG, default "crm_chris" — the bootstrap constant). Null if tenant #1
@@ -115,9 +147,12 @@ export async function resolveTenant1Google(): Promise<
 }
 
 /** Revoke a refresh token at Google (best-effort; ignores already-revoked). */
-export async function revokeRefreshToken(refreshToken: string): Promise<void> {
+export async function revokeRefreshToken(
+  refreshToken: string,
+  purpose: GooglePurpose = "MAIN",
+): Promise<void> {
   try {
-    await oauthClient().revokeToken(refreshToken);
+    await oauthClient(purpose).revokeToken(refreshToken);
   } catch {
     // Token may already be invalid/revoked — disconnecting locally is what matters.
   }

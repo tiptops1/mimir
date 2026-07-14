@@ -21,6 +21,14 @@ export interface OutgoingEmail {
   to: string;
   subject: string;
   body: string;
+  // Threading (outreach follow-ups): reply headers make the recipient's client
+  // stack the mail under the first one; `threadId` files it in the same Gmail
+  // conversation on the sender side.
+  inReplyTo?: string | null; // previous message's RFC Message-ID
+  references?: string[] | null; // ALL prior RFC Message-IDs, oldest first
+  threadId?: string | null; // Gmail thread of the first message
+  // One-click unsubscribe (RFC 8058) etc. Values must be header-safe ASCII.
+  extraHeaders?: Record<string, string> | null;
 }
 
 /** Build a raw RFC822 message + the Message-ID we stamped on it. */
@@ -43,10 +51,19 @@ export function buildMimeMessage(email: OutgoingEmail): {
     `Subject: ${encodeHeaderWord(email.subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: ${messageId}`,
+  ];
+  if (email.inReplyTo) headers.push(`In-Reply-To: ${email.inReplyTo}`);
+  if (email.references && email.references.length > 0) {
+    headers.push(`References: ${email.references.join(" ")}`);
+  }
+  for (const [name, value] of Object.entries(email.extraHeaders ?? {})) {
+    headers.push(`${name}: ${value}`);
+  }
+  headers.push(
     "MIME-Version: 1.0",
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
-  ];
+  );
   return { raw: `${headers.join("\r\n")}\r\n\r\n${bodyB64}`, messageId };
 }
 
@@ -54,12 +71,19 @@ export function buildMimeMessage(email: OutgoingEmail): {
 export async function sendGmail(
   client: GoogleOAuthClient,
   email: OutgoingEmail,
-): Promise<{ messageId: string; gmailId: string | null }> {
+): Promise<{ messageId: string; gmailId: string | null; threadId: string | null }> {
   const gmail = google.gmail({ version: "v1", auth: client });
   const { raw, messageId } = buildMimeMessage(email);
   const res = await gmail.users.messages.send({
     userId: "me",
-    requestBody: { raw: Buffer.from(raw, "utf8").toString("base64url") },
+    requestBody: {
+      raw: Buffer.from(raw, "utf8").toString("base64url"),
+      ...(email.threadId ? { threadId: email.threadId } : {}),
+    },
   });
-  return { messageId, gmailId: res.data.id ?? null };
+  return {
+    messageId,
+    gmailId: res.data.id ?? null,
+    threadId: res.data.threadId ?? null,
+  };
 }

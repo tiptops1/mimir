@@ -58,6 +58,11 @@ model Integration {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
   tenantId     String    @db.ObjectId
   provider     String // "google"
+  // What the connection is FOR. "MAIN" = the owner's real mailbox (ingestion,
+  // digest); "OUTREACH" = the cold-email sender on the secondary domain. Lets a
+  // tenant hold two Google rows without the sync/send paths picking the wrong
+  // account. Existing rows are backfilled by scripts/backfill-integration-purpose.ts.
+  purpose      String    @default("MAIN") // MAIN | OUTREACH
   accountEmail String // the connected Google account (from OAuth userinfo)
   refreshToken String // AES-256-GCM encrypted
   scopes       String[]
@@ -66,7 +71,7 @@ model Integration {
   lastSyncedAt DateTime?
   tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, provider])
+  @@unique([tenantId, provider, purpose])
   @@index([tenantId])
 }
 

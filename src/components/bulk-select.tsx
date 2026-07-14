@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { RefreshCw, X } from "lucide-react";
 import { bulkSetCompanyEnum, type EnumField } from "@/app/actions/companies";
+import { bulkEnrollCompanies } from "@/app/actions/sequences";
 import { PRIORITE_OPTIONS, POTENTIEL_OPTIONS } from "@/lib/constants";
 
 // Bulk actions on the Suivi table (P2.2). The server component wraps the table
@@ -33,13 +34,20 @@ function useBulk(): BulkContextValue {
   return ctx;
 }
 
+export interface BulkSequenceOption {
+  id: string;
+  label: string;
+}
+
 export function BulkProvider({
   pageIds,
   stages,
+  sequences = [],
   children,
 }: {
   pageIds: string[];
   stages: Array<{ value: string; label: string }>;
+  sequences?: BulkSequenceOption[];
   children: React.ReactNode;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -69,7 +77,7 @@ export function BulkProvider({
   return (
     <BulkContext.Provider value={value}>
       {children}
-      <BulkBar stages={stages} />
+      <BulkBar stages={stages} sequences={sequences} />
     </BulkContext.Provider>
   );
 }
@@ -106,10 +114,20 @@ export function BulkRowCheckbox({ id }: { id: string }) {
 const SELECT_CLS =
   "rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-brand disabled:opacity-50";
 
-function BulkBar({ stages }: { stages: Array<{ value: string; label: string }> }) {
+function BulkBar({
+  stages,
+  sequences,
+}: {
+  stages: Array<{ value: string; label: string }>;
+  sequences: BulkSequenceOption[];
+}) {
   const { selected, clear } = useBulk();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [enrollResult, setEnrollResult] = useState<{
+    enrolled: number;
+    skipped: number;
+  } | null>(null);
 
   if (selected.size === 0) return null;
 
@@ -117,6 +135,15 @@ function BulkBar({ stages }: { stages: Array<{ value: string; label: string }> }
     if (!value) return;
     startTransition(async () => {
       await bulkSetCompanyEnum([...selected], field, value);
+      router.refresh();
+    });
+  };
+
+  const enroll = (sequenceId: string) => {
+    if (!sequenceId) return;
+    startTransition(async () => {
+      const res = await bulkEnrollCompanies([...selected], sequenceId);
+      setEnrollResult({ enrolled: res.enrolled, skipped: res.skipped.length });
       router.refresh();
     });
   };
@@ -169,6 +196,30 @@ function BulkBar({ stages }: { stages: Array<{ value: string; label: string }> }
             </option>
           ))}
         </select>
+        {sequences.length > 0 && (
+          <select
+            className={SELECT_CLS}
+            disabled={pending}
+            value=""
+            onChange={(e) => enroll(e.target.value)}
+          >
+            <option value="">Enrôler dans une séquence…</option>
+            {sequences.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {enrollResult && (
+          <span className="text-xs text-muted">
+            {enrollResult.enrolled} inscrite
+            {enrollResult.enrolled > 1 ? "s" : ""}
+            {enrollResult.skipped > 0
+              ? `, ${enrollResult.skipped} ignorée${enrollResult.skipped > 1 ? "s" : ""}`
+              : ""}
+          </span>
+        )}
         <button
           type="button"
           onClick={clear}

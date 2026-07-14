@@ -90,6 +90,42 @@ const NAME_STOP = new Set([
   "mr", "mme", "saint", "st",
 ]);
 
+// French given names that are NEVER distinctive for a broker's domain — an
+// ORIAS record like "MARIE DUPONT" should treat "marie" as noise and match on
+// "dupont" alone. Only used by the V2 matcher (LEADONE_MATCHER_V2=1). Curated
+// list of common first names (male + female), not exhaustive but covers the
+// dominant cases in French brokerage.
+const COMMON_FIRST_NAMES = new Set([
+  // Male
+  "jean", "pierre", "jacques", "louis", "henri", "andre", "marcel", "michel",
+  "robert", "francois", "alain", "philippe", "patrick", "bernard", "christian",
+  "gerard", "daniel", "roger", "claude", "marc", "paul", "thierry", "franck",
+  "laurent", "thomas", "nicolas", "alexandre", "guillaume", "jerome", "vincent",
+  "antoine", "pascal", "olivier", "eric", "sebastien", "stephane", "cedric",
+  "julien", "benoit", "mathieu", "martin", "sylvain", "david", "bruno", "herve",
+  "denis", "xavier", "remy", "simon", "gilles", "arnaud", "joseph", "georges",
+  "aurelien", "romain", "damien", "quentin", "hugo", "emmanuel", "ludovic",
+  "adrien", "kevin", "jonathan", "mickael", "yves", "yann", "yannick", "gabriel",
+  "raphael", "nathan", "victor", "leo", "lucas", "maxime", "florent", "florian",
+  "clement", "baptiste", "fabien", "fabrice", "richard", "regis", "rene",
+  "roland", "raymond", "jerome", "jeremy", "manuel", "matthieu", "loic",
+  // Female
+  "marie", "jeanne", "francoise", "monique", "catherine", "martine", "nathalie",
+  "isabelle", "jacqueline", "anne", "sylvie", "brigitte", "christine",
+  "dominique", "chantal", "denise", "elisabeth", "madeleine", "veronique",
+  "sophie", "valerie", "cecile", "laurence", "corinne", "patricia", "karine",
+  "virginie", "sandrine", "sabine", "celine", "agnes", "magali", "aurelie",
+  "delphine", "stephanie", "emmanuelle", "elodie", "marion", "mathilde",
+  "camille", "julie", "pauline", "charlotte", "laure", "helene", "emilie",
+  "alexandra", "audrey", "caroline", "laetitia", "melanie", "lucie", "oceane",
+  "chloe", "manon", "jade", "ines", "lea", "sarah", "beatrice", "simone",
+  "elise", "juliette", "marianne", "florence", "carole", "pascale", "aline",
+  "amelie", "sandra", "yvette", "yvonne", "colette", "danielle", "annick",
+  "michele", "michelle", "renee", "suzanne", "genevieve", "solange", "regine",
+  "carine", "estelle", "fanny", "marielle", "clemence", "adele", "eva",
+  "johanne", "elodie", "melissa", "salome", "nina", "eloise",
+]);
+
 function deburr(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
@@ -109,8 +145,26 @@ function domainLabel(host: string): string {
   return host.replace(/^www\./, "").split(".").slice(0, -1).join("");
 }
 
-// Does this host's domain label match the company name strongly enough to keep?
+/**
+ * Does this host's domain label match the company name strongly enough to keep?
+ *
+ * V1 (default): requires 2+ distinct name tokens in the label, OR a full
+ * concat match, OR a single-token exact/prefix match. Optimized for brand-shaped
+ * names (VERLINGUE → verlingue.fr) — too strict for person-named brokers, which
+ * are the majority of ORIAS-registered courtiers (see /leadone metrics).
+ *
+ * V2 (LEADONE_MATCHER_V2=1): also accepts "distinctive surname anywhere in the
+ * label" — the dominant French broker pattern (cabinet-DUPONT.fr,
+ * DUPONT-assurances.fr). Guarded by (a) filtering French given names out of the
+ * name tokens, so "MARIE DUPONT" scores against "dupont" alone; (b) a length
+ * floor of 5 chars on the token; (c) requiring the label to carry ≥2 chars
+ * beyond the token, defeating loose matches like `dupont.fr` for a random
+ * `MARIE DUPONT` (which still needs the stricter V1 path).
+ */
 export function hostMatchesName(host: string, name: string): boolean {
+  if (process.env.LEADONE_MATCHER_V2 === "1") {
+    return hostMatchesNameV2(host, name);
+  }
   const label = deburr(domainLabel(host));
   const toks = nameTokens(name);
   if (toks.length === 0) return false;
@@ -125,6 +179,57 @@ export function hostMatchesName(host: string, name: string): boolean {
   if (toks.length === 1) {
     const t = toks[0];
     return t.length >= 6 && (label === t || label.startsWith(t) || (t.startsWith(label) && label.length >= 5));
+  }
+  return false;
+}
+
+/**
+ * V2 matcher. Runs all of V1's accepting paths unchanged (never regresses a
+ * name V1 already handled), then adds one rule:
+ *
+ *   Surname anchor — the LAST alphanumeric token in the raw name (French
+ *   naming convention: "Prénom NOM"). If it's ≥5 chars, not a first name or
+ *   stop word, appears anywhere in the domain label, and the label has ≥2
+ *   chars beyond it, accept. Defends against:
+ *     • First-name matches: "FRANCIS NOEL" won't validate francisbatt.com
+ *       because surname is "noel" (4 chars, below floor) and francisbatt
+ *       doesn't contain "noel" anyway.
+ *     • Loose-match risk: "MARIE MARTIN" won't validate bare martin.fr
+ *       because the label carries no extra content (delta = 0).
+ */
+export function hostMatchesNameV2(host: string, name: string): boolean {
+  const label = deburr(domainLabel(host));
+  const toks = nameTokens(name);
+  if (toks.length === 0) return false;
+
+  // ---- V1 paths, verbatim ----
+  const hits = toks.filter((t) => label.includes(t));
+  if (hits.length >= 2) return true;
+  const concat = toks.join("");
+  if (concat.length >= 5 && label === concat) return true;
+  if (toks.length === 1) {
+    const t = toks[0];
+    if (
+      t.length >= 6 &&
+      (label === t ||
+        label.startsWith(t) ||
+        (t.startsWith(label) && label.length >= 5))
+    ) {
+      return true;
+    }
+  }
+
+  // ---- V2 addition: surname anchor ----
+  const raw = deburr(name).replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/);
+  const surname = raw[raw.length - 1] ?? "";
+  if (
+    surname.length >= 5 &&
+    !NAME_STOP.has(surname) &&
+    !COMMON_FIRST_NAMES.has(surname) &&
+    label.includes(surname) &&
+    label.length >= surname.length + 2
+  ) {
+    return true;
   }
   return false;
 }

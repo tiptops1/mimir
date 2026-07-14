@@ -29,11 +29,17 @@ const STATUS_STYLE: Record<string, string> = {
   ACTIVE: "bg-emerald-100 text-emerald-700",
   PAUSED: "bg-amber-100 text-amber-700",
   DONE: "bg-surface-2 text-muted",
+  REPLIED: "bg-sky-100 text-sky-700",
+  BOUNCED: "bg-rose-100 text-rose-700",
+  OPTED_OUT: "bg-rose-100 text-rose-700",
 };
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Active",
   PAUSED: "En pause",
   DONE: "Terminée",
+  REPLIED: "A répondu",
+  BOUNCED: "Email invalide",
+  OPTED_OUT: "Désinscrite",
 };
 
 function EnrollmentItem({
@@ -65,7 +71,7 @@ function EnrollmentItem({
         </p>
       </div>
       <div className="flex items-center gap-1">
-        {enr.status !== "DONE" && (
+        {(enr.status === "ACTIVE" || enr.status === "PAUSED") && (
           <button
             type="button"
             disabled={pending}
@@ -116,6 +122,7 @@ export function SequencesCard({
   enrollments: EnrollmentRow[];
 }) {
   const [sel, setSel] = useState(sequences[0]?.id ?? "");
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   return (
@@ -129,29 +136,38 @@ export function SequencesCard({
       )}
 
       {sequences.length > 0 && (
-        <div className="flex items-center gap-2 border-t border-border pt-3">
-          <Select
-            value={sel}
-            onChange={(e) => setSel(e.target.value)}
-            className="h-9 flex-1 py-1.5 text-sm"
-          >
-            {sequences.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.stepCount} étapes)
-              </option>
-            ))}
-          </Select>
-          <Button
-            variant="secondary"
-            disabled={pending || !sel}
-            onClick={() =>
-              start(async () => {
-                await enrollCompany(companyId, sel);
-              })
-            }
-          >
-            {pending ? "…" : "Enrôler"}
-          </Button>
+        <div className="space-y-2 border-t border-border pt-3">
+          <div className="flex items-center gap-2">
+            <Select
+              value={sel}
+              onChange={(e) => setSel(e.target.value)}
+              className="h-9 flex-1 py-1.5 text-sm"
+            >
+              {sequences.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.stepCount} étapes)
+                </option>
+              ))}
+            </Select>
+            <Button
+              variant="secondary"
+              disabled={pending || !sel}
+              onClick={() =>
+                start(async () => {
+                  setError(null);
+                  const res = await enrollCompany(companyId, sel);
+                  if (res?.error) setError(res.error);
+                })
+              }
+            >
+              {pending ? "…" : "Enrôler"}
+            </Button>
+          </div>
+          {error && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+              {error}
+            </p>
+          )}
         </div>
       )}
     </div>

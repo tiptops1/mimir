@@ -267,6 +267,53 @@ about to cost or pay), not a backward report.
 
 ---
 
+## P5 — Cold outreach automation *(built + probe-tested; NOT committed, NOT shipped)*
+
+> **Status: code-complete in the working tree, uncommitted (29 files as of 2026-07-14).** A separate
+> OUTREACH Google identity sends multi-touch cold sequences to Lead One prospects, with reply/bounce
+> sync, an auto-pause breaker, and public opt-out. Backed by real DB probes (30 engine + 18 reply +
+> 13 opt-out checks). **Ship is blocked on owner setup, not code** — see go-live below.
+
+WP1–WP8 (one line each; the code is the record):
+- **WP1** — schema + plumbing: `Integration.purpose` (MAIN/OUTREACH), `OutreachMessage`, `OutreachConfig`,
+  `Sequence.mode`, `Contact.emailStatus`; backfill; **`db:push` already applied to Atlas**.
+- **WP2** — OUTREACH connect flow: 2nd Google card at `/settings/integrations`, separate `GOOGLE_OUTREACH_*`
+  client (Internal consent screen → no 7-day token death).
+- **WP3** — sequence editor (`/outreach/sequences`): adaptive template vars, subject on first mail only,
+  "Re:" follow-ups, live preview. Chris's 4-step "Cold email courtiers santé" created via the UI.
+- **WP4** — send engine: French business-day math, hourly `/api/cron/outreach`, spread budget, threading,
+  ledger + timeline Activity + `dernierContact` bump.
+- **WP5** — reply/bounce sync + breaker: threadId match → REPLIED exit + "Répondre" task + hot alert;
+  BOUNCED → `emailStatus="INVALID"`; 7-day bounce-rate breaker → pause flag + red banner (ADMIN resume).
+- **WP6** — opt-out: public HMAC `/api/outreach/unsubscribe`, List-Unsubscribe + footer → BlockedSender +
+  consent OPT_OUT + AuditLog.
+- **WP7** — enrollment: shared `canEnroll` gate at the fiche, bulk enroll on Suivi, Lead One auto-enroll.
+- **WP8** — dashboard `/outreach`: 5 metrics, funnel, recent sends, config form (cap, warm-up, window,
+  holidays, threshold, auto-enroll picker, unsubscribe text).
+
+### Go-live prerequisites *(owner-owned, not code)*
+1. **Sending identity — DECIDED 2026-07-14: Option A.** Send cold outreach from a **dedicated
+   `avelior.eu` mailbox** (e.g. `prospection@avelior.eu`) on Christopher's existing Google Workspace
+   (confirmed on Google MX). *Why a dedicated mailbox:* keeps replies/bounces out of Christopher's
+   personal inbox (WP5 scans this mailbox). **No new domain needed** — the earlier "buy get-avelior.com"
+   step is **dropped**: the avelior.eu Workspace already lets us create the **Internal** OAuth client
+   (permanent token, no 7-day death), which was the only reason a domain purchase was ever on the list.
+2. **Christopher (Workspace/GCP admin) creates** the dedicated mailbox + an **Internal** OAuth client in
+   the avelior.eu org, then hands over client id / secret / redirect URI.
+3. Set `GOOGLE_OUTREACH_*` env vars on Railway.
+4. Add an hourly cron-job.org call → `/api/cron/outreach` with the `CRON_SECRET` Bearer.
+
+Then say "push" → `/ship` (schema `db:push` already run, so it no-ops).
+
+### Deferred add-on — Option B: separate sending domain *(deliverability isolation)*
+- [ ] **When prospect volume grows**, move cold sending to a **separate throwaway domain** (e.g.
+  `get-avelior.com`) with its own SPF/DKIM/DMARC, so spam complaints can't degrade avelior.eu's
+  reputation for Christopher's real client mail. **Skipped for v1 by owner decision (2026-07-14):**
+  low volume + targeted, personalised mail makes the shared-domain risk minor for now. Revisit as
+  send volume climbs.
+
+---
+
 ## How this interleaves with the platform roadmap
 
 | Product item | Depends on / rides | Can ship now? |

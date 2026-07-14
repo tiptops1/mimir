@@ -1,17 +1,25 @@
 import type { PrismaClient } from "@prisma/client";
 
 // Multi-touch cadence engine. A Sequence holds ordered steps; enrolling a company
-// schedules the first step. The cron (advanceSequences) materializes each due step
-// as a Task in the worklist and moves the enrollment forward. Auto-send is OFF by
-// design — EMAIL steps create a task the user actions (one click to the AI
-// composer), so nothing leaves the CRM without a human in the loop.
+// schedules the first step. Two modes (Sequence.mode):
+//   TASKS      — the cron (advanceSequences) materializes each due step as a Task
+//                in the worklist; a human actions it. The original behavior.
+//   AUTO_EMAIL — the outreach send engine (lib/outreach/send-engine.ts) OWNS due
+//                enrollments: EMAIL steps are sent automatically from the OUTREACH
+//                inbox using the step's subject/body template; non-email channels
+//                still become Tasks. advanceSequences skips these entirely.
 
 export type SequenceChannel = "EMAIL" | "APPEL" | "LINKEDIN";
+export type SequenceMode = "TASKS" | "AUTO_EMAIL";
 
 export interface SequenceStep {
   offsetDays: number;
   channel: SequenceChannel;
   title: string;
+  // AUTO_EMAIL templates ({{prenom}}, {{societe}}, … — see lib/outreach/template.ts).
+  // Only the FIRST email step carries a subject; follow-ups thread as "Re:".
+  subject?: string;
+  body?: string;
 }
 
 const DAY = 86_400_000;
@@ -36,7 +44,14 @@ export function parseSteps(raw: unknown): SequenceStep[] {
       typeof o.title === "string" && o.title.trim()
         ? o.title.trim()
         : "Action de séquence";
-    out.push({ offsetDays, channel, title });
+    const step: SequenceStep = { offsetDays, channel, title };
+    if (typeof o.subject === "string" && o.subject.trim()) {
+      step.subject = o.subject.trim();
+    }
+    if (typeof o.body === "string" && o.body.trim()) {
+      step.body = o.body;
+    }
+    out.push(step);
   }
   return out;
 }
@@ -61,8 +76,14 @@ export async function advanceSequences(
   opts: { now?: Date } = {},
 ): Promise<{ materialized: number; completed: number }> {
   const now = opts.now ?? new Date();
+  // AUTO_EMAIL enrollments belong to the outreach send engine — materializing
+  // their steps as tasks here would double-touch the prospect.
   const due = await prisma.enrollment.findMany({
-    where: { status: "ACTIVE", nextDueAt: { lte: now } },
+    where: {
+      status: "ACTIVE",
+      nextDueAt: { lte: now },
+      sequence: { mode: { not: "AUTO_EMAIL" } },
+    },
     include: { sequence: true },
     take: 200,
   });
