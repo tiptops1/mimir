@@ -267,12 +267,13 @@ about to cost or pay), not a backward report.
 
 ---
 
-## P5 — Cold outreach automation *(built + probe-tested; NOT committed, NOT shipped)*
+## P5 — Cold outreach automation *(code DEPLOYED; dormant until owner go-live setup)*
 
-> **Status: code-complete in the working tree, uncommitted (29 files as of 2026-07-14).** A separate
-> OUTREACH Google identity sends multi-touch cold sequences to Lead One prospects, with reply/bounce
-> sync, an auto-pause breaker, and public opt-out. Backed by real DB probes (30 engine + 18 reply +
-> 13 opt-out checks). **Ship is blocked on owner setup, not code** — see go-live below.
+> **Status: shipped to prod 2026-07-14 (`5e14896` → `main` → Railway); `db:push:control` confirmed
+> already in sync.** A separate OUTREACH Google identity sends multi-touch cold sequences to Lead One
+> prospects, with reply/bounce sync, an auto-pause breaker, and public opt-out. Backed by real DB
+> probes (30 engine + 18 reply + 13 opt-out checks). **The code is live but the engine stays dormant
+> until the owner completes the go-live setup below** (no OUTREACH Google credential = nothing sends).
 
 WP1–WP8 (one line each; the code is the record):
 - **WP1** — schema + plumbing: `Integration.purpose` (MAIN/OUTREACH), `OutreachMessage`, `OutreachConfig`,
