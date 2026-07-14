@@ -2,7 +2,7 @@
 
 # Avelior Analytics — orientation
 
-A CRM for French insurance-brokerage prospecting. **Live** on MongoDB Atlas + Railway;
+A CRM for French insurance-brokerage prospecting. **Live** on MongoDB Atlas + Vercel;
 owner/first user = **Christopher**. Built single-tenant — **now evolving into a
 multi-tenant, config-driven CRM platform** (Christopher = tenant #1) so it can be replicated
 for other customers.
@@ -38,9 +38,9 @@ This is Next.js 16, which post-dates training data — read `node_modules/next/d
   run the whole `/ship` chain without asking again turn-by-turn.
 
 ## Ship ritual (when I say push — use the `/ship` skill)
-`npm run lint` → `npm run build` → commit → `git push` (Railway auto-deploys) →
+`npm run lint` → `npm run build` → commit → `git push` (Vercel auto-deploys from `main`) →
 `npm run db:push` **only if** `prisma/` changed → update `docs/roadmap.md`.
-**No smoke tests, no status checks, no dev server** unless I ask. Prod on Railway doubles
+**No smoke tests, no status checks, no dev server** unless I ask. Prod on Vercel doubles
 as Christopher's test server — there is no separate staging.
 
 ## UI conventions (re-stated too many times — just follow them)

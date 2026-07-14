@@ -61,27 +61,34 @@ npm run dev         # http://localhost:3000
 
 Log in with the `SEED_ADMIN_*` credentials, or register a new (`USER`) account at `/register`.
 
-## Deployment — GitHub → Railway
+## Deployment — GitHub → Vercel
 
 1. **Push to GitHub**
    ```bash
    git remote add origin https://github.com/<you>/avelior-analytics.git
    git push -u origin main
    ```
-2. **Create the Railway project** → "Deploy from GitHub repo" → pick this repo.
-   Railway auto-detects Next.js (Nixpacks); `railway.json` sets the start command.
-3. **Set environment variables** in the Railway service → *Variables*:
+2. **Import in Vercel** → "Add New Project" → pick this repo.
+   Vercel auto-detects Next.js; `vercel.json` provides minimal config.
+3. **Set environment variables** in the Vercel project → *Settings → Environment Variables*:
    - `DATABASE_URL` — your MongoDB Atlas URI
+   - `CONTROL_DATABASE_URL` — control-plane MongoDB URI
    - `SESSION_SECRET` — a fresh random secret
-   - `APP_URL` — the Railway public URL (e.g. `https://avelior-analytics.up.railway.app`)
-   - `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NAME`
-4. **Allow Atlas network access** from anywhere (`0.0.0.0/0`) so Railway can connect.
-5. **First deploy** builds and starts automatically. Then run the one-off setup once:
+   - `ENCRYPTION_KEY` — AES-256-GCM key for encrypted secrets
+   - `APP_URL` — the Vercel domain (e.g. `https://your-project.vercel.app`)
+   - `CRON_SECRET` — bearer token for cron endpoints
+   - All other env vars from `.env.example`
+4. **Allow Atlas network access** from anywhere (`0.0.0.0/0`) so Vercel can connect.
+5. **First deploy** builds and starts automatically. Run the one-off setup locally:
    ```bash
-   railway run npm run db:push
-   railway run npm run seed
+   npm run db:push
+   npm run seed
    ```
-   (or use the Railway dashboard's one-off command runner).
+6. **Set up cron-job.org** to hit the cron endpoints on the Vercel domain:
+   - `/api/cron` (sync) — every 4 hours
+   - `/api/cron/enrich` — every hour
+   - `/api/cron/advance` — every 4 hours
+   - `/api/cron/outreach` — hourly, Mon-Fri 08:00-18:00 Europe/Paris
 
 > The build command (`prisma generate && next build`) and `postinstall` (`prisma generate`) are
 > already configured in `package.json`.

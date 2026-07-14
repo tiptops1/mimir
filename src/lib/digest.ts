@@ -10,7 +10,7 @@ import { getTenantConfig } from "./tenant-config";
 
 const CURSOR = "digest";
 const APP_URL =
-  process.env.APP_URL || "https://avelior-analytics-production.up.railway.app";
+  process.env.APP_URL || "http://localhost:3000";
 
 function todayKey(d = new Date()): string {
   return d.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
