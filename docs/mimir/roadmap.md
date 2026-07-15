@@ -88,8 +88,8 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 - [x] ~~Record the prod Vercel URL~~ — done.
 - [x] ~~Verify all four cron routes are scheduled on cron-job.org~~ — **verified 2026-07-15, all
       four successful.**
-- [ ] Record the **new** Mimir Vercel URL + Atlas cluster name once S0 lands (same trap, new env).
-      *S0 done 2026-07-15: Atlas = `mimir-dev` cluster in new project; Vercel assignment pending (manual step, user).*
+- [x] Record the **new** Mimir Vercel URL + Atlas cluster name once S0 lands (same trap, new env).
+      *S0 done 2026-07-15: Atlas = `mimir-dev` cluster (EU M0 free). Vercel + cron-job.org setup deferred to later (not blocking development).*
 
 **Accounts/infra ready before S0:** Atlas org access (to create a new project), Vercel account (new
 project), GitHub (new repo).
