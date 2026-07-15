@@ -7,10 +7,10 @@
 > Ritual per session (unchanged from the brief): **plan mode → approve → execute → lint → build →
 > commit → update this file → `/clear`.** Push to `main` only on an explicit "push".
 >
-> **Revised 2026-07-15 — D6: separate environment.** Mimir is no longer built inside
-> `avelior-analytics`. It gets its **own repo, own Atlas cluster, own Vercel project, own cron
-> schedules, own secrets**, seeded from a duplicate of Vision RM at its current commit as the
-> baseline. See §0.5 and S0. Everything below assumes that split.
+> **Revised 2026-07-15 — D6: separate environment.** Mimir is no longer built inside the baseline
+> repo. It gets its **own repo, own Atlas cluster, own Vercel project, own cron schedules, own
+> secrets**, seeded from a duplicate of the Vision RM baseline at its current commit. See §0.5 and
+> S0. Everything below assumes that split.
 
 ---
 
@@ -46,32 +46,32 @@ the memo's rate snapshot is dated 2026-07 and explicitly says verify before quot
 
 Two independent environments from now on:
 
-| | **Vision RM (prod)** | **Mimir (new)** |
+| | **Vision RM (prod baseline)** | **Mimir (new)** |
 |---|---|---|
-| Repo | `avelior-analytics` | new repo, seeded from `avelior-analytics` @ `719f842` |
+| Repo | the baseline repo | new repo, seeded from the baseline repo @ `719f842` |
 | Atlas | `crm-railway` cluster (legacy name), prod data | **new project/cluster**, no prod data, ever |
 | Host | existing Vercel project | **new Vercel project** |
 | Crons | cron-job.org, 4 routes ✅ verified scheduled | **new schedules, new `CRON_SECRET`** |
 | Secrets | existing `.env` | **all fresh** — never reuse `ENCRYPTION_KEY`, `SESSION_SECRET`, `CRON_SECRET` |
-| Live user | Christopher (`crm_chris`) | none — demo tenants only |
+| Live user | the baseline's original tenant | none — demo tenants only |
 
 **What this buys:** a real staging environment for the first time. The brief's standing constraint
 ("local `.env` points at prod Atlas — every script run is production") **no longer applies in the
-Mimir repo**. It still applies in `avelior-analytics`.
+Mimir repo**. It still applies in the baseline repo.
 
 **What this costs — accept it consciously:** the D4/D5 reuse story now means *inheriting a copy* of
 `/inbox`, `AuditLog`, the outreach ledger and the DB router, not extending the live ones. The two
 codebases will drift.
 
 **Open decision — record in `decisions.md` at S0:** is Mimir a *permanent parallel platform*, or a
-proving ground whose modules get **merged back** into `avelior-analytics` once validated? This
+proving ground whose modules get **merged back** into the baseline repo once validated? This
 changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 
 **Baseline discipline (new standing rules):**
 - The duplicated Vision RM code is a **baseline, not a fork to improve**. Bug fixes that belong to
-  Vision RM go in `avelior-analytics` and get pulled across — not fixed only in Mimir.
+  the baseline product go in the baseline repo and get pulled across — not fixed only in Mimir.
 - Anything gated to tenant #1 in the baseline (legacy IMAP/ICS/`FIREFLIES_API_KEY` fallbacks,
-  `TENANT1_SLUG` assumptions, Christopher-specific seed config) is **dead weight on day one** —
+  `TENANT1_SLUG` assumptions, hardcoded single-tenant seed config) is **dead weight on day one** —
   identify it at S0, strip or neutralize it before building on top.
 - The Mimir repo has **no production user**. "Don't break the live app" is replaced by "never point
   this repo at the prod cluster."
@@ -83,8 +83,8 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 **Human/business track (runs in parallel, not Claude Code work):**
 - [ ] **G1** — start Google OAuth Production + CASA process now. Longest external lead time.
       *Note: the Mimir environment needs its own OAuth client too — G1 work should account for it.*
-- [ ] **G2** — ask Christopher what a typical month of client email contains → close the HDS
-      decision **before Huginn ingests anything**.
+- [ ] **G2** — ask the baseline's business contact what a typical month of client email contains →
+      close the HDS decision **before Huginn ingests anything**.
 - [x] ~~Record the prod Vercel URL~~ — done.
 - [x] ~~Verify all four cron routes are scheduled on cron-job.org~~ — **verified 2026-07-15, all
       four successful.**
@@ -103,10 +103,10 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
 ### Phase −1 — Environment split (new, blocks everything)
 
 - [x] **S0 — New repo + environment, Vision RM duplicated as baseline** · **Opus, plan mode** · M · ✅ 2026-07-15
-  Run **outside** `avelior-analytics` (it creates a sibling repo). Do not touch `avelior-analytics`
+  Run **outside** the baseline repo (it creates a sibling repo). Do not touch the baseline repo
   in this session.
   Scope: decide the duplication mechanic (clone/fork vs. copy-source) and record why; create the new
-  repo seeded from `avelior-analytics` @ current commit; new Atlas project/cluster; new Vercel
+  repo seeded from the baseline repo @ current commit; new Atlas project/cluster; new Vercel
   project; fresh `ENCRYPTION_KEY` / `SESSION_SECRET` / `CRON_SECRET`; `.env` pointed at the **new**
   cluster; identify and flag every tenant-#1-specific / prod-specific artifact that shouldn't carry
   over; bootstrap one demo tenant so the baseline provably runs.
@@ -115,8 +115,9 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   Atlas/Vercel steps you must do by hand listed out.
 
 - [x] **S0b — Baseline strip-down** · Sonnet · S · ✅ 2026-07-15
-  Execute the strip list S0 produced: remove/neutralize legacy tenant-#1 fallbacks, Christopher seed
-  config, dead env vars. Keep the spine (control plane, router, auth, config-driven schema).
+  Execute the strip list S0 produced: remove/neutralize legacy tenant-#1 fallbacks, hardcoded
+  single-tenant seed config, dead env vars. Keep the spine (control plane, router, auth,
+  config-driven schema).
   *Exit:* lint/build green on the new repo; `grep` for the prod cluster host returns nothing.
 
 ### Phase 0 — Groundwork (no gates block this)
@@ -129,8 +130,8 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   (tenant-slug/domain examples, dead script references removed) as the baseline architecture
   reference. `README.md`/`INTEGRATIONS.md`/`docs/architecture.md` genericized + corrected for
   drift the S0b code strip left behind (dead `npm run seed`/`sync:*` script references, stale
-  Railway/IMAP instructions). *Exit met:* `grep -rEi "christopher|ctoppo|avelior"` across the
-  top-level docs returns nothing; CLAUDE.md ~50 lines.
+  Railway/IMAP instructions). *Exit met:* a repo-wide search for the baseline customer's name/domain
+  across the top-level docs returns nothing; CLAUDE.md ~50 lines.
 
 - [ ] **S2 — Event schema + core data model (design only)** · Opus, plan mode · M
   Design: `AgentEvent` taxonomy (module × category × action lifecycle), `AgentAction` ledger record
@@ -261,6 +262,6 @@ Cmd+K palette on Atlas Search → MCP connector.
    part of S0b's exit.
 5. **Zod at every boundary** — agent tool inputs, ledger transitions, queue payloads.
 6. `--dry` first for any script touching data (the `clean:inbox` precedent). Less lethal here than in
-   prod, but the habit is what transfers back to `avelior-analytics`.
+   prod, but the habit is what transfers back to the baseline repo.
 7. **Additive-only schema, still** — not because a live user would break, but because it keeps
    merge-back cheap if that's the decision.
