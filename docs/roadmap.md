@@ -8,14 +8,29 @@
 > `docs/product-roadmap.md`. P1.3 (Deal object) is meant to fold into **Phase 1** here; P1.1/P1.2
 > (outbound + sequences) ride **Phase 3**.
 
-**Current phase: Phase 3 DONE + Phase 4 onboarding box DONE & DEPLOYED (2026-07-01, `91350b9` →
-`main` → Railway); Phase 1 + 2 already deployed.** The per-tenant cron loop, per-tenant Fireflies
-credential and the self-serve tenant-provisioning page closed everything code-shaped on this track.
-Remaining Phase 4 boxes are business decisions (branding/subdomain, billing provider, customer #2).
+**Current phase: Phase 3 DONE + Phase 4 onboarding box DONE & DEPLOYED (2026-07-15, migrated from
+Railway → Vercel on 2026-07-15); Phase 1 + 2 already deployed.** The per-tenant cron loop, per-tenant 
+Fireflies credential and the self-serve tenant-provisioning page closed everything code-shaped on this 
+track. Remaining Phase 4 boxes are business decisions (branding/subdomain, billing provider, customer #2).
 The product track's P2 also completed + deployed this session (see `docs/product-roadmap.md`).
 **`npm run db:push` was run against prod** (StageChange collection + indexes; AuditLog lazy-creates).
-**Still user-owned:** set `PLATFORM_ADMIN_EMAILS` on Railway to unlock `/settings/tenants`, then
+**Infrastructure:** Railway subscription ended; migrated to **Vercel Hobby** (free tier) on 2026-07-15.
+Cron routes split into 4 functions to fit 60s serverless limit. MongoDB Atlas unchanged.
+**Still user-owned:** set `PLATFORM_ADMIN_EMAILS` on Vercel to unlock `/settings/tenants`, then
 exercise a first real tenant provisioning run.
+
+---
+
+**2026-07-15 — Infrastructure migration: Railway → Vercel.** Free Railway subscription ended.
+Migrated to **Vercel Hobby** (free, 60-second serverless function limit). Split the monolithic 
+`/api/cron` (300s) into 4 routes: `/api/cron` (sync, 20s), `/api/cron/enrich` (AI enrichment, 30s),
+`/api/cron/advance` (sequences + digest, 10s), `/api/cron/outreach` (reply sync + send, 20s).
+AI enrichment batch reduced 80→20 but runs hourly instead of 4h to maintain throughput.
+Fixed hardcoded Railway URL fallback in `src/lib/digest.ts`. All routes tested + verified 200 OK.
+MongoDB Atlas unchanged. Christopher reconnected Google OAuth + Fireflies. Cron-job.org scheduler
+still external (Vercel Hobby only allows 2 built-in cron jobs; we need 4).
+
+---
 
 Previously: **Phase 1 + Phase 2 DONE & DEPLOYED to prod (2026-06-26).** The previously-held Phase 1
 (stages + native fields as config) and Phase 2 (fields + stages self-serve `/settings` UI) commits were
