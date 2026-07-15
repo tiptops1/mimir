@@ -11,8 +11,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const tenant1Slug = () => process.env.TENANT1_SLUG || "crm_chris";
-
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -42,7 +40,6 @@ async function handle(req: NextRequest) {
 
   for (const tenant of tenants) {
     const prisma = getTenantPrisma(decrypt(tenant.connectionString));
-    const isTenant1 = tenant.slug === tenant1Slug();
     const google = await authedClientForTenant(tenant.id);
 
     const sequences = await settle("sequences", () =>
@@ -54,8 +51,7 @@ async function handle(req: NextRequest) {
     const digest = await settle("digest", () =>
       sendDailyDigest(prisma, {
         google,
-        ownerName:
-          !isTenant1 && google ? nameFromEmail(google.accountEmail) : undefined,
+        ownerName: google ? nameFromEmail(google.accountEmail) : undefined,
       }),
     );
 

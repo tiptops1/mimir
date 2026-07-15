@@ -77,10 +77,10 @@ async function main() {
   const fakeSend = async (_c: GoogleOAuthClient, email: OutgoingEmail) => {
     outMails.push(email);
     n++;
-    return { messageId: `<pr-${n}@get-avelior.com>`, gmailId: `g${n}`, threadId: `t${n}` };
+    return { messageId: `<pr-${n}@example.com>`, gmailId: `g${n}`, threadId: `t${n}` };
   };
-  const outreach = { client: {} as GoogleOAuthClient, accountEmail: "chris@get-avelior.com" };
-  const mainBox = { client: {} as GoogleOAuthClient, accountEmail: "ctoppo@avelior.eu" };
+  const outreach = { client: {} as GoogleOAuthClient, accountEmail: "outreach@example.com" };
+  const mainBox = { client: {} as GoogleOAuthClient, accountEmail: "owner@example.com" };
   const monday = new Date("2026-07-13T08:00:00Z");
 
   // ---------- step 1 sends for both ----------
@@ -135,7 +135,7 @@ async function main() {
   const alerts: OutgoingEmail[] = [];
   const alertSend = async (_c: GoogleOAuthClient, email: OutgoingEmail) => {
     alerts.push(email);
-    return { messageId: "<alert-1@avelior.eu>", gmailId: "ga", threadId: "ta" };
+    return { messageId: "<alert-1@example.com>", gmailId: "ga", threadId: "ta" };
   };
 
   const sync = await runOutreachReplySync(prisma, outreach, mainBox, {
@@ -163,7 +163,7 @@ async function main() {
     where: { companyId: companyA.id, direction: "INBOUND", type: "EMAIL" },
   });
   check("INBOUND activity for A", Boolean(inboundAct));
-  check("alert email sent to MAIN box", alerts.length === 1 && alerts[0].to === "ctoppo@avelior.eu", alerts[0]?.subject);
+  check("alert email sent to MAIN box", alerts.length === 1 && alerts[0].to === "owner@example.com", alerts[0]?.subject);
   check("alert names the company", (alerts[0]?.subject ?? "").includes("PROBE Répondeur"));
 
   // Re-run: cursor overlap must not duplicate anything.
@@ -191,7 +191,7 @@ async function main() {
         toEmail: `filler${i}@example.com`,
         subject: "x",
         body: "x",
-        messageId: `<filler-${i}@get-avelior.com>`,
+        messageId: `<filler-${i}@example.com>`,
         sentAt: new Date("2026-07-13T07:00:00Z"),
       },
     });

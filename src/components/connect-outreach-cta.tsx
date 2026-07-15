@@ -5,7 +5,7 @@ import { Send, Check, RefreshCw } from "lucide-react";
 import { disconnectOutreachGoogle } from "@/app/actions/integrations";
 
 // Settings card for the OUTREACH Google connection — the cold-email sender
-// inbox on the secondary domain (e.g. chris@get-avelior.com). Same one-click
+// inbox on a secondary domain (e.g. outreach@votredomaine.com). Same one-click
 // OAuth as the main card, but lands in the OUTREACH slot (?purpose=OUTREACH)
 // so the ingestion sync never touches it and the send engine never picks the
 // main mailbox by mistake.
@@ -50,8 +50,8 @@ export function ConnectOutreachCta({
               <>{accountEmail} · utilisée uniquement par le moteur Outreach</>
             ) : (
               <>
-                La boîte du domaine secondaire (ex. chris@get-avelior.com) —
-                jamais votre adresse principale. Les séquences d&apos;emails
+                La boîte du domaine secondaire (ex. outreach@votredomaine.com)
+                — jamais votre adresse principale. Les séquences d&apos;emails
                 partent d&apos;ici.
               </>
             )}

@@ -4,9 +4,7 @@ import { getTenantPrisma } from "@/lib/tenant-db";
 import { decrypt } from "@/lib/crypto";
 import { authedClientForTenant } from "@/lib/google-oauth";
 import { getFirefliesKey, touchGoogleLastSynced } from "@/lib/integrations";
-import { runImapSync } from "@/lib/imap-sync";
 import { runGmailSync } from "@/lib/gmail-sync";
-import { syncCalendar } from "@/lib/calendar-sync";
 import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
 import { syncFireflies } from "@/lib/fireflies";
 import type { SourceOutcome } from "@/lib/tenant-cron";
@@ -14,8 +12,6 @@ import type { SourceOutcome } from "@/lib/tenant-cron";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const tenant1Slug = () => process.env.TENANT1_SLUG || "crm_chris";
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -35,7 +31,6 @@ async function handle(req: NextRequest) {
 
   for (const tenant of tenants) {
     const prisma = getTenantPrisma(decrypt(tenant.connectionString));
-    const isTenant1 = tenant.slug === tenant1Slug();
     const google = await authedClientForTenant(tenant.id);
 
     const sources: SourceOutcome[] = [];
@@ -49,11 +44,6 @@ async function handle(req: NextRequest) {
           runGoogleCalendarSync(prisma, google.client, google.accountEmail, {}),
         ),
       );
-    } else if (isTenant1) {
-      sources.push(
-        await settle("email", () => runImapSync(prisma, {})),
-        await settle("calendar", () => syncCalendar(prisma, {})),
-      );
     } else {
       sources.push(
         { source: "email", ok: false, error: "Google non connecté" },
@@ -61,9 +51,7 @@ async function handle(req: NextRequest) {
       );
     }
 
-    const firefliesKey =
-      (await getFirefliesKey(tenant.id)) ??
-      (isTenant1 ? process.env.FIREFLIES_API_KEY : undefined);
+    const firefliesKey = await getFirefliesKey(tenant.id);
     sources.push(
       firefliesKey
         ? await settle("fireflies", () =>

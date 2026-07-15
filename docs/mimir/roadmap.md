@@ -114,7 +114,7 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   the permanent-parallel-vs-merge-back decision written to `docs/mimir/decisions.md`, and the manual
   Atlas/Vercel steps you must do by hand listed out.
 
-- [ ] **S0b — Baseline strip-down** · Sonnet · S
+- [x] **S0b — Baseline strip-down** · Sonnet · S · ✅ 2026-07-15
   Execute the strip list S0 produced: remove/neutralize legacy tenant-#1 fallbacks, Christopher seed
   config, dead env vars. Keep the spine (control plane, router, auth, config-driven schema).
   *Exit:* lint/build green on the new repo; `grep` for the prod cluster host returns nothing.

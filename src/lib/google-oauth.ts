@@ -1,5 +1,4 @@
 import { google } from "googleapis";
-import { controlPrisma } from "@/lib/control-db";
 import { getGoogleCredential, type GooglePurpose } from "@/lib/integrations";
 
 // No "server-only" guard (like crypto.ts / integrations.ts): the session-less
@@ -128,22 +127,6 @@ export async function authedClientForOutreach(
   const client = oauthClient("OUTREACH");
   client.setCredentials({ refresh_token: cred.refreshToken });
   return { client, accountEmail: cred.accountEmail };
-}
-
-/**
- * Session-less resolver for tenant #1's Google client, used by the cron route
- * and the CLI sync scripts (which have no session). Resolves tenant #1 by slug
- * (TENANT1_SLUG, default "crm_chris" — the bootstrap constant). Null if tenant #1
- * has no active Google connection (callers then fall back to legacy IMAP/ICS).
- */
-export async function resolveTenant1Google(): Promise<
-  { client: GoogleOAuthClient; accountEmail: string; tenantId: string } | null
-> {
-  const slug = process.env.TENANT1_SLUG || "crm_chris";
-  const tenant = await controlPrisma.tenant.findUnique({ where: { slug } });
-  if (!tenant) return null;
-  const authed = await authedClientForTenant(tenant.id);
-  return authed ? { ...authed, tenantId: tenant.id } : null;
 }
 
 /** Revoke a refresh token at Google (best-effort; ignores already-revoked). */

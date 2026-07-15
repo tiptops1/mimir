@@ -3,9 +3,7 @@ import { decrypt } from "@/lib/crypto";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { authedClientForTenant } from "@/lib/google-oauth";
 import { getFirefliesKey, touchGoogleLastSynced } from "@/lib/integrations";
-import { runImapSync } from "@/lib/imap-sync";
 import { runGmailSync } from "@/lib/gmail-sync";
-import { syncCalendar } from "@/lib/calendar-sync";
 import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
 import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
@@ -13,14 +11,10 @@ import { advanceSequences } from "@/lib/sequences";
 import { advanceFinanceAlerts } from "@/lib/finance-alerts";
 import { sendDailyDigest } from "@/lib/digest";
 
-// Phase 3: the per-tenant ingestion loop. For each ACTIVE tenant, resolve its
-// data DB through the control plane, its Google connection (OAuth) and its
-// Fireflies key (encrypted Integration rows), then run every pipeline stage.
-// The legacy env-based fallbacks (IMAP / ICS / FIREFLIES_API_KEY / OWNER_EMAIL)
-// apply ONLY to tenant #1 — they are Christopher's pre-multi-tenant setup and
-// must never leak another tenant's ingestion into his mailbox.
-
-const tenant1Slug = () => process.env.TENANT1_SLUG || "crm_chris";
+// The per-tenant ingestion loop. For each ACTIVE tenant, resolve its data DB
+// through the control plane, its Google connection (OAuth) and its Fireflies
+// key (encrypted Integration rows), then run every pipeline stage. A tenant
+// with no Google connection simply gets no email/calendar sync this run.
 
 export interface SourceOutcome {
   source: string;
@@ -71,7 +65,6 @@ export async function runCronForTenant(
   tenant: TenantRow,
 ): Promise<TenantCronReport> {
   const prisma = getTenantPrisma(decrypt(tenant.connectionString));
-  const isTenant1 = tenant.slug === tenant1Slug();
   const google = await authedClientForTenant(tenant.id);
 
   const sources: SourceOutcome[] = [];
@@ -84,12 +77,6 @@ export async function runCronForTenant(
         runGoogleCalendarSync(prisma, google.client, google.accountEmail, {}),
       ),
     );
-  } else if (isTenant1) {
-    // Christopher's pre-OAuth setup: IMAP app password + secret iCal URL.
-    sources.push(
-      await settle("email", () => runImapSync(prisma, {})),
-      await settle("calendar", () => syncCalendar(prisma, {})),
-    );
   } else {
     sources.push(
       { source: "email", ok: false, error: "Google non connecté" },
@@ -97,9 +84,7 @@ export async function runCronForTenant(
     );
   }
 
-  const firefliesKey =
-    (await getFirefliesKey(tenant.id)) ??
-    (isTenant1 ? process.env.FIREFLIES_API_KEY : undefined);
+  const firefliesKey = await getFirefliesKey(tenant.id);
   sources.push(
     firefliesKey
       ? await settle("fireflies", () =>
@@ -128,10 +113,8 @@ export async function runCronForTenant(
   const digest = await settle("digest", () =>
     sendDailyDigest(prisma, {
       google,
-      // Tenant #1 keeps the configured greeting; others derive one from the
-      // connected account until owner-name becomes tenant config.
-      ownerName:
-        !isTenant1 && google ? nameFromEmail(google.accountEmail) : undefined,
+      // Derived from the connected account until owner-name becomes tenant config.
+      ownerName: google ? nameFromEmail(google.accountEmail) : undefined,
     }),
   );
 

@@ -36,9 +36,9 @@ async function main() {
     datasourceUrl: process.env.CONTROL_DATABASE_URL,
   });
   const tenant = await control.tenant.findUnique({
-    where: { slug: process.env.TENANT1_SLUG || "crm_chris" },
+    where: { slug: process.env.TEST_TENANT_SLUG || "crm_demo" },
   });
-  if (!tenant) throw new Error("tenant #1 not found");
+  if (!tenant) throw new Error("test tenant not found");
 
   // ---------- fixtures ----------
   const stale = await prisma.company.findUnique({ where: { siret: SIRET } });
@@ -77,7 +77,7 @@ async function main() {
       toEmail: EMAIL,
       subject: "S",
       body: "B",
-      messageId: "<optout-probe@get-avelior.com>",
+      messageId: "<optout-probe@example.com>",
     },
   });
 

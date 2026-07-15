@@ -9,10 +9,9 @@ import {
 import { parseRawEmail } from "./mime-email";
 import type { GoogleOAuthClient } from "./google-oauth";
 
-// Gmail API email sync (OAuth). The seamless replacement for imap-sync.ts: it
-// fetches messages in RAW form and feeds them through the SAME parser
-// (mime-email) and matching engine (email-sync processEmail) as the IMAP path —
-// only auth + transport differ.
+// Gmail API email sync (OAuth). Fetches messages in RAW form and feeds them
+// through the shared parser (mime-email) and matching engine (email-sync
+// processEmail).
 //
 // Incremental strategy: store the most recent message's internalDate (epoch ms)
 // in SyncCursor("gmail") and next run query `after:<seconds>`. Day-granular

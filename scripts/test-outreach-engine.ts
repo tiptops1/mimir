@@ -122,14 +122,14 @@ async function main() {
     sentMails.push(email);
     sendCount++;
     return {
-      messageId: `<probe-${sendCount}@get-avelior.com>`,
+      messageId: `<probe-${sendCount}@example.com>`,
       gmailId: `gm-${sendCount}`,
       threadId: "thread-1",
     };
   };
   const fakeOutreach = {
     client: {} as GoogleOAuthClient,
-    accountEmail: "chris.toppo@get-avelior.com",
+    accountEmail: "owner@example.com",
   };
   // Monday 2026-07-13 10:00 Paris — inside window, business day.
   const monday = new Date("2026-07-13T08:00:00Z");
@@ -208,12 +208,12 @@ async function main() {
   );
   check(
     "run3 In-Reply-To = first messageId",
-    mail2?.inReplyTo === "<probe-1@get-avelior.com>",
+    mail2?.inReplyTo === "<probe-1@example.com>",
     mail2?.inReplyTo,
   );
   check(
     "run3 References carry the chain",
-    (mail2?.references ?? []).join(" ") === "<probe-1@get-avelior.com>",
+    (mail2?.references ?? []).join(" ") === "<probe-1@example.com>",
   );
   check("run3 same Gmail thread", mail2?.threadId === "thread-1");
   const after3 = await prisma.enrollment.findUnique({ where: { id: enrollment.id } });
