@@ -1,8 +1,8 @@
 # Architecture — multi-tenant CRM platform
 
-> **Goal:** Avelior Analytics is being evolved from a single-tenant CRM (Christopher) into a
-> **multi-tenant, config-driven CRM platform**. Christopher is tenant #1 / the prototype; the
-> same codebase then onboards other customers with no per-customer code.
+> **Goal:** this CRM platform is **multi-tenant and config-driven** by design. The first tenant
+> provisioned is the prototype; the same codebase then onboards other customers with no
+> per-customer code.
 
 ## The three planes
 
@@ -12,7 +12,7 @@ CONTROL PLANE · shared database (Prisma)
         │
         ▼  router resolves tenantId → connection string
 TENANT DATA PLANE · one isolated database per customer (flexible documents)
-  Chris's DB ──┐  Customer 2 DB   Customer 3 DB   (provisioned on signup)
+  Tenant 1 DB ──┐  Customer 2 DB   Customer 3 DB   (provisioned on signup)
    • Entity & field definitions (config)   ← drives dynamic forms/tables/validation
    • Contacts · Companies · Deals
    • Pipeline · Views · Activities
@@ -25,7 +25,7 @@ INTEGRATION LAYER · OAuth + webhooks  (ALREADY BUILT single-tenant — see INTE
 ## Key decisions (and why)
 
 ### 1. Multi-tenancy = database-per-tenant on a **shared Atlas cluster**
-- Each customer gets a **logically separate database** (`crm_chris`, `crm_acme`, …) on **one**
+- Each customer gets a **logically separate database** (`crm_tenant1`, `crm_tenant2`, …) on **one**
   cluster — real data isolation + per-customer backup/export, *without* paying for or operating N
   clusters. Onboarding = create a DB + seed config.
 - **Build the DB-router abstraction now** (control plane maps `tenantId → connection string`). A
@@ -51,13 +51,13 @@ INTEGRATION LAYER · OAuth + webhooks  (ALREADY BUILT single-tenant — see INTE
 
 ## How today's app maps onto the target
 
-| Today (single-tenant) | Target (multi-tenant) |
+| Legacy single-tenant shape | Target (multi-tenant) |
 |---|---|
-| One Atlas DB `CRM-Railway`, all data | Control-plane DB + one DB per tenant; router resolves which |
+| One Atlas DB, all data | Control-plane DB + one DB per tenant; router resolves which |
 | `User`/`Company`/`Contact`/`Activity` (Prisma, fixed) | Core entities + **field-definition config** driving custom fields |
-| Christopher seeded as ADMIN | Christopher = **tenant #1**; users belong to a tenant |
+| A single owner seeded as ADMIN | Tenant #1's owner is **one tenant among many**; users belong to a tenant |
 | Integration env vars (IMAP_*, FIREFLIES_API_KEY, …) global | Per-tenant integration credentials, encrypted in control plane |
-| Hardcoded French-brokerage fields/stages | Same fields/stages expressed as **tenant config** (seeded for Chris) |
+| Hardcoded French-brokerage fields/stages | Same fields/stages expressed as **tenant config** (seeded per tenant) |
 
 ## The one rule that keeps this replicable
 If you ever hardcode something specific to one customer's business **in code**, stop — it belongs
