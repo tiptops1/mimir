@@ -89,6 +89,7 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 - [x] ~~Verify all four cron routes are scheduled on cron-job.org~~ — **verified 2026-07-15, all
       four successful.**
 - [ ] Record the **new** Mimir Vercel URL + Atlas cluster name once S0 lands (same trap, new env).
+      *S0 done 2026-07-15: Atlas = `mimir-dev` cluster in new project; Vercel assignment pending (manual step, user).*
 
 **Accounts/infra ready before S0:** Atlas org access (to create a new project), Vercel account (new
 project), GitHub (new repo).
@@ -101,7 +102,7 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
 
 ### Phase −1 — Environment split (new, blocks everything)
 
-- [ ] **S0 — New repo + environment, Vision RM duplicated as baseline** · **Opus, plan mode** · M
+- [x] **S0 — New repo + environment, Vision RM duplicated as baseline** · **Opus, plan mode** · M · ✅ 2026-07-15
   Run **outside** `avelior-analytics` (it creates a sibling repo). Do not touch `avelior-analytics`
   in this session.
   Scope: decide the duplication mechanic (clone/fork vs. copy-source) and record why; create the new
