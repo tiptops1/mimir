@@ -1,11 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
-import { parseIcs, type IcsAttendee, type IcsEvent } from "./ics";
-import { buildCaches, emailDomain, splitName, type Caches } from "./email-sync";
+import type { IcsAttendee, IcsEvent } from "./ics";
+import { emailDomain, splitName, type Caches } from "./email-sync";
 
-// Google Calendar → CRM. Reads the calendar's read-only "secret iCal address"
-// (Settings → Integrate calendar → Secret address in iCal format), matches the
-// other attendees to known contacts/companies, and logs a MEETING activity per
-// event. Dedupe key is Activity.messageId = `cal:<event-uid>`.
+// Calendar event matching/dedup engine, shared by google-calendar-sync.ts
+// (OAuth). Matches attendees to known contacts/companies and logs a MEETING
+// activity per event. Dedupe key is Activity.messageId = `cal:<event-uid>`.
 
 export interface CalendarOutcome {
   events: number; // events considered (in window, not the owner's solo blocks)
@@ -140,33 +139,4 @@ export async function processCalendar(
     out.logged++;
   }
   return out;
-}
-
-/** Fetch the iCal feed and process it. */
-export async function syncCalendar(
-  prisma: PrismaClient,
-  opts: { icsUrl?: string; ownerEmail?: string; windowDays?: number; dry?: boolean } = {},
-): Promise<CalendarOutcome> {
-  const icsUrl = opts.icsUrl || process.env.GOOGLE_CALENDAR_ICS_URL;
-  const ownerEmail = (
-    opts.ownerEmail ||
-    process.env.OWNER_EMAIL ||
-    process.env.IMAP_USER ||
-    ""
-  )
-    .trim()
-    .toLowerCase();
-  if (!icsUrl) {
-    throw new Error("GOOGLE_CALENDAR_ICS_URL is not set");
-  }
-  const res = await fetch(icsUrl, { headers: { "user-agent": "avelior-crm" } });
-  if (!res.ok) {
-    throw new Error(`Calendar feed ${res.status}`);
-  }
-  const text = await res.text();
-  const caches = await buildCaches(prisma);
-  return processCalendar(prisma, parseIcs(text), ownerEmail, caches, {
-    windowDays: opts.windowDays,
-    dry: opts.dry,
-  });
 }

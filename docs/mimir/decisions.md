@@ -42,3 +42,22 @@ Consequences, so nobody re-litigates them implicitly:
   **Additive-only schema stays anyway** — as discipline, and because it keeps cherry-picks clean.
 - The inherited Vision RM feature surface (CRM, outreach, Lead One, Finances) is Mimir's substrate,
   not a product Mimir maintains for Vision RM's users. Christopher stays on `avelior-analytics`.
+
+## 2026-07-15 — S0b: baseline strip-down executed
+
+Ran the `docs/mimir/strip-list.md` punch list end to end. Runtime: the tenant-#1 IMAP/ICS/
+`FIREFLIES_API_KEY` fallback branches in `tenant-cron.ts` and both `/api/cron` routes are gone —
+email/calendar sync now runs only when a tenant has connected Google OAuth; Fireflies only via the
+per-tenant `Integration` key. Deleted `imap-sync.ts` and `resolveTenant1Google()`; trimmed
+`calendar-sync.ts` down to its shared `processCalendar` matching engine (still used by the OAuth
+path) and dropped the legacy ICS-fetch function. Deleted five CLI scripts that only existed to
+drive the retired path (`sync-email/calendar/all/fireflies.ts`, `clean-inbox-spam.ts`) + their
+`package.json` aliases. Christopher-specific config (`CHRISTOPHER_CONFIG` → `DEFAULT_CONFIG`),
+the dead CSV `prisma/seed.ts`, and `bootstrap-control-plane.ts` are gone; `add-user.ts` and the
+outreach unsubscribe test script now default to `crm_demo`. Real `@avelior.eu`/`@get-avelior.com`
+addresses in test fixtures and one UI example string are now `example.com`/generic. `.env.example`
+lost `TENANT1_SLUG`, the legacy IMAP/ICS/`FIREFLIES_API_KEY` blocks, and the commented `SEED_ADMIN_*`
+block. The repo-hygiene and `GOOGLE_CSE_*`/`TENANT` strip-list items were already non-issues
+(verified, not tracked in git / not present in code). Docs drift is untouched — explicitly S1.
+`npm run lint` + `npm run build` green; `grep -ri crm-railway` and
+`grep -rE "avelior\.eu|get-avelior\.com"` repo-wide now only hit docs (S1 scope).

@@ -6,7 +6,7 @@ import { PrismaClient as ControlClient } from "../src/generated/control";
  * Add (or update) a login account in the control plane and attach it to a tenant.
  *
  *   npm run user:add -- --email a@b.c --password secret [--name "Jane"] \
- *                       [--role ADMIN|MANAGER|USER] [--tenant crm_chris]
+ *                       [--role ADMIN|MANAGER|USER] [--tenant crm_demo]
  *
  * Idempotent: re-running with the same email resets that user's password/name and
  * ensures the membership/role. Requires CONTROL_DATABASE_URL.
@@ -22,7 +22,7 @@ async function main() {
   const password = arg("--password");
   const name = arg("--name") ?? null;
   const role = (arg("--role", "ADMIN") as "ADMIN" | "MANAGER" | "USER");
-  const slug = arg("--tenant", "crm_chris")!;
+  const slug = arg("--tenant", "crm_demo")!;
 
   if (!email || !password) {
     throw new Error("Usage: --email <email> --password <password> [--name] [--role] [--tenant]");

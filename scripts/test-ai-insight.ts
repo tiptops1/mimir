@@ -21,7 +21,7 @@ async function main() {
     kind: "MEETING" as const,
     subject: "RDV découverte – Cabinet Durand Assurances",
     companyName: "Cabinet Durand Assurances",
-    participants: ["Christophe (Avelior)", "M. Durand", "Mme Lefevre"],
+    participants: ["Courtier", "M. Durand", "Mme Lefevre"],
     body: `Réunion de découverte de 45 min avec M. Durand (gérant) et Mme Lefevre (resp. production).
 Le cabinet gère ~600 contrats IARD et cherche à digitaliser son suivi commercial : aujourd'hui tout
 est sur Excel et ils perdent des relances. M. Durand est très intéressé par le pipeline et le scoring
@@ -31,7 +31,7 @@ Action convenue : on leur envoie une proposition chiffrée et on cale une démo 
   };
 
   // Stage keys are config data now (StageDefinition) — this probe touches no DB,
-  // so it uses Chris's seeded defaults (see scripts/seed-config.ts).
+  // so it uses the default seeded stages (see scripts/seed-config.ts).
   const stageKeys = [
     "A_QUALIFIER",
     "A_CONTACTER",

@@ -1,11 +1,11 @@
 import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import type { Addr, ParsedEmail } from "./email-sync";
 
-// Shared RFC822/MIME → ParsedEmail mapping. Used by both the legacy IMAP sync
-// (imap-sync.ts) and the Gmail API sync (gmail-sync.ts), which fetches messages
-// in raw form — so both feed identical ParsedEmail shapes into the matching
-// engine (email-sync.ts processEmail). Kept out of email-sync.ts so that file
-// stays parser-agnostic and unit-testable.
+// Shared RFC822/MIME → ParsedEmail mapping. Used by the Gmail API sync
+// (gmail-sync.ts), which fetches messages in raw form and feeds identical
+// ParsedEmail shapes into the matching engine (email-sync.ts processEmail).
+// Kept out of email-sync.ts so that file stays parser-agnostic and
+// unit-testable.
 
 function addrList(a: AddressObject | AddressObject[] | undefined): Addr[] {
   if (!a) return [];

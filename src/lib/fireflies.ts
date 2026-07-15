@@ -104,16 +104,9 @@ export async function syncFireflies(
   prisma: PrismaClient,
   opts: { apiKey?: string; ownerEmail?: string; limit?: number; dry?: boolean } = {},
 ): Promise<FirefliesOutcome> {
-  const apiKey = opts.apiKey || process.env.FIREFLIES_API_KEY;
-  const ownerEmail = (
-    opts.ownerEmail ||
-    process.env.OWNER_EMAIL ||
-    process.env.IMAP_USER ||
-    ""
-  )
-    .trim()
-    .toLowerCase();
-  if (!apiKey) throw new Error("FIREFLIES_API_KEY is not set");
+  const apiKey = opts.apiKey;
+  const ownerEmail = (opts.ownerEmail || "").trim().toLowerCase();
+  if (!apiKey) throw new Error("No Fireflies API key provided");
 
   const limit = opts.limit ?? 25;
   const { transcripts } = await gql<{ transcripts: FfTranscript[] }>(
