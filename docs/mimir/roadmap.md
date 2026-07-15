@@ -133,13 +133,15 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   Railway/IMAP instructions). *Exit met:* a repo-wide search for the baseline customer's name/domain
   across the top-level docs returns nothing; CLAUDE.md ~50 lines.
 
-- [ ] **S2 — Event schema + core data model (design only)** · Opus, plan mode · M
+- [x] **S2 — Event schema + core data model (design only)** · Opus, plan mode · M · ✅ 2026-07-15
   Design: `AgentEvent` taxonomy (module × category × action lifecycle), `AgentAction` ledger record
   (proposed → approved/edited/rejected → executed → undone, with source passages + trigger refs),
   `AutonomyConfig` (per-tenant × per-category level 0–3), `PromptTemplate` (config, not code).
   Generic ontology, French labels in config. Events can't be backfilled — this schema is the one
-  thing worth over-thinking. *Exit:* `docs/mimir/events.md` + Prisma model draft reviewed. No code
-  pushed.
+  thing worth over-thinking. *Exit met:* `docs/mimir/events.md` written (four Prisma model drafts,
+  state-machine guard table, graduation-math inputs, seed category list with never-graduates
+  flags, GDPR-erasure posture); design decisions logged in `decisions.md`. No code pushed —
+  S3 implements the doc verbatim.
 
 - [ ] **S3 — Schema implementation + seed** · Sonnet · S
   Implement S2's models in the Mimir repo's `prisma/tenant/schema.prisma`, `db:push` **against the

@@ -92,3 +92,32 @@ customer-domain addresses in test fixtures and one UI example string are now `ex
 non-issues (verified, not tracked in git / not present in code). Docs drift is untouched —
 explicitly S1. `npm run lint` + `npm run build` green; `grep -ri crm-railway` and a grep for the
 baseline's real customer domains repo-wide now only hit docs (S1 scope).
+
+## 2026-07-15 — S2: event schema + core data model designed (no code)
+
+Design doc: `docs/mimir/events.md` — the reviewed artifact S3 implements verbatim. Decisions
+closed there, recorded here so they don't get re-litigated at implementation time:
+
+- **Taxonomy is the triple module × category × action**, stored as three indexed string columns
+  on `AgentEvent`. The dotted `module.category.action` form is for docs/logs only — never a
+  parsed single column.
+- **Strings, not Prisma enums**, for every status/type/vocabulary field — matches the repo-wide
+  baseline convention and keeps vocabularies additive without schema changes.
+- **All four models live in the tenant schema** (through the DB router). Control plane gets
+  nothing at S2; cross-tenant metering aggregation is S5's problem.
+- **Ledger row = current state; events = history.** Every `AgentAction` transition emits exactly
+  one `AgentEvent` from the same write API (S7), so they can't drift. Events are append-only;
+  GDPR erasure scrubs `data`/`entityId` but keeps rows.
+- **`AutonomyConfig` is one row per category** (not an `OutreachConfig`-style singleton) —
+  categories graduate independently. Kill-switch is the inherited `paused/pausedReason/pausedAt`
+  triple.
+- **Never-graduates is defense in depth:** `maxLevel: 1` in seed config for money/legal, *plus*
+  a hardcoded state-machine floor for health-flagged content — deliberately code, not config,
+  so no tenant misconfiguration can lift it.
+- **`autonomyLevelAtProposal` is stamped on every action** so graduation stats stay
+  interpretable after a category's level changes; only level-1 (human-reviewed) actions count
+  toward graduating.
+- **Prompt versions are immutable once used** — editing inserts version n+1; actions pin
+  `promptKey`+`promptVersion`. Templates declare a `taskClass`, never a model name — the S5
+  router owns class → model.
+- **FAILED is terminal**; a retry is a new proposal with a fresh event trail — no status rewinds.
