@@ -1,7 +1,7 @@
-# Avelior Analytics — CRM
+# CRM baseline
 
-A full-stack CRM for B2B prospecting in the French insurance-brokerage sector, built from the
-"CRM Chris 0-200" dataset (companies registered under NAF `66.22Z`).
+A full-stack CRM for B2B prospecting in the French insurance-brokerage sector (companies
+registered under NAF `66.22Z`).
 
 - **Companies** — searchable, filterable directory with full detail/edit pages
 - **Contacts** — people (dirigeants) attached to companies
@@ -38,20 +38,24 @@ cp .env.example .env     # then fill in the values (see below)
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | MongoDB URI, e.g. `mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/avelior?retryWrites=true&w=majority` |
+| `DATABASE_URL` | Tenant #1's MongoDB URI, e.g. `mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/tenant1?retryWrites=true&w=majority` |
+| `CONTROL_DATABASE_URL` | Control-plane MongoDB URI (same cluster, separate DB) |
+| `CLUSTER_BASE_URL` | Base connection URI; the DB name is swapped per tenant when provisioning |
 | `SESSION_SECRET` | Random 32-byte secret. Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `ENCRYPTION_KEY` | AES-256-GCM key (32B base64) for encrypted integration credentials — must stay stable |
 | `APP_URL` | Public base URL (e.g. `http://localhost:3000`) |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | Default admin account created by the seed |
+| `PLATFORM_ADMIN_EMAILS` | Comma-separated vendor logins that unlock `/settings/tenants` |
 
-## 2. Push schema + seed data
+## 2. Push schema + provision a tenant
 
 ```bash
-npm run db:push     # creates collections + indexes in MongoDB
-npm run seed        # imports data/crm-chris-0-200.csv (~198 companies) + admin user
+npm run db:push:control     # control-plane collections + indexes
+npm run db:push             # tenant-schema collections + indexes
+npm run tenant:provision    # create an isolated tenant DB + its first ADMIN user
+npm run config:seed         # seed default stages + field definitions for that tenant
 ```
 
-The seed is **idempotent** (upserts by SIRET / email) and seeds **Christopher** as the `ADMIN`
-account owner.
+`tenant:provision` is idempotent per tenant slug; re-running it is safe.
 
 ## 3. Run
 
@@ -59,13 +63,13 @@ account owner.
 npm run dev         # http://localhost:3000
 ```
 
-Log in with the `SEED_ADMIN_*` credentials, or register a new (`USER`) account at `/register`.
+Log in with the account created by `tenant:provision`.
 
 ## Deployment — GitHub → Vercel
 
 1. **Push to GitHub**
    ```bash
-   git remote add origin https://github.com/<you>/avelior-analytics.git
+   git remote add origin https://github.com/<you>/<repo>.git
    git push -u origin main
    ```
 2. **Import in Vercel** → "Add New Project" → pick this repo.
@@ -79,10 +83,13 @@ Log in with the `SEED_ADMIN_*` credentials, or register a new (`USER`) account a
    - `CRON_SECRET` — bearer token for cron endpoints
    - All other env vars from `.env.example`
 4. **Allow Atlas network access** from anywhere (`0.0.0.0/0`) so Vercel can connect.
-5. **First deploy** builds and starts automatically. Run the one-off setup locally:
+5. **First deploy** builds and starts automatically. Run the one-off setup locally (pointed at the
+   prod `DATABASE_URL`/`CONTROL_DATABASE_URL`):
    ```bash
+   npm run db:push:control
    npm run db:push
-   npm run seed
+   npm run tenant:provision
+   npm run config:seed
    ```
 6. **Set up cron-job.org** to hit the cron endpoints on the Vercel domain:
    - `/api/cron` (sync) — every 4 hours
@@ -114,53 +121,28 @@ npm run enrich:websites -- --limit=20
 npm run enrich:websites -- --force   # also re-check companies that already have a site
 ```
 
-> **Run this locally**, from a normal home/office connection. The search engines block datacenter
-> IPs, so running it on a server (or Railway) returns nothing. It only ever fills empty `siteWeb`
-> fields — it never overwrites a site you've entered.
+> **Run this locally**, from a normal home/office connection. Search engines block datacenter IPs,
+> so running it on a server returns nothing. It only ever fills empty `siteWeb` fields — it never
+> overwrites a site you've entered.
 
-## Email sync (Gmail / Google Workspace)
+## Email / calendar / call-transcript sync
 
-Logs Christopher's sent & received emails against the right contact, and queues unknown senders
-for review in the **Boîte de réception** page.
-
-**One-time setup (Google account for `Ctoppo@avelior.eu`):**
-1. Enable **2-Step Verification**.
-2. Create an **App Password** (type: Mail) — a 16-character code.
-3. Gmail → Settings → *Forwarding and POP/IMAP* → **enable IMAP**.
-4. Workspace admin console → ensure **IMAP** and **App Passwords** are allowed for the org.
-5. Set env vars (locally in `.env`, and in Railway):
-   ```
-   IMAP_HOST=imap.gmail.com
-   IMAP_PORT=993
-   IMAP_USER=Ctoppo@avelior.eu
-   IMAP_PASSWORD=<the App Password>
-   OWNER_EMAIL=Ctoppo@avelior.eu
-   ```
-
-**Run it:**
-```bash
-npm run sync:email              # incremental — only mail since the last run
-npm run sync:email -- --backfill=200   # also import the last 200 messages per folder
-npm run sync:email -- --dry     # connect + parse, write nothing
-```
-First run is **going-forward only** (it records the current mailbox position and imports nothing)
-unless you pass `--backfill`. Schedule it on Railway as a **cron service** every ~5 minutes.
-
-**Matching policy:** email matches an existing contact → logged as an activity. No contact but the
-domain matches a known company → a contact is auto-created under it. Otherwise the sender lands in
-the review queue, where you approve (attach to a company / create a new one) or ignore.
+Each tenant connects their own Gmail + Google Calendar (OAuth, one-click) and optionally Fireflies
+(API key) from `/settings/integrations`; every message/meeting/call is matched to the right
+contact/company, logged as an activity, and read by the AI insight pass for a summary, sentiment,
+next step and suggested pipeline stage. Unknown senders queue in the **Boîte de réception** page.
+See `INTEGRATIONS.md` for the full OAuth setup and how matching/dedupe works.
 
 ## Project structure
 
 ```
-prisma/schema.prisma     Models: User, Company, Contact, Activity (+ enums)
-prisma/seed.ts           CSV import + admin seed
-data/                    Source CSV
-src/app/(app)/           Dashboard, companies, contacts, pipeline, analytics (protected)
-src/app/login,register/  Auth screens
-src/app/api/             Stage PATCH + enrichment stub
-src/app/actions/         Server Actions (auth, companies, contacts)
-src/components/          UI, sidebar, forms, pipeline board, charts
-src/lib/                 db, session, dal, validations, constants
-src/proxy.ts             Route protection (Next.js 16 "proxy" = middleware)
+prisma/control/schema.prisma  Control plane: Tenant, User, Membership, Integration
+prisma/tenant/schema.prisma   Tenant data: Company, Contact, Deal, Activity, Task, … (23 models)
+src/app/(app)/                Dashboard, companies, contacts, pipeline, analytics, settings (protected)
+src/app/login,register/       Auth screens
+src/app/api/                  Cron routes, stage PATCH, enrichment/search endpoints
+src/app/actions/              Server Actions (auth, companies, contacts, tasks, …)
+src/components/               UI, sidebar, forms, pipeline board, charts
+src/lib/                      tenant-db router, session, config, integrations, AI, Lead One
+src/proxy.ts                  Route protection (Next.js 16 "proxy" = middleware)
 ```

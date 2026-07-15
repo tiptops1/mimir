@@ -1,12 +1,11 @@
-# Vision RM — consolidated brief
+# CRM baseline — consolidated brief
 
-> **Purpose.** Single source of truth for Claude Projects: product, architecture, plan, and the
-> hard-won gotchas. Everything here is **current state + the reasoning behind it**. Chronological
-> history lives in `docs/roadmap.md` / `docs/product-roadmap.md` working logs — deliberately not
-> repeated here.
+> **Purpose.** Single source of truth for the CRM/Lead One/Outreach baseline Mimir was built on top
+> of: architecture, data model, feature surface, and the hard-won gotchas. Everything here is
+> **current state + the reasoning behind it**, describing the inherited structure — not a
+> chronological log.
 >
-> **Verified against the repo on 2026-07-15** at commit `6f8af65`. When this doc and a working log
-> disagree, this doc is newer. When this doc and the **code** disagree, the code wins — say so.
+> When this doc and the **code** disagree, the code wins — say so.
 
 ---
 
@@ -14,52 +13,45 @@
 
 | | |
 |---|---|
-| **Product** | **Vision RM** — a multi-tenant, config-driven CRM for French insurance-brokerage prospecting |
-| **Repo** | `avelior-analytics` (legacy name, github.com/tiptops1/avelior-analytics) |
-| **Vendor** | Nicolas — independent builder, owns the platform. Personal Gmail only. |
-| **Customer #1** | **Avelior** (Christopher, `Ctoppo@avelior.eu`), tenant slug `crm_chris` |
+| **What this is** | A multi-tenant, config-driven CRM for French insurance-brokerage prospecting, inherited as Mimir's baseline substrate |
 | **Language** | The UI is **French**. Copy, labels, enum labels, emails — all French. |
 | **Market** | French insurance brokers, NAF code `66.22Z` |
 
-Christopher is **in production right now**. He is a real user with real data (~731 companies, ~839
-contacts). "Don't break the live app" is a hard constraint on every change.
-
-The vendor has **no Google Workspace, no avelior.eu access, and no client-side credentials**. Never
-assume otherwise. Anything requiring Workspace admin or the avelior.eu domain is **Christopher's to
-do** and must be handed to him as instructions, not attempted.
+This baseline has **no production tenant in Mimir** — everything here is a staging/demo
+environment. `mimir-env-guard` enforces that nothing in this repo can reach the original prod
+cluster. Demo tenants only (see `docs/mimir/roadmap.md` S6).
 
 ---
 
-## 2. State at a glance
+## 2. State at a glance (baseline, as inherited)
 
 | Track | Status |
 |---|---|
-| Platform Phase 0 — multi-tenant spine | ✅ deployed |
-| Platform Phase 1 — config-driven core | ✅ deployed |
-| Platform Phase 2 — self-serve customization | ✅ deployed |
-| Platform Phase 3 — per-tenant integrations | ✅ deployed |
-| Platform Phase 4 — productize & replicate | ⚠️ code done (provisioning); branding/billing/customer #2 are business decisions |
-| Product P0 — system of action (tasks) | ✅ deployed |
-| Product P1 — outbound, deals, sequences, notifications | ✅ deployed |
-| Product P2 — scale & polish | ✅ deployed |
-| Product P3 — Finances cockpit | ✅ deployed |
-| Product P5 — cold outreach engine | ⚠️ **deployed but dormant** — no OUTREACH credential = nothing sends |
-| Lead One — lead-gen pipeline | ✅ deployed; needs API keys set to run at full strength |
+| Multi-tenant spine | ✅ present in the baseline |
+| Config-driven core (fields/stages) | ✅ present |
+| Self-serve customization | ✅ present |
+| Per-tenant integrations | ✅ present |
+| Productize/replicate plumbing | ✅ present (provisioning flow) |
+| System of action (tasks) | ✅ present |
+| Outbound, deals, sequences, notifications | ✅ present |
+| Scale & polish (mobile, dark mode, bulk actions, saved views, dedupe) | ✅ present |
+| Finances cockpit | ✅ present |
+| Cold outreach engine | ✅ present, **dormant by default** — needs an OUTREACH credential to send |
+| Lead One — lead-gen pipeline | ✅ present; needs API keys set to run at full strength |
 
-Everything code-shaped on the platform track is **done**. The remaining platform work is sales and
-business decisions, not engineering.
+This is the baseline Mimir builds new agentic modules on top of (`docs/mimir/roadmap.md` Phase 1+).
 
 ---
 
 ## 3. Architecture — three planes
 
 ```
-CONTROL PLANE · shared DB `crm_control` (Prisma, typed)
+CONTROL PLANE · shared DB (Prisma, typed)
   Tenant │ User │ Membership │ Integration (encrypted creds)
         │
         ▼  router: tenantId → connection string (AES-256-GCM decrypt)
 TENANT DATA PLANE · one isolated MongoDB DB per customer, shared Atlas cluster
-  crm_chris ──┐  crm_acme   crm_…   (provisioned on signup)
+  tenant_1 ──┐  tenant_2   tenant_…   (provisioned on signup)
    • FieldDefinition + StageDefinition  ← config that drives forms/tables/board
    • Company · Contact · Deal · Activity · Task · …
         ▲
@@ -70,8 +62,8 @@ INTEGRATION LAYER · per-tenant OAuth
 
 ### Decision 1 — DB-per-tenant on a **shared** Atlas cluster
 
-Each customer gets a logically separate database (`crm_chris`, `crm_acme`) on **one** cluster. Real
-data isolation and per-customer backup/export, without paying for or operating N clusters.
+Each customer gets a logically separate database (`tenant_1`, `tenant_2`, …) on **one** cluster.
+Real data isolation and per-customer backup/export, without paying for or operating N clusters.
 Onboarding = create a DB + seed config.
 
 *Rejected:* cluster-per-tenant (≈$60+/mo/customer, slow onboarding — reserve for a client whose
@@ -93,8 +85,8 @@ Prisma fights this (it wants a fixed typed schema), hence the split:
 ### Decision 3 — Integrations were built single-tenant, then made per-tenant
 
 Credentials live encrypted in the control plane (`Integration`), and ingestion routes to the right
-tenant DB via `lib/tenant-cron.ts`. Legacy env fallbacks (IMAP/ICS/`FIREFLIES_API_KEY`) are **gated
-to tenant #1 only**, so another tenant can never ingest Christopher's mailbox.
+tenant DB via `lib/tenant-cron.ts`. (Legacy env-var fallback paths for a single hardcoded tenant
+were stripped from Mimir at S0b — every tenant connects its own OAuth credential now.)
 
 AI keys (Gemini/Claude) stay **env-based by design** — they're the platform's own provider account,
 not a tenant credential.
@@ -103,17 +95,18 @@ not a tenant credential.
 
 ## 4. The rules that protect the goal
 
-These are non-negotiable. Violating them is the rebuild we're avoiding.
+These are non-negotiable. Violating them is the rebuild this platform is designed to avoid.
 
-1. **Config, not code.** Anything specific to one customer's business (fields, stages, views,
-   labels) is stored as *data/config*. About to hardcode a Christopher-specific field? Stop — it
-   belongs in the field-definition config.
+1. **Config, not code.** Anything specific to one tenant's business (fields, stages, views,
+   labels) is stored as *data/config*. About to hardcode a tenant-specific field or brand name?
+   Stop — it belongs in config.
 2. **Tenant data only through the DB router.** All tenant access resolves `tenantId → connection`
    via `await getTenantDb()`. Never hardcode a DB or connection string.
-3. **Don't break the live single-tenant app.** Christopher is in production. Prefer additive schema
-   changes.
-4. **Push to `main` only on an explicit "push".** When the user does say it, run the whole `/ship`
-   chain without asking turn-by-turn.
+3. **Never point this repo at the prod cluster.** There is no production tenant here — the
+   constraint that replaces "don't break the live app." Run `mimir-env-guard` before anything
+   data-touching.
+4. **Push to `main` only on an explicit "push".** When the user does say it, run the whole
+   `mimir-ship` chain without asking turn-by-turn.
 5. **This is Next.js 16** — it post-dates model training data. Read `node_modules/next/dist/docs/`
    before writing Next code. Note `middleware.ts` is renamed **`proxy.ts`**.
 
@@ -131,8 +124,7 @@ These are non-negotiable. Violating them is the rebuild we're avoiding.
 | Charts | Recharts |
 | Validation | `zod` |
 | Google | `googleapis` |
-| Email parsing | `imapflow` + `mailparser` (legacy IMAP path) |
-| Host | **Vercel** (migrated off Railway 2026-07-14) |
+| Host | **Vercel** |
 | AI | Google **Gemini 2.5 Flash** (primary), Claude Haiku (fallback) — raw fetch, no SDK |
 
 **Prisma 6, not 7** — Prisma 7's `prisma-client` generator is SQL-driver-adapter only and doesn't
@@ -210,7 +202,7 @@ backlog. "Spam" permanently blocks address **and** domain via `BlockedSender`.
 `suggestedStage` prompt rule: the last stage actually **franchie**, never a planned one (it used to
 over-advance planned demos to DEMO_REALISEE).
 
-### 8.2 Outreach (P5 — dormant)
+### 8.2 Outreach (dormant by default)
 
 A **separate OUTREACH Google identity** (`Integration.purpose = OUTREACH`) sends multi-touch cold
 sequences to Lead One prospects. `src/lib/outreach/`: French business-day math, spread budget,
@@ -218,13 +210,12 @@ threading ("Re:" follow-ups, subject on first mail only), ledger + timeline Acti
 sync (threadId match → REPLIED exit + "Répondre" task), a 7-day bounce-rate **breaker** that pauses
 sending, and public HMAC opt-out → BlockedSender + consent OPT_OUT + AuditLog.
 
-**Decided 2026-07-14 (Option A):** send from a dedicated `prospection@avelior.eu` mailbox on
-Christopher's existing Workspace. A dedicated mailbox keeps replies/bounces out of his personal
-inbox (the reply sync scans it). **No new domain** — the avelior.eu Workspace provides the
-**Internal** OAuth client, which is the only reason a domain purchase was ever considered.
+Sending identity is a **dedicated mailbox on the tenant's own Workspace domain** (kept separate from
+the tenant owner's personal inbox, since the reply sync scans it), using the Workspace's **Internal**
+OAuth client so refresh tokens don't expire.
 
-*Deferred (Option B):* a separate throwaway sending domain for deliverability isolation. Skipped for
-v1 — low volume + personalised mail makes shared-domain risk minor. Revisit as volume climbs.
+*Deferred (Option B):* a separate throwaway sending domain for deliverability isolation, if/when
+volume climbs enough that shared-domain reputation risk matters.
 
 ### 8.3 Lead One
 
@@ -242,9 +233,9 @@ Free-tier lead-gen feeding the CRM. `src/lib/leadone/`, `scripts/leadone/`, revi
    redirect.
 5. **Promote** — SIRET + domain + name dedupe, BlockedSender check.
 
-**Provider history — do not re-research:** Google CSE was primary until its web-search API died
-(removed 2026-07-13). Brave was never integrated — its free tier died Feb 2026. Tavily replaced CSE.
-Paid upgrade path if volume demands: Serper.dev (~$1/1k real Google results, `gl=fr`).
+**Provider history — do not re-research:** Google CSE was primary until its web-search API died.
+Brave was never integrated — its free tier died. Tavily replaced CSE. Paid upgrade path if volume
+demands: Serper.dev (~$1/1k real Google results, `gl=fr`).
 
 ### 8.4 Finances
 
@@ -256,44 +247,40 @@ into `FINANCE` Tasks (deduped by `financeEntryId`) → `/todo` + bell + digest f
 
 ---
 
-## 9. Deployment & ops
+## 9. Deployment & ops (baseline pattern — Mimir has its own project, see `docs/mimir/decisions.md`)
 
-**GitHub → Vercel**, auto-deploy from `main`. Prod doubles as Christopher's test server — there is
-**no staging**.
+**GitHub → Vercel**, auto-deploy from `main`.
 
 ### The cron split (important)
 
 Vercel Hobby caps functions at **60s**, so the monolithic `/api/cron` was split. All four routes
-accept `Authorization: Bearer $CRON_SECRET` **or** `?key=$CRON_SECRET`, and are scheduled
-externally on **cron-job.org** (deliberately off-host to save credit):
+accept `Authorization: Bearer $CRON_SECRET` **or** `?key=$CRON_SECRET`, scheduled externally (e.g.
+cron-job.org, kept off-host):
 
 | Route | Does | Schedule |
 |---|---|---|
 | `/api/cron` | Gmail/Calendar/Fireflies sync | every 4h |
 | `/api/cron/enrich` | Gemini AI enrichment | hourly |
 | `/api/cron/advance` | sequences + finance alerts + digest | every 4h |
-| `/api/cron/outreach` | cold-email send engine | hourly, Mon–Fri 08:00–18:00 Europe/Paris |
+| `/api/cron/outreach` | cold-email send engine | hourly, business hours |
 
 Response shape is `{ ranAt, tenants: [...] }`. Manual run = open the URL with `?key=`.
 
-⚠️ **Open question:** whether all four are actually configured on cron-job.org post-migration is
-**unverified**. If only the original `/api/cron` is scheduled, AI enrichment and sequence
-advancement are silently not running — the same failure class as the `isSet` bug (§11).
-
-### Ship ritual (the `/ship` skill)
+### Ship ritual (the `mimir-ship` skill)
 
 `npm run lint` → `npm run build` → commit → `git push` → `npm run db:push` **only if `prisma/`
-changed** → update the roadmap. No smoke tests, no status checks, no dev server unless asked.
+changed** → update `docs/mimir/roadmap.md`. No smoke tests, no status checks, no dev server unless
+asked.
 
 ### Atlas
 
-Cluster `crm-railway.grgeizg.mongodb.net` (name is legacy). Network Access must be `0.0.0.0/0`
-Active or Prisma fails with a TLS "received fatal alert: InternalError". Prisma requires a **replica
-set** — Atlas provides one by default.
+Network Access must be `0.0.0.0/0` Active or Prisma fails with a TLS "received fatal alert:
+InternalError". Prisma requires a **replica set** — Atlas provides one by default.
 
 **Atlas Search** powers the global top-bar search (`$search` via Prisma `aggregateRaw`,
 `lib/search.ts`, `/api/search`); dynamic-mapping "default" indexes created by `npm run
-search:indexes`. Free on all tiers (M0 ≤3 indexes).
+search:indexes`. Free on all tiers (M0 ≤3 indexes) — the 3-index cap becomes the binding constraint
+once per-tenant vector search lands (Mimir S12).
 
 **Two-tier search model:** the top bar = "jump to a known record" (Atlas, fuzzy, navigates away).
 Per-page boxes = "narrow the list I'm working" (regex `contains`, composes with structured filters +
@@ -301,73 +288,61 @@ pagination — deliberately **not** Atlas).
 
 ### Google OAuth
 
-The Cloud project ("Vision RM", `320715852987`) lives in the **vendor's personal Google account** —
-it's the platform app every customer connects to, so it must be named neutrally, never "avelior".
-With no Workspace org, the consent screen is **External → Testing**, so refresh tokens **expire ~7
-days** → reconnect weekly via "Connecter Google". Permanent fix = publish to Production + Google
-CASA verification (gmail is a restricted scope). The OUTREACH client sidesteps this entirely by
-being **Internal** to the avelior.eu org.
+The Cloud OAuth project is the platform app every tenant connects to, so it must be named neutrally.
+With no Workspace org behind it, the consent screen is **External → Testing**, so refresh tokens
+**expire ~7 days** → reconnect weekly. Permanent fix = publish to Production + Google CASA
+verification (gmail is a restricted scope). A dedicated OUTREACH client sidesteps this entirely by
+being **Internal** to a Workspace org, when one is available.
 
 ### Cost
 
 Gemini 2.5 Flash on the **paid** tier (billing enabled): ~365 in / 162 out tokens per interaction ⇒
-**~€0.15–0.25/month**. €10 prepay + €2 budget alert. The GCP budget "cap" only **alerts** — the €10
-prepay is the real hard stop. Model is `gemini-2.5-flash` (**Flash, not Pro** — a deliberate cost
-choice). `reasoning_effort: "none"` kills 2.5-flash thinking tokens (~4× less billable output, no
-quality loss). Single 429 retry for free-tier RPM bumps.
+a few cents to a few dimes per month at low volume. Model is `gemini-2.5-flash` (**Flash, not Pro**
+— a deliberate cost choice). `reasoning_effort: "none"` kills 2.5-flash thinking tokens (~4× less
+billable output, no quality loss). Single 429 retry for free-tier RPM bumps.
 
 ---
 
 ## 10. Environment variables
 
-Secrets live in `avelior-analytics/.env` only. **Never echo them, never put them in settings or
-allowlists, never ask for them in chat** — reference by name.
+Reference by name, never echo values.
 
 | Var | Notes |
 |---|---|
 | `DATABASE_URL` | Tenant #1's data DB |
-| `CONTROL_DATABASE_URL` | `crm_control`, same cluster |
+| `CONTROL_DATABASE_URL` | Control-plane DB, same cluster |
 | `CLUSTER_BASE_URL` | Base URI; DB-name path swapped for the slug when provisioning |
 | `ENCRYPTION_KEY` | AES-256-GCM, 32B base64. **Must stay stable** — rotating orphans every stored connection string + refresh token |
 | `SESSION_SECRET` | Signs session JWTs |
-| `TENANT1_SLUG` | `crm_chris` — how session-less contexts resolve tenant #1 |
-| `PLATFORM_ADMIN_EMAILS` | Vendor logins, comma-separated. Unlocks `/settings/tenants`. Tenant ADMINs (Christopher) must **not** be listed |
+| `TENANT1_SLUG` | How session-less contexts resolve the first-provisioned tenant |
+| `PLATFORM_ADMIN_EMAILS` | Vendor logins, comma-separated. Unlocks `/settings/tenants` |
 | `APP_URL` | Public base URL — used for links in the digest |
 | `CRON_SECRET` | Bearer/`?key=` for all four cron routes |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Wins if set |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | Fallback; no key at all = AI no-op |
 | `GOOGLE_CLIENT_ID` / `_SECRET` / `_OAUTH_REDIRECT_URI` | MAIN identity |
-| `GOOGLE_OUTREACH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | OUTREACH identity — **unset, the P5 blocker** |
+| `GOOGLE_OUTREACH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | OUTREACH identity |
 | `TAVILY_API_KEY`, `EXA_API_KEY`, `SERPAPI_KEY` | Lead One |
-| `IMAP_*`, `OWNER_EMAIL`, `GOOGLE_CALENDAR_ICS_URL`, `FIREFLIES_API_KEY` | Legacy fallbacks, **tenant #1 only** |
-
-Local `.env` points at **prod** Atlas, so `npm run` scripts act on **live data**. Treat every script
-run as production.
 
 ---
 
 ## 11. Gotchas — the expensive lessons
 
 **Mongo `null` ≠ missing.** A Prisma `{ field: null }` filter does **not** match a document where
-the field is *absent*. This silently killed AI enrichment in prod for days: `enrichActivities`
-filtered `aiSummary: null`, activity docs are created without that field, so it matched 0 rows
-forever while Gemini looked live. Fix: `{ aiSummary: { isSet: false } }`. Same trap fixed in the
-three `dernierContact` `updateMany`s. **Any new "not yet processed" query must use `isSet: false`.**
+the field is *absent*. This silently killed AI enrichment for days in the baseline app:
+`enrichActivities` filtered `aiSummary: null`, activity docs are created without that field, so it
+matched 0 rows forever while the AI provider looked live. Fix: `{ aiSummary: { isSet: false } }`.
+**Any new "not yet processed" query must use `isSet: false`.**
 
 **Atlas `$search` on a missing index returns `[]`, not an error.** So `searchAll` falls back to
 regex on *empty* results, not just on error — a broken index looks like "no matches".
 
-**Search engines block datacenter IPs.** `enrich:websites` and `LEADONE_KEYLESS=1` keyless Bing/DDG
-scraping work **only from a residential IP** — they must run locally, never on CI or the host.
+**Search engines block datacenter IPs.** `enrich:websites` and keyless Bing/DDG scraping work
+**only from a residential IP** — they must run locally, never on CI or the host.
 
 **Windows/OneDrive:** stop the dev server before `prisma generate` / `npm run build` — a running
 node process holds the Prisma query-engine DLL → EPERM rename failures. PowerShell 5.1 console is
-cp1252; don't print accented text from scripts. No system Python — use `uv`. Run one-off TS via
-`npx tsx` **from inside `avelior-analytics/`**.
-
-**Paths:** run all npm/prisma/git/tsx commands from `avelior-analytics/`, never the workspace root.
-Scratch scripts go in `avelior-analytics/scripts/` — Temp scripts can't resolve `node_modules` or
-`dotenv/config`.
+cp1252; don't print accented text from scripts. No system Python — use `uv`.
 
 **Client/server split:** `lib/stage-config.ts` is server-only (pulls the tenant DB router);
 `lib/stage-meta.ts` is the client-safe half. Client components take `stages`/`stageDefs` as **props
@@ -376,8 +351,9 @@ from a server parent** — importing the server module into a `"use client"` fil
 **React state does not persist across separate preview eval calls.** Test interactive flows in ONE
 self-contained expression.
 
-**Claude Pro ≠ API.** Pro can't run the unattended cron. The way to leverage Pro is a CRM **MCP
-connector** so Christopher chats with his whole CRM at zero marginal cost.
+**API keys, never a chat subscription.** Automated/cron work needs API billing — a chat-only
+subscription can't run unattended jobs. The way to leverage a chat subscription instead is a CRM
+**MCP connector** so a user chats with their whole CRM at zero marginal cost.
 
 ---
 
@@ -392,14 +368,10 @@ npm run db:push              # tenant schema → Atlas
 npm run db:push:control      # control schema → Atlas
 npm run prisma:generate      # both clients
 
-npm run tenant:bootstrap     # promote Chris in place as tenant #1
 npm run tenant:provision     # new isolated tenant DB + admin
 npm run user:add             # idempotent control-plane login + membership
 npm run config:seed          # seed stages + field definitions
 npm run search:indexes       # create Atlas Search indexes
-
-npm run sync:all             # email + calendar + fireflies + AI (local)
-npm run clean:inbox          # retroactively dismiss queued spam (--dry)
 npm run enrich:websites      # LOCAL ONLY — residential IP required
 
 npm run leadone:run          # full lead-gen pipeline
@@ -407,31 +379,13 @@ npm run leadone:run          # full lead-gen pipeline
 
 ---
 
-## 13. Open items
+## 13. Deferred, needs a decision (baseline-level, not code)
 
-**Blocking P5 go-live** (Christopher's, not code):
-1. Create `prospection@avelior.eu` mailbox on the avelior.eu Workspace.
-2. Create an **Internal** OAuth client in the avelior.eu GCP org → hand over id/secret/redirect URI.
-3. Set `GOOGLE_OUTREACH_*` on **Vercel**.
-4. Confirm the hourly `/api/cron/outreach` schedule.
-
-**Verify:**
-- All four cron routes actually scheduled on cron-job.org post-Vercel (§9).
-- The prod Vercel URL — **not recorded anywhere**; the old Railway URL is dead and README has only a
-  placeholder. Worth writing down.
-
-**Known doc drift:** `docs/roadmap.md`, `docs/product-roadmap.md` and parts of `README.md` still say
-"Railway → auto-deploy". Only `CLAUDE.md` + the README deploy section were updated in `6f8af65`.
-
-**Deferred, needs a decision:** per-tenant branding/subdomain (DNS); billing provider (Stripe
-recommended); customer #2 (sales). Per-rep leaderboard waits on >1 active rep. Email templates were
-superseded by the AI composer. Lead One paid upgrade = Serper.dev if volume demands.
-
-**Lint baseline (verified 2026-07-15):** `npm run lint` = **0 errors, 3 warnings** — unused `Input`
-in `company-detail-actions.tsx`, unused `dateValue` in `company-form.tsx`, and an `exhaustive-deps`
-warning on `pipeline-board.tsx:231`. Anything beyond these three is yours. *(Both roadmaps still
-list a stale "known pre-existing lint errors" set — enum-cell / global-search `set-state-in-effect`
-and `no-explicit-any` in `enrich-dirigeants.ts`. All fixed; ignore those notes.)*
+Per-tenant branding/subdomain (DNS); billing provider; onboarding a real customer (sales). Per-rep
+leaderboard waits on >1 active rep. Email templates were superseded by the AI composer. Lead One
+paid upgrade = Serper.dev if volume demands. Cold outreach go-live needs a dedicated sending mailbox
++ Internal OAuth client on a real Workspace domain, plus the `GOOGLE_OUTREACH_*` env vars and an
+hourly `/api/cron/outreach` schedule — all business/ops setup, not code.
 
 ---
 
@@ -453,6 +407,4 @@ and `no-explicit-any` in `enrich-dirigeants.ts`. All fixed; ignore those notes.)
 - One session per task. Finish → commit → `/clear`.
 - Start each phase in plan mode, then execute.
 - Reference files by path; don't paste them. Let subagents do broad searches.
-- The roadmaps are the cross-session memory — tick boxes as you go.
-</content>
-</invoke>
+- `docs/mimir/roadmap.md` is the cross-session memory — tick boxes as you go.

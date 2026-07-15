@@ -121,12 +121,16 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
 
 ### Phase 0 — Groundwork (no gates block this)
 
-- [ ] **S1 — Docs + CLAUDE.md refactor** · Sonnet · S
-  In the **Mimir repo**: create `docs/mimir/` (this roadmap, `events.md` stub, `decisions.md` —
-  which already holds the S0 entry). Rewrite the inherited `CLAUDE.md` for *this* repo: the six
-  standing rules (memo §7) + the `isSet: false` invariant + "every side effect goes through the
-  ledger" + the §0.5 baseline rules. Strip Vision-RM-only content the copy dragged in.
-  *Exit:* CLAUDE.md under ~300 lines and true for this repo, module docs exist, roadmap committed.
+- [x] **S1 — Docs + CLAUDE.md refactor** · Sonnet · S · ✅ 2026-07-15
+  `CLAUDE.md` rewritten for this repo (Mimir identity, pointers to `docs/mimir/*`, the standing
+  rules, `mimir-ship`/`mimir-env-guard` ritual, no Vision-RM-only content). `docs/roadmap.md` +
+  `docs/product-roadmap.md` (Vision RM's own dated build logs) deleted — not Mimir's history.
+  `docs/VISION-RM-BRIEF.md` renamed to `docs/CRM-BASELINE-BRIEF.md` and genericized in place
+  (tenant-slug/domain examples, dead script references removed) as the baseline architecture
+  reference. `README.md`/`INTEGRATIONS.md`/`docs/architecture.md` genericized + corrected for
+  drift the S0b code strip left behind (dead `npm run seed`/`sync:*` script references, stale
+  Railway/IMAP instructions). *Exit met:* `grep -rEi "christopher|ctoppo|avelior"` across the
+  top-level docs returns nothing; CLAUDE.md ~50 lines.
 
 - [ ] **S2 — Event schema + core data model (design only)** · Opus, plan mode · M
   Design: `AgentEvent` taxonomy (module × category × action lifecycle), `AgentAction` ledger record

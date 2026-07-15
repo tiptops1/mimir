@@ -43,6 +43,31 @@ Consequences, so nobody re-litigates them implicitly:
 - The inherited Vision RM feature surface (CRM, outreach, Lead One, Finances) is Mimir's substrate,
   not a product Mimir maintains for Vision RM's users. Christopher stays on `avelior-analytics`.
 
+## 2026-07-15 — S1: docs refactor executed
+
+Ran the docs-drift item `strip-list.md` deferred to S1. `docs/roadmap.md` and
+`docs/product-roadmap.md` — Vision RM's own 400+ line dated working logs, full of
+customer-identifying detail baked into hundreds of entries — were **deleted** rather than scrubbed
+(same acceptance rationale as the S0 clone caveat: still reachable via git history, private repo).
+`docs/VISION-RM-BRIEF.md` was **renamed to `docs/CRM-BASELINE-BRIEF.md`** and genericized in place
+(tenant-slug/domain examples, "Christopher"/"Vision RM" framing removed) — it keeps its role as the
+baseline architecture reference, just describing the CRM/Lead One/Outreach structure generically
+instead of the specific customer it was built for. `CLAUDE.md` fully rewritten for Mimir (points at
+`docs/mimir/*`, drops the old "don't break the live app" framing for "never point this repo at the
+prod cluster"). `README.md`, `INTEGRATIONS.md`, `docs/architecture.md` genericized; while in there,
+also fixed factual drift the S0b code strip left behind — these docs still referenced `npm run
+seed`, `npm run sync:email/calendar/all`, `npm run clean:inbox`, IMAP setup steps, and Railway cron
+instructions, all of which no longer exist in the codebase (S0b deleted the scripts and legacy
+fallback paths). Corrected to the current tenant-provisioning + OAuth-only + Vercel/cron-job.org
+reality.
+
+**Not done here (flagged as a follow-up, not a doc issue):** `grep`-ing `src/` turned up hardcoded
+"Avelior" strings baked into AI prompt templates (`src/lib/ai-extract.ts:59`,
+`src/lib/email-research.ts:223,230`) and a user-agent string (`src/lib/enrich.ts:349`) — a real
+"config not code" violation, since every tenant's AI-drafted email would currently sign off as
+"Avelior" regardless of tenant. Needs its own small session against `default-config.ts`/tenant
+config, not bundled into a docs pass.
+
 ## 2026-07-15 — S0b: baseline strip-down executed
 
 Ran the `docs/mimir/strip-list.md` punch list end to end. Runtime: the tenant-#1 IMAP/ICS/

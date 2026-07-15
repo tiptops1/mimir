@@ -1,17 +1,17 @@
 # Auto-enrichment integrations
 
-Connect Christopher's **Gmail**, **Google Calendar** and **Fireflies** so the CRM
+Connect a tenant's **Gmail**, **Google Calendar** and **Fireflies** so the CRM
 fills itself in: every email, meeting and call transcript is matched to the right
-company/contact, logged as an activity, and read by Claude to extract a summary,
-sentiment, next step and a suggested pipeline stage.
+company/contact, logged as an activity, and read by the AI pass to extract a
+summary, sentiment, next step and a suggested pipeline stage.
 
-It all runs **inside this one Next.js app on Railway** — no extra service, no
-Zapier/n8n, no per-operation fees. One scheduled request (`/api/cron`) pulls every
-source and runs the AI pass.
+It all runs **inside this one Next.js app** — no extra service, no Zapier/n8n, no
+per-operation fees. Scheduled cron requests pull every source and run the AI pass,
+once per connected tenant.
 
 ```
 Gmail (OAuth) ─┐
-Google Calendar │→  match to company/contact  →  Activity log  →  Claude insight
+Google Calendar │→  match to company/contact  →  Activity log  →  AI insight
 Fireflies (API) ┘     (existing engine)            (in CRM)        (summary/next step)
 ```
 
@@ -19,25 +19,25 @@ Fireflies (API) ┘     (existing engine)            (in CRM)        (summary/ne
 
 ## What you need
 
-Some of this can only be done by you — accounts and keys. Add platform keys to
-**Railway → avelior-analytics → Variables**, then redeploy. Use `.env.example` as
-the reference list.
+Some of this can only be done by you — accounts and keys. Add platform keys to the
+**Vercel project → Settings → Environment Variables**, then redeploy. Use
+`.env.example` as the reference list.
 
-### 1. Google (Gmail + Calendar) — one-click **Connect** *(OAuth, preferred)*
-The seamless integration: a tenant clicks **Connecter Google** on the dashboard,
-approves once, and Gmail + Calendar start syncing. Emails/meetings are logged
+### 1. Google (Gmail + Calendar) — one-click **Connect** *(OAuth)*
+Each tenant clicks **Connecter Google** on `/settings/integrations`, approves once,
+and Gmail + Calendar start syncing for that tenant only. Emails/meetings are logged
 against the right contact; unknown senders go to the **Boîte de réception** queue.
 
 This needs a **one-time Google Cloud setup** (platform-level, done once — not per
-user):
+tenant):
 1. Create a Google Cloud project; enable the **Gmail API** and **Google Calendar
    API**.
 2. **OAuth consent screen.** Scopes: `openid`, `email`, `gmail.readonly`,
    `gmail.send`, `calendar.readonly`, `calendar.events`. (Send/event-write scopes
    are requested now so adding those features later needs no re-consent.)
-   - **If the account is on a Google Workspace domain (e.g. `@avelior.eu`): choose
-     `Internal`.** No Google verification required, and refresh tokens **don't
-     expire** — genuinely seamless.
+   - **If the account is on a Google Workspace domain (e.g. `@yourcompany.com`):
+     choose `Internal`.** No Google verification required, and refresh tokens
+     **don't expire** — genuinely seamless.
    - Otherwise the app stays in **Testing** mode: works immediately, but tokens
      expire ~7 days (reconnect from the dashboard) until you complete Google's
      verification (CASA) — a separate, weeks-long process.
@@ -49,12 +49,11 @@ user):
    `GOOGLE_OAUTH_REDIRECT_URI`. The refresh token is encrypted at rest with the
    existing `ENCRYPTION_KEY`.
 
-Then just open the dashboard and click **Connecter Google**. To switch accounts or
-revoke access, click **Déconnecter** (revokes the token at Google too).
+Then open `/settings/integrations` and click **Connecter Google**. To switch
+accounts or revoke access, click **Déconnecter** (revokes the token at Google too).
 
-> **Legacy fallback:** until a Google account is connected, the app still syncs via
-> the old IMAP App-Password (`IMAP_*`) and secret-iCal (`GOOGLE_CALENDAR_ICS_URL`)
-> env vars, so nothing goes dark during rollout. Retire those once OAuth is live.
+There is no env-var fallback path — every tenant connects its own OAuth credential;
+a tenant with nothing connected simply has no ingestion running.
 
 ### 2. Fireflies — `FIREFLIES_API_KEY`  *(free tier works)*
 Imports call transcripts; uses Fireflies' own AI summary as the raw text.
@@ -92,43 +91,30 @@ present**, otherwise it falls back to `ANTHROPIC_API_KEY`.
 
 ## Turn on the schedule
 
-Generate the shared secret that protects the cron endpoint and add it as
-`CRON_SECRET` (Railway variable):
+Generate the shared secret that protects the cron endpoints and add it as
+`CRON_SECRET` (Vercel env var):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-Then make Railway call the endpoint on a schedule. **Railway → New → Cron**
-(or a separate "cron" service) with the command:
+Vercel Hobby caps serverless functions at 60s, so ingestion is split into four
+routes, each accepting `Authorization: Bearer $CRON_SECRET` or `?key=$CRON_SECRET`:
 
-```bash
-curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron"
-```
+| Route | Does | Suggested cadence |
+|---|---|---|
+| `/api/cron` | Gmail/Calendar/Fireflies sync | every 4h |
+| `/api/cron/enrich` | AI enrichment | hourly |
+| `/api/cron/advance` | sequences + finance alerts + digest | every 4h |
+| `/api/cron/outreach` | cold-email send engine | hourly, business hours |
 
-Suggested cadence: **every 15–30 min** for email, hourly is fine for everything.
-The endpoint runs each source independently — if one key is missing or a source
-fails, the others still run, and the JSON response shows per-source results.
+Each route iterates every connected tenant independently — one tenant's failure
+(missing key, expired token) doesn't block another's, and the JSON response shows
+per-tenant results.
 
-No Railway cron? Any free scheduler works (e.g. cron-job.org) hitting the same
-URL with the `Authorization: Bearer <CRON_SECRET>` header.
-
----
-
-## Run it manually (local or `railway run`)
-
-```bash
-npm run sync:all                 # email + calendar + fireflies + AI pass
-npm run sync:all -- --dry        # parse + match, write nothing (safe preview)
-
-npm run sync:email               # just email (--backfill=200 to import history)
-npm run sync:calendar            # just calendar  (--dry to preview)
-npm run sync:fireflies           # just transcripts (--limit=50, --dry)
-```
-
-First run tip: `npm run sync:email -- --backfill=200` and
-`npm run sync:fireflies -- --limit=50` to pull recent history once, then let the
-cron keep it current.
+Schedule an external caller against each route (e.g. cron-job.org, kept off-host)
+hitting the URL with the `Authorization: Bearer <CRON_SECRET>` header, or open the
+URL directly with `?key=<CRON_SECRET>` to trigger a manual run.
 
 ---
 
@@ -155,10 +141,11 @@ calendar, `ff:<transcript-id>` for Fireflies — re-running is safe.
 
 ## Cost (rough)
 
-- Gmail IMAP, Calendar iCal, Fireflies free tier: **€0**.
-- Claude API: a few hundred interactions/month on the default Haiku model is
-  typically **a few euros/month**. Set a spend limit in the Anthropic console.
-- Railway: the existing app + a cron trigger, no new database.
+- Gmail OAuth, Calendar OAuth, Fireflies free tier: **€0**.
+- Gemini 2.5 Flash (primary AI provider) at low volume: a few cents to a few dimes
+  a month. Claude Haiku is the fallback if `GEMINI_API_KEY` is unset. Set a spend
+  limit with whichever provider you use.
+- Hosting: the existing Vercel project + external cron triggers, no new database.
 
 ---
 
