@@ -163,12 +163,16 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   only, domain state in Mongo through the DB router. Run model closed: no Run collection,
   `AgentEvent.runId` = Inngest run ID.
 
-- [ ] **S5 — AI metering + model router** · Sonnet · M
-  `lib/ai/meter.ts` on the `LeadOneQuota` pattern: per-tenant token/cost ledger + hard quota.
-  `lib/ai/router.ts`: task class → provider/model (Gemini Flash | Haiku | Sonnet), Batch + caching
-  for anything cron-shaped. Every agent call goes through both — no direct fetches from modules.
-  *Exit:* inherited enrichment migrated onto the router unchanged in behavior; metering visible via
-  a script. **Must exist before customer #2 touches anything agentic.**
+- [x] **S5 — AI metering + model router** · Sonnet · M · ✅ 2026-07-16
+  `lib/ai/meter.ts` on the `LeadOneQuota` pattern: per-tenant `AiUsage` ledger (atomic increment,
+  keyed by day/provider/model/taskClass) + `AiBudget` monthly cap, pre-call gated. `lib/ai/router.ts`:
+  `TASK_CLASS_MODEL` (classify/summarize → Haiku, draft → Sonnet, extract-by-default → Gemini) for
+  modules that don't exist yet; `callByTaskClass` is the single metered entry point. `ai-extract.ts`'s
+  existing Gemini-preferred/Claude-fallback selection passes an explicit override — unchanged
+  behavior, now metered. Batch/caching for cron-shaped work deferred (no batch-shaped agent work
+  exists yet outside the S4 proof route). *Exit met:* `enrichActivities`/`composeProspectingEmail`
+  migrated onto the router with identical prompts/providers/retries; `scripts/ai/usage-report.ts`
+  shows per-tenant month-to-date spend vs. budget across every ACTIVE tenant.
 
 - [ ] **S6 — Demo tenant + synthetic data** · Sonnet · S
   Flesh out the S0 bootstrap tenant (`crm_demo`) with synthetic French-broker data via

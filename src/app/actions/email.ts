@@ -37,7 +37,7 @@ export async function generateEmailDraft(
   const dossier = await buildProspectDossier(prisma, companyId, contactId);
   if (!dossier.companyLabel) return { error: "Société introuvable." };
 
-  const composed = await composeProspectingEmail({
+  const composed = await composeProspectingEmail(prisma, {
     dossier: dossier.dossier,
     senderName: getTenantConfig().owner.name,
     companyLabel: dossier.companyLabel,

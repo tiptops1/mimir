@@ -212,13 +212,16 @@ function parseComposed(text: string): ComposedEmail | null {
  * Draft a tailored French prospecting email from a dossier. Returns null if no AI
  * provider is configured or the model output can't be parsed.
  */
-export async function composeProspectingEmail(args: {
-  dossier: string;
-  senderName: string;
-  companyLabel: string;
-  contactLabel: string | null;
-  contactFirstName: string | null;
-}): Promise<ComposedEmail | null> {
+export async function composeProspectingEmail(
+  prisma: PrismaClient,
+  args: {
+    dossier: string;
+    senderName: string;
+    companyLabel: string;
+    contactLabel: string | null;
+    contactFirstName: string | null;
+  },
+): Promise<ComposedEmail | null> {
   const greeting = args.contactFirstName ? `Bonjour ${args.contactFirstName},` : "Bonjour,";
   const system = `Tu es ${args.senderName}, du cabinet de courtage Avelior. Tu rédiges un email de prospection B2B personnalisé, en français, à un dirigeant d'un cabinet de courtage / d'agence d'assurance (prospect).
 
@@ -237,7 +240,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour : {"subject": "
 DOSSIER (recherche documentée) :
 ${args.dossier || "(dossier limité — peu d'informations disponibles)"}`;
 
-  const text = await callModel(system, user, { maxTokens: 800 });
+  const text = await callModel(prisma, "draft", system, user, { maxTokens: 800 });
   if (!text) return null;
   return parseComposed(text);
 }

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { loadStageDefs } from "./stage-config";
+import { callByTaskClass, GEMINI_DEFAULT_MODEL, HAIKU_MODEL, type TaskClass } from "./ai/router";
 
 // The "brain": turns raw interaction text (an email, a meeting, a call
 // transcript) into structured CRM signal via an LLM. Decoupled from any one
@@ -10,17 +11,15 @@ import { loadStageDefs } from "./stage-config";
 //   2. ANTHROPIC_API_KEY -> Claude (Haiku) — usage-based, a few €/month here
 // With neither key set it is a no-op, so the rest of the pipeline keeps logging
 // activities — they just won't carry AI insight.
+//
+// The actual HTTP calls, metering and budget gate live in lib/ai/router.ts +
+// lib/ai/meter.ts (S5) — this module only decides *which* provider/model to
+// pass down, keeping the Gemini-preferred/Claude-fallback selection exactly
+// as it was before the router existed.
 
-// --- Gemini (free tier) — preferred. OpenAI-compatible chat endpoint. ---
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-// 2.5 Flash has a generous free tier and good French. Override with GEMINI_MODEL.
-const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
-
-// --- Claude (Anthropic) — fallback. ---
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-// Haiku is cheap + fast and plenty for extraction. Override with ANTHROPIC_MODEL.
-const ANTHROPIC_DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+// Override with GEMINI_MODEL / ANTHROPIC_MODEL.
+const GEMINI_MODEL = () => process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
+const ANTHROPIC_MODEL = () => process.env.ANTHROPIC_MODEL || HAIKU_MODEL;
 
 export interface CrmInsight {
   summary: string; // 1–2 sentence neutral recap, in French
@@ -119,123 +118,33 @@ function coerceInsight(raw: unknown, stageKeys: string[]): CrmInsight | null {
   };
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * Call Gemini's OpenAI-compatible chat endpoint. Returns the raw text, or null
- * on any error. Retries once on a 429 (free-tier rate limit) honouring
- * Retry-After (capped) — a persistent 429/quota leaves aiSummary null so the
- * next cron run retries the activity.
- */
-async function callGemini(
-  system: string,
-  userContent: string,
-  maxTokens: number,
-): Promise<string | null> {
-  const key = process.env.GEMINI_API_KEY!;
-  const model = process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        response_format: { type: "json_object" },
-        // Gemini 2.5 Flash is a "thinking" model; its hidden thinking tokens bill
-        // at the output rate. Extraction needs no reasoning — disabling it cut
-        // billable output ~4x in testing with identical results.
-        reasoning_effort: "none",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
-
-    if (res.status === 429 && attempt === 0) {
-      const retryAfter = Number.parseInt(res.headers.get("retry-after") || "", 10);
-      const waitMs = Math.min(
-        Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000,
-        10000,
-      );
-      await sleep(waitMs);
-      continue;
-    }
-    if (!res.ok) {
-      console.warn(`[ai] Gemini API ${res.status}: ${await res.text()}`);
-      return null;
-    }
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    return data.choices?.[0]?.message?.content ?? null;
-  }
-  return null;
-}
-
-/** Call Claude's Messages endpoint. Returns the raw text, or null on error. */
-async function callClaude(
-  system: string,
-  userContent: string,
-  maxTokens: number,
-): Promise<string | null> {
-  const key = process.env.ANTHROPIC_API_KEY!;
-  const res = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || ANTHROPIC_DEFAULT_MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
-  if (!res.ok) {
-    console.warn(`[ai] Claude API ${res.status}: ${await res.text()}`);
-    return null;
-  }
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  return (data.content ?? [])
-    .map((b) => (b.type === "text" ? b.text ?? "" : ""))
-    .join("");
-}
-
 /**
  * Generic single-shot call to the active LLM (Gemini preferred, Claude fallback).
  * Returns the raw text response, or null if no provider is configured / on error.
  * Shared by the insight-extraction pass and the email composer (lib/email-research).
+ * Routes through lib/ai/router.ts (metering + budget gate, S5) with an explicit
+ * provider/model override so this module's own Gemini-preferred/Claude-fallback
+ * selection stays exactly as it was before the router existed.
  */
 export async function callModel(
+  prisma: PrismaClient,
+  taskClass: TaskClass,
   system: string,
   user: string,
   opts: { maxTokens?: number } = {},
 ): Promise<string | null> {
   const which = provider();
   if (!which) return null;
-  const maxTokens = opts.maxTokens ?? 700;
-  try {
-    return which === "gemini"
-      ? await callGemini(system, user, maxTokens)
-      : await callClaude(system, user, maxTokens);
-  } catch (e) {
-    console.warn(`[ai] callModel failed: ${(e as Error).message}`);
-    return null;
-  }
+  return callByTaskClass(prisma, taskClass, system, user, {
+    maxTokens: opts.maxTokens,
+    provider: which,
+    model: which === "gemini" ? GEMINI_MODEL() : ANTHROPIC_MODEL(),
+  });
 }
 
 /** Call the active LLM on one interaction. Returns null if disabled or on any error. */
 export async function extractInsight(
+  prisma: PrismaClient,
   input: ExtractInput,
   stageKeys: string[],
 ): Promise<CrmInsight | null> {
@@ -258,7 +167,7 @@ export async function extractInsight(
 
   const userContent = `${header}\n\n---\n${body}`;
 
-  const text = await callModel(buildSystemPrompt(stageKeys), userContent);
+  const text = await callModel(prisma, "extract", buildSystemPrompt(stageKeys), userContent);
   if (!text) return null;
   return coerceInsight(parseJsonObject(text), stageKeys);
 }
@@ -305,6 +214,7 @@ export async function enrichActivities(
       continue;
     }
     const insight = await extractInsight(
+      prisma,
       {
         kind: a.type as ExtractInput["kind"],
         subject: a.subject,

@@ -159,3 +159,42 @@ at `/api/inngest`. Verified 2026-07-16 against `crm_demo` on the local dev serve
 with `attempts: 2, survivedFailure: true`); with `?failAlways=1` the `onFailure` handler wrote
 `run_failed`. Inngest v4 API note: triggers live in `createFunction`'s first argument
 (`triggers: [{ event }]`) — the three-argument v3 form from older docs throws at module load.
+
+## 2026-07-16 — S5: AI metering + model router
+
+`lib/ai/meter.ts` + `lib/ai/router.ts`, two new tenant-schema models (`AiUsage`, `AiBudget`).
+Decisions closed here:
+
+- **Metering lives in the tenant schema, not the control plane** — same shape as `LeadOneQuota`
+  (per-tenant DB, through the router), matching the S2 note that cross-tenant aggregation is
+  S5's problem, not a control-plane schema concern. The rollup is `scripts/ai/usage-report.ts`:
+  loops ACTIVE tenants via the control plane, connects each tenant DB, sums.
+- **One source of truth for spend.** `AiUsage` is a per-`(day, provider, model, taskClass)`
+  ledger updated via atomic Mongo `$inc` (safe under concurrent serverless writers — unlike
+  `LeadOneQuota`'s read-then-update, which is fine there only because Lead One is single-writer
+  by design). `AiBudget` holds only the configured `monthlyLimitUsd`; month-to-date spend is
+  computed by summing `AiUsage`, not tracked as a second counter, so the two numbers can't drift
+  apart.
+- **Budget gate is pre-call, not a reservation.** Cost isn't known until the response arrives
+  (unlike Lead One's fixed per-call quota), so `checkBudget` gates on spend-so-far vs. limit; a
+  call already in flight when the limit is crossed can push spend slightly over. Accepted
+  trade-off, same spirit as `LeadOneQuota.takeQuota`'s "reserve n" but for a number that can't be
+  known upfront — documented in `meter.ts`.
+- **Pricing snapshot 2026-07 from the memo** (Haiku 4.5 $1/$5, Sonnet $3/$15, Opus 4.8 $5/$25,
+  per MTok) — re-verify at https://docs.claude.com before this feeds real billing. Gemini 2.5
+  Flash is priced at $0: the CRM-enrichment path only runs on Gemini's free tier, so it is
+  genuinely free to us; tokens/calls are still recorded for visibility.
+- **`extract`'s existing Gemini-preferred/Claude-fallback selection stays outside the static
+  `TASK_CLASS_MODEL` table** — `ai-extract.ts`'s `provider()` picks Gemini-then-Claude exactly as
+  before S5 and passes that choice down as an explicit override to `callByTaskClass`. The static
+  table (`classify`/`summarize` → Haiku, `draft`/`extract`-by-default → Sonnet/Gemini) is for
+  modules that don't exist yet (Huginn/Muninn/Bragi, S14+) and have no hardcoded selection of
+  their own. This is what "inherited enrichment migrated onto the router unchanged in behavior"
+  means in practice: same prompts, same provider fallback, same retry — now metered.
+- **Low-level HTTP callers moved from `ai-extract.ts` into `router.ts`** (`callGemini`/
+  `callClaude`) so real token usage from each API's `usage` field can be captured at the call
+  site — the pre-S5 code discarded it. `callModel`/`extractInsight`/`composeProspectingEmail` now
+  take a `PrismaClient` (already available at every call site) so the metering write can happen.
+- **`scripts/test-ai-insight.ts` now needs a tenant slug** (`crm_demo` default) instead of being
+  DB-free — metering means every AI call writes an `AiUsage` row, so a "no DB touched" probe is no
+  longer possible.

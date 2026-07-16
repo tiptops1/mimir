@@ -1,11 +1,17 @@
 import "dotenv/config";
+import { PrismaClient as ControlClient } from "../src/generated/control";
+import { PrismaClient as TenantClient } from "@prisma/client";
+import { decrypt } from "../src/lib/crypto";
 import { extractInsight, aiEnabled } from "../src/lib/ai-extract";
 
-// Read-only probe: runs the EXACT Gemini path the cron uses (extractInsight) on a
-// synthetic prospect meeting. No DB touched, no prod data mutated — it just proves
-// the calendar→Gemini "brain" works and shows the structured signal it returns.
+// Probe: runs the EXACT Gemini path the cron uses (extractInsight) on a
+// synthetic prospect meeting. No CRM data mutated — it just proves the
+// calendar→Gemini "brain" works and shows the structured signal it returns.
+// Since S5, extractInsight is metered (lib/ai/meter.ts), so this now takes a
+// tenant's PrismaClient and writes one AiUsage row there — same tenant lookup
+// as scripts/check-proof-events.ts.
 //
-//   GEMINI_API_KEY=... npx tsx scripts/test-ai-insight.ts
+//   GEMINI_API_KEY=... npx tsx scripts/test-ai-insight.ts [slug=crm_demo]
 // (or put GEMINI_API_KEY in .env first)
 
 async function main() {
@@ -14,6 +20,15 @@ async function main() {
     process.exit(1);
   }
   console.log("provider:", process.env.GEMINI_API_KEY ? "gemini" : "anthropic");
+
+  const slug = process.argv[2] ?? "crm_demo";
+  const control = new ControlClient();
+  const tenant = await control.tenant.findUnique({
+    where: { slug },
+    select: { connectionString: true },
+  });
+  if (!tenant) throw new Error(`Unknown tenant: ${slug}`);
+  const prisma = new TenantClient({ datasourceUrl: decrypt(tenant.connectionString) });
 
   // The kind of thing a Google Calendar event becomes after calendar-sync:
   // a MEETING activity with a subject + description body, matched to a company.
@@ -44,15 +59,19 @@ Action convenue : on leur envoie une proposition chiffrée et on cale une démo 
   ];
 
   const t0 = Date.now();
-  const insight = await extractInsight(sample, stageKeys);
+  const insight = await extractInsight(prisma, sample, stageKeys);
   const ms = Date.now() - t0;
 
   if (!insight) {
-    console.error(`\nNo insight returned (API error or unparsable) after ${ms}ms.`);
+    console.error(`\nNo insight returned (API error, budget exhausted, or unparsable) after ${ms}ms.`);
+    await prisma.$disconnect();
+    await control.$disconnect();
     process.exit(2);
   }
   console.log(`\nGemini responded in ${ms}ms:\n`);
   console.log(JSON.stringify(insight, null, 2));
+  await prisma.$disconnect();
+  await control.$disconnect();
 }
 
 main().catch((e) => {

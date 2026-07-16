@@ -555,6 +555,37 @@ model LeadOneQuota {
   updatedAt   DateTime @updatedAt
 }
 
+// AI cost metering (S5). One row per (day, provider, model, taskClass), all
+// numeric fields updated via atomic `increment` (safe under concurrent
+// serverless writers — unlike LeadOneQuota's read-then-update, which is fine
+// there because Lead One is single-writer by design). Month-to-date spend is
+// computed by summing rows, not tracked as a separate counter, so there is
+// exactly one source of truth for "how much has this tenant spent".
+model AiUsage {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  day              String   // "YYYY-MM-DD" (UTC), same bucketing spirit as LeadOneQuota's windowKey
+  provider         String   // "gemini" | "anthropic"
+  model            String
+  taskClass        String   // classify | extract | draft | summarize
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  costUsd          Float    @default(0)
+  calls            Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  @@unique([day, provider, model, taskClass])
+  @@index([day])
+}
+
+// Per-tenant monthly AI spend cap (config, editable). Singleton row — the
+// `@unique` on a constant-valued field enforces at most one via upsert.
+model AiBudget {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  singleton       String   @unique @default("default")
+  monthlyLimitUsd Float
+  updatedAt       DateTime @updatedAt
+}
+
 // One row per pipeline execution — observability for the /leadone page and CI.
 model LeadOneRun {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId

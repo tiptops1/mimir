@@ -231,6 +231,18 @@ async function upsertPromptTemplates(prisma: PrismaClient): Promise<void> {
   }
 }
 
+// Default monthly AI spend cap (S5) — inside the memo's €15-40/tenant
+// variable-cost range. Never clobber a live limit once a tenant has edited it.
+const DEFAULT_AI_MONTHLY_LIMIT_USD = 20;
+
+async function upsertAiBudget(prisma: PrismaClient): Promise<void> {
+  await prisma.aiBudget.upsert({
+    where: { singleton: "default" },
+    update: {},
+    create: { singleton: "default", monthlyLimitUsd: DEFAULT_AI_MONTHLY_LIMIT_USD },
+  });
+}
+
 /** Seed (or refresh) the default config on a tenant DB. Idempotent. */
 export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
   for (const s of DEFAULT_STAGES) {
@@ -257,6 +269,7 @@ export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
 
   await upsertAutonomyConfig(prisma);
   await upsertPromptTemplates(prisma);
+  await upsertAiBudget(prisma);
 
   for (const seq of DEFAULT_SEQUENCES) {
     const existing = await prisma.sequence.findFirst({ where: { name: seq.name } });
