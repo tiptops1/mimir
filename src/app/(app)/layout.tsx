@@ -1,5 +1,6 @@
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
+import { RealmScope } from "@/components/realm-scope";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { GlobalSearch } from "@/components/global-search";
@@ -37,31 +38,33 @@ export default async function AppLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        className="hidden lg:flex"
-        pendingCount={pendingCount}
-        todoCount={todoCount}
-        leadOneCount={leadOneCount}
-        user={user}
-      />
-      <main className="flex-1 overflow-y-auto bg-background">
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6">
-          <MobileSidebar
-            pendingCount={pendingCount}
-            todoCount={todoCount}
-            leadOneCount={leadOneCount}
-            user={user}
-          />
-          <GlobalSearch isAdmin={session.role === "ADMIN"} />
-          <div className="ml-auto flex items-center gap-2">
-            <QuickAddMenu />
-            <ThemeToggle />
-            <NotificationsBell summary={notifications} />
-          </div>
-        </header>
-        {children}
-      </main>
-    </div>
+    <RealmScope>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar
+          className="hidden lg:flex"
+          pendingCount={pendingCount}
+          todoCount={todoCount}
+          leadOneCount={leadOneCount}
+          user={user}
+        />
+        <main className="flex-1 overflow-y-auto bg-background">
+          <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6">
+            <MobileSidebar
+              pendingCount={pendingCount}
+              todoCount={todoCount}
+              leadOneCount={leadOneCount}
+              user={user}
+            />
+            <GlobalSearch isAdmin={session.role === "ADMIN"} />
+            <div className="ml-auto flex items-center gap-2">
+              <QuickAddMenu />
+              <ThemeToggle />
+              <NotificationsBell summary={notifications} />
+            </div>
+          </header>
+          {children}
+        </main>
+      </div>
+    </RealmScope>
   );
 }

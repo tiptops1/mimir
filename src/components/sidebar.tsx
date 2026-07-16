@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { logout } from "@/app/actions/auth";
+import { REALMS } from "@/lib/realms";
 import { cn, initialsFromName } from "@/lib/utils";
 
 const NAV = [
@@ -32,6 +33,54 @@ const NAV = [
   { href: "/finances", label: "Finances", icon: Wallet },
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
 ];
+
+// Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms
+// whose modules don't exist yet (e.g. Mimir before S7) simply render nothing.
+const GROUPS = REALMS.map((realm) => ({
+  realm,
+  items: NAV.filter((item) => realm.routes.includes(item.href.slice(1))),
+})).filter((g) => g.items.length > 0);
+
+function NavItem({
+  item,
+  pathname,
+  badge,
+}: {
+  item: { href: string; label: string; icon: typeof Settings };
+  pathname: string;
+  badge: number;
+}) {
+  const active =
+    pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-100",
+        active
+          ? "bg-realm-subtle text-foreground"
+          : "text-muted hover:bg-surface-2 hover:text-foreground",
+      )}
+    >
+      {active && (
+        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-realm" />
+      )}
+      <Icon
+        className={cn(
+          "h-[18px] w-[18px] shrink-0 transition-colors",
+          active ? "text-realm" : "text-faint group-hover:text-muted",
+        )}
+      />
+      <span className="flex-1 truncate">{item.label}</span>
+      {badge > 0 && (
+        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold text-on-brand tnum">
+          {badge}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export type SidebarProps = {
   user: { name: string; email: string; role: string };
@@ -49,10 +98,15 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const pathname = usePathname();
-  const nav =
-    user.role === "ADMIN"
-      ? [...NAV, { href: "/settings", label: "Paramètres", icon: Settings }]
-      : NAV;
+
+  const badgeFor = (href: string) =>
+    href === "/inbox"
+      ? pendingCount
+      : href === "/todo"
+        ? todoCount
+        : href === "/leadone"
+          ? leadOneCount
+          : 0;
 
   return (
     <aside
@@ -65,50 +119,33 @@ export function Sidebar({
         <BrandMark />
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 pt-1">
-        {nav.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          const badge =
-            item.href === "/inbox"
-              ? pendingCount
-              : item.href === "/todo"
-                ? todoCount
-                : item.href === "/leadone"
-                  ? leadOneCount
-                  : 0;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-100",
-                active
-                  ? "bg-surface-2 text-foreground"
-                  : "text-muted hover:bg-surface-2 hover:text-foreground",
-              )}
-            >
-              {active && (
-                <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-brand" />
-              )}
-              <Icon
-                className={cn(
-                  "h-[18px] w-[18px] shrink-0 transition-colors",
-                  active
-                    ? "text-brand"
-                    : "text-faint group-hover:text-muted",
-                )}
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {badge > 0 && (
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold text-on-brand tnum">
-                  {badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 pt-1">
+        {GROUPS.map(({ realm, items }) => (
+          <div key={realm.slug} className="pt-4 first:pt-0">
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
+              {realm.label}
+            </p>
+            <div className="space-y-0.5">
+              {items.map((item) => (
+                <NavItem
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  badge={badgeFor(item.href)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+        {user.role === "ADMIN" && (
+          <div className="mt-4 border-t border-border pt-3">
+            <NavItem
+              item={{ href: "/settings", label: "Paramètres", icon: Settings }}
+              pathname={pathname}
+              badge={0}
+            />
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-border p-3">

@@ -103,6 +103,66 @@
 }
 
 /*
+ * Realm accents — the cosmos layer (see .claude/skills/mimir-cosmos).
+ * RealmScope stamps data-realm on the app shell per route section; these
+ * swap a small accent-token set the same way data-theme swaps the theme.
+ * No attribute (settings, auth) = neutral brand fallback. Dark values are
+ * pre-brightened for contrast; data-theme lives on <html> ABOVE the realm
+ * wrapper, hence descendant (not compound) selectors.
+ */
+:root {
+  --realm: var(--brand);
+  --realm-hover: var(--brand-hover);
+  --realm-subtle: var(--brand-subtle);
+  --realm-ring: var(--ring);
+}
+[data-realm="chasse"] {
+  --realm: #0891b2;
+  --realm-hover: #0e7490;
+  --realm-subtle: #ecfeff;
+  --realm-ring: rgba(8, 145, 178, 0.4);
+}
+[data-realm="tresor"] {
+  --realm: #059669;
+  --realm-hover: #047857;
+  --realm-subtle: #ecfdf5;
+  --realm-ring: rgba(5, 150, 105, 0.4);
+}
+[data-realm="mimir"] {
+  --realm: #d97706;
+  --realm-hover: #b45309;
+  --realm-subtle: #fffbeb;
+  --realm-ring: rgba(217, 119, 6, 0.4);
+}
+[data-theme="dark"] [data-realm="chasse"] {
+  --realm: #22d3ee;
+  --realm-hover: #67e8f9;
+  --realm-subtle: rgba(6, 182, 212, 0.16);
+  --realm-ring: rgba(34, 211, 238, 0.45);
+}
+[data-theme="dark"] [data-realm="tresor"] {
+  --realm: #34d399;
+  --realm-hover: #6ee7b7;
+  --realm-subtle: rgba(16, 185, 129, 0.16);
+  --realm-ring: rgba(52, 211, 153, 0.45);
+}
+[data-theme="dark"] [data-realm="mimir"] {
+  --realm: #fbbf24;
+  --realm-hover: #fcd34d;
+  --realm-subtle: rgba(245, 158, 11, 0.16);
+  --realm-ring: rgba(251, 191, 36, 0.45);
+}
+
+/* Inside a realm, the light follows you: focus + selection take the realm hue. */
+[data-realm] :focus-visible {
+  outline-color: var(--realm-ring);
+}
+[data-realm] ::selection {
+  background: var(--realm-subtle);
+  color: var(--realm);
+}
+
+/*
  * Dark compat layer for LITERAL Tailwind hue utilities. Stage/priority badge
  * classes live as DATA in the tenant DB (StageDefinition.badgeClass etc. store
  * strings like "bg-sky-100 text-sky-700"), so they can't be migrated to tokens
@@ -163,6 +223,10 @@
   --color-brand-active: var(--brand-active);
   --color-brand-subtle: var(--brand-subtle);
   --color-on-brand: var(--on-brand);
+
+  --color-realm: var(--realm);
+  --color-realm-hover: var(--realm-hover);
+  --color-realm-subtle: var(--realm-subtle);
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);
