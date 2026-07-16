@@ -7,6 +7,11 @@ baseline (companies/contacts/pipeline/tasks/deals/finances, plus a **Lead One** 
 and a cold-outreach engine). There is **no production tenant in this repo** — every environment is
 staging/demo. See `docs/CRM-BASELINE-BRIEF.md` for what the inherited baseline actually is.
 
+**`crm_demo`** is the default dev/demo tenant, seeded with synthetic French-broker (courtier)
+data — 20 companies across all 8 pipeline stages, contacts, deals, activities, tasks, finance
+entries. Reseed (idempotent) with `npm run tenant:seed-demo`. It's the default target for new
+feature work and demos.
+
 **Before any architecture/session work, read:**
 - `docs/mimir/roadmap.md` — the session plan and **cross-session memory** (which session is current)
 - `docs/mimir/AGENTIC-PLATFORM-DECISION-MEMO.md` — the platform decisions (D1–D5) and open gates (G1/G2)

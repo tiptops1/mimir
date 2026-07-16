@@ -100,6 +100,13 @@ project), GitHub (new repo).
 
 Sizing: **S** = comfortably one session · **M** = one full session · split anything that grows past M.
 
+**Checkpoint** sessions (new) close every phase: no code by default, XS. Demo what the phase
+actually shipped, compare it against the memo's intent, and decide out loud whether anything built
+so far suggests a new feature, a scope cut, or a re-prioritization of what's next. Log anything
+that changes the plan in `decisions.md`; edit the session list below if scope actually changes.
+Skipping a checkpoint is fine if the phase was trivial — don't force it — but don't silently roll
+into the next phase on autopilot either.
+
 ### Phase −1 — Environment split (new, blocks everything)
 
 - [x] **S0 — New repo + environment, Vision RM duplicated as baseline** · **Opus, plan mode** · M · ✅ 2026-07-15
@@ -174,11 +181,23 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   migrated onto the router with identical prompts/providers/retries; `scripts/ai/usage-report.ts`
   shows per-tenant month-to-date spend vs. budget across every ACTIVE tenant.
 
-- [ ] **S6 — Demo tenant + synthetic data** · Sonnet · S
-  Flesh out the S0 bootstrap tenant (`crm_demo`) with synthetic French-broker data via
-  `tenant:provision` + seed. *No longer the staging **mechanism** — the whole repo is staging now.
-  This is the demo/sales fixture and the default target for every new feature.*
-  *Exit:* demo tenant realistic enough to demo against, documented in CLAUDE.md.
+- [x] **S6 — Demo tenant + synthetic data** · Sonnet · S · ✅ 2026-07-16
+  Fleshed out `crm_demo` with `scripts/seed-demo-data.ts` (`npm run tenant:seed-demo`): 20 French
+  courtier companies funnel-shaped across all 8 seeded stages, contacts, deals (incl. historical
+  renewal deals), activities (some with AI-insight fields), tasks, stage-change history, and 7
+  finance-cockpit entries. Idempotent — Company upserted by siret, children deleted+recreated per
+  run; verified identical counts across two runs. Lead One / outreach-message seeding deliberately
+  out of scope (separate module story; would misrepresent the dormant-by-default outreach engine).
+  *Exit met:* demo tenant realistic enough to demo against; documented in CLAUDE.md.
+
+- [ ] **Checkpoint — Phase 0 wrap** · reflection, no code · XS
+  S0–S6 built: the standalone environment, refreshed docs, the Heimdallr event/ledger schema
+  (unimplemented behavior, schema only), the job-queue decision, AI metering + routing, and a
+  demo-able `crm_demo` tenant. Before starting Heimdallr proper (S7): demo `crm_demo` end to end,
+  re-read the memo's D1–D5 against what actually got built, and decide whether Phase 1's scope
+  (S7–S9) still matches reality — e.g. does the ledger design need anything the S4/S5 sessions
+  revealed? Any new feature ideas surfaced while building the demo data belong here, not as a
+  side quest in a later session.
 
 ### Phase 1 — Heimdallr, module 0 (the bridge)
 
@@ -197,6 +216,14 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   Generalize the inherited outreach bounce-breaker: per-category edit-rate / negative-signal breaker
   that auto-demotes to `draft_approve` + writes an `AgentEvent`. Undo window on reversible actions.
   *Exit:* breaker unit-tested; demotion visible in the inbox.
+
+- [ ] **Checkpoint — Phase 1 wrap** · reflection, no code · XS
+  Heimdallr (the bridge) is the substrate every later module proposes actions through — this is
+  the highest-leverage checkpoint to get right. Demo the full propose → approve/edit/reject →
+  execute → undo loop on `crm_demo` with a hand-inserted proposal. Does the breaker/graduation
+  design (S9) hold up against a real edit, or does it need adjusting before Mímisbrunnr starts
+  writing proposals against it? Revisit whether any inbox UX gaps found while demoing are worth
+  a follow-up session before Phase 2, or can ride along later.
 
 ### Phase 2 — Mímisbrunnr, module 1 (the well)
 
@@ -222,6 +249,13 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   Minimal query UI with cited passages. Read-only, no side effects — this is the sales demo.
   *Exit:* demo on `crm_demo` against a seeded knowledge base.
 
+- [ ] **Checkpoint — Phase 2 wrap** · reflection, no code · XS
+  Mímisbrunnr (the well) is retrieval infra for Huginn/Muninn/Bragi — check it actually serves what
+  they'll need before building on it. Demo the RAG query surface, sanity-check retrieval quality
+  against the S10 embedding decision now that real chunks are indexed, and confirm the index-budget
+  counter is tracking correctly. Is G2 (HDS scope) resolved yet? Phase 3 is gated on it — if not,
+  decide whether to reorder Phase 4 work ahead of Huginn rather than idling.
+
 ### Phase 3 — Huginn, module 2 · ⚠ blocked on G2
 
 - [ ] **S14 — Draft pipeline** · plan on Opus · M
@@ -233,6 +267,14 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   first draft ever shown**. Graduation math + never-graduates list (money, legal, health-flagged) as
   pure, tested functions.
 
+- [ ] **Checkpoint — Phase 3 wrap** · reflection, no code · XS
+  Huginn is the first module that writes real proposals against a real inbound channel (email) —
+  the first live test of the whole Heimdallr loop under real-world noise. Demo drafts actually
+  generated from real-shaped support email, check graduation stats are accumulating sensibly from
+  first draft, and look for anything Huginn needed that Phase 1/2 didn't provide (a retrieval gap,
+  an autonomy-category gap, a UX gap in the inbox). Good moment to ask whether Muninn/Nornir/Bragi
+  in Phase 4 still make sense in the planned order, or whether what shipped here reprioritizes them.
+
 ### Phase 4 — Remaining realms (order per memo)
 
 - [ ] **S16 — Muninn: RCA templates (config) + doc generation + versioning** · Sonnet · M
@@ -240,6 +282,13 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
 - [ ] **S18 — Bragi (part 1): brand-voice pack + content calendar config + generate-to-ledger** · Sonnet · M
       Publishing connector is a separate decision spike — don't bundle it.
 - [ ] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.
+
+- [ ] **Checkpoint — Phase 4 wrap / platform retro** · reflection, no code · XS
+  All seven realms exist. Step back further than the per-phase checkpoints: demo the platform
+  end-to-end across modules, review the original memo's D1–D5 against what actually got built and
+  note where reality diverged and why, and decide what's next — harden/polish existing modules,
+  pick up the parallel premium track, or scope a genuinely new module. This is also the moment to
+  revisit the permanent-parallel-vs-merge-back question (§0.5) with a full platform to judge it by.
 
 **Parallel premium track** (slot into gaps, one S-session each): per-tenant branding pull-forward →
 Cmd+K palette on Atlas Search → MCP connector.
