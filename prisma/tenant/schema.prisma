@@ -580,3 +580,107 @@ model SavedView {
 
   @@index([userId, page])
 }
+
+// ── Heimdallr — agentic platform foundation (S2/S3) ─────────────────────────
+// Designed in docs/mimir/events.md; implemented verbatim here. Four models:
+// AgentEvent (append-only stream), AgentAction (the one ledger, D5),
+// AutonomyConfig (per-category autonomy level + breaker, D2), PromptTemplate
+// (prompts as tenant config, Path C rule 1). See events.md for the full
+// taxonomy, state machine, and rules — this is the schema only.
+
+model AgentEvent {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  at       DateTime @default(now())
+  module   String   // heimdallr | mimisbrunnr | huginn | muninn | nornir | bragi | forseti | system
+  category String   // AutonomyConfig.category key, or module-local domain (ingestion, quota, …)
+  action   String   // lifecycle verb — see events.md §1
+  actionId String?  @db.ObjectId // loose ref → AgentAction
+  runId    String?  // loose ref → queue job/run (run model decided at S4)
+  entity   String?  // COMPANY | CONTACT | DEAL | … (AuditLog convention)
+  entityId String?  @db.ObjectId
+  userId   String?  @db.ObjectId // loose ref → control-plane User (approver/editor), no relation
+  data     Json?    // small event-specific payload; big blobs live on AgentAction
+
+  @@index([at])
+  @@index([module, category, at])
+  @@index([actionId])
+  @@index([entity, entityId])
+}
+
+model AgentAction {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  module   String // emitting module (same vocabulary as AgentEvent.module)
+  category String // autonomy category key → AutonomyConfig
+  type     String // concrete action, e.g. email.draft_reply | crm.update_field | doc.rca
+  status   String @default("PROPOSED")
+  // PROPOSED | APPROVED | REJECTED | EXPIRED | EXECUTED | FAILED | UNDONE
+
+  payload       Json    // the proposal as generated (draft body, field diff, doc content, …)
+  editedPayload Json?   // payload after human edit; null = approved untouched
+  wasEdited     Boolean @default(false) // denormalized for graduation queries
+
+  sources Json? // cited passages: [{ docId, chunkId, quote, score }] (Mímisbrunnr, S12)
+  trigger Json? // triggering context: { kind: "email"|"cron"|"manual", refs… }
+  entity   String?
+  entityId String? @db.ObjectId
+
+  autonomyLevelAtProposal Int  // level in force when proposed — graduation-stat integrity
+  promptKey     String?       // PromptTemplate key used to generate the proposal
+  promptVersion Int?          // + exact version — pins what produced this output
+
+  reversible Boolean   @default(false)
+  undoData   Json?     // whatever execution recorded to reverse itself
+  expiresAt  DateTime? // auto-EXPIRED past this (stale drafts don't linger as pending)
+
+  proposedAt DateTime  @default(now())
+  decidedAt  DateTime?
+  decidedBy  String?   @db.ObjectId // loose ref → control-plane User; null = auto-approved
+  executedAt DateTime?
+  undoneAt   DateTime?
+  error      String?
+
+  @@index([status, proposedAt])
+  @@index([category, status])
+  @@index([entity, entityId])
+}
+
+model AutonomyConfig {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  category String @unique // dotted key, e.g. huginn.support_reply
+  label    String // French label — config-as-data, StageDefinition pattern
+  level    Int    @default(0) // 0 off | 1 draft_approve | 2 auto_with_undo | 3 autonomous
+  maxLevel Int    @default(3) // ceiling; never-graduates categories seeded with 1
+
+  // graduation + breaker thresholds (OutreachConfig pattern)
+  editRateThresholdPct       Int @default(20) // trailing edit-rate that trips demotion
+  negativeSignalThresholdPct Int @default(5)  // module-defined negative signal (bounce pattern)
+  breakerMinSample           Int @default(10) // below this, breaker/graduation stay silent
+  graduationWindowDays       Int @default(21)
+  graduationUneditedPct      Int @default(95) // D2: ≥95% unedited over the window
+
+  undoWindowMinutes Int @default(60)
+
+  // kill switch (OutreachConfig paused-triple)
+  paused       Boolean   @default(false)
+  pausedReason String?
+  pausedAt     DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
+model PromptTemplate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   // dotted, e.g. huginn.support_reply.draft
+  version   Int      @default(1)
+  label     String   // French label
+  body      String   // template text with {{placeholders}}
+  variables String[] @default([]) // declared placeholder names — render fails on undeclared vars
+  taskClass String   // classify | extract | draft | summarize — S5 router maps class → model
+  module    String?  // owning module, for admin UI grouping
+  active    Boolean  @default(true) // exactly one active version per key (enforced in code, S7 API)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, version])
+  @@index([key, active])
+}

@@ -143,11 +143,15 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   flags, GDPR-erasure posture); design decisions logged in `decisions.md`. No code pushed —
   S3 implements the doc verbatim.
 
-- [ ] **S3 — Schema implementation + seed** · Sonnet · S
-  Implement S2's models in the Mimir repo's `prisma/tenant/schema.prisma`, `db:push` **against the
-  new cluster**, extend `config:seed` with default autonomy config (everything `off`, Huginn
-  categories at `draft_approve` when enabled). Additive-only still applies — it keeps merge-back
-  cheap. *Exit:* lint/build green, seed idempotent.
+- [x] **S3 — Schema implementation + seed** · Sonnet · S · ✅ 2026-07-16
+  Implemented S2's four models (`AgentEvent`, `AgentAction`, `AutonomyConfig`, `PromptTemplate`)
+  verbatim in `prisma/tenant/schema.prisma`, `db:push`'d against `mimir-dev`. Extended
+  `seedTenantConfig()` with the 7 seed autonomy categories (all `level: 0`, finance/legal capped
+  at `maxLevel: 1`) and a 2-row `PromptTemplate` skeleton (`crm.ai_extract.system`,
+  `outreach.email_draft.system`) mirroring the prompts already hardcoded in `ai-extract.ts` /
+  `email-research.ts` — those modules are unchanged; wiring them onto `PromptTemplate` (and
+  dropping the hardcoded broker name) is deferred to its own session. *Exit met:* lint/build
+  green, seed verified idempotent (row counts unchanged across two runs).
 
 - [ ] **S4 — Job-queue spike + decision** · Opus for the eval, tiny code · M
   Closes the memo's open decision (Inngest / Trigger.dev / Upstash QStash). Criteria: Vercel 60s
