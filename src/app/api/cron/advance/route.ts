@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { authorized } from "@/lib/cron-auth";
 import { listActiveTenants, settle } from "@/lib/tenant-cron";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { decrypt } from "@/lib/crypto";
@@ -10,14 +11,6 @@ import { sendDailyDigest } from "@/lib/digest";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  return req.nextUrl.searchParams.get("key") === secret;
-}
 
 function nameFromEmail(email: string): string {
   const local = email.split("@")[0] ?? "";

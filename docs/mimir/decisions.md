@@ -121,3 +121,41 @@ closed there, recorded here so they don't get re-litigated at implementation tim
   `promptKey`+`promptVersion`. Templates declare a `taskClass`, never a model name — the S5
   router owns class → model.
 - **FAILED is terminal**; a retry is a new proposal with a fresh event trail — no status rewinds.
+
+## 2026-07-16 — S4: job queue = Inngest (memo §5.1 open decision, closed)
+
+**Decision: Inngest** (`inngest` ^4.13, free "Hobby" tier: 50k executions/mo, where one
+execution = a run or a step — a 3-step job ≈ 4). Evaluated against the roadmap's criteria
+(Vercel 60s fit · resumable steps · per-step retries · cost · cron-job.org-style triggers):
+
+- **Trigger.dev** — eliminated structurally: task code executes on *their* managed infra, so the
+  DB router, encrypted connection strings and env would live in a second deployment target.
+- **Upstash QStash (raw)** — cheapest, but it's a message queue, not an orchestrator: resume,
+  per-step retry and idempotency would be hand-built — exactly the layer S7+ must be able to trust.
+- **Vercel Workflows** — not in the memo's shortlist (GA'd 2026-04, after the memo). Credible
+  runner-up: no new vendor, native. Rejected for now: 3 months GA, needs the still-deferred Vercel
+  project for real observability, couples orchestration to the host. **Named re-evaluation
+  candidate** if Inngest's $99/mo Pro cliff is ever approached.
+- Inngest wins on: per-step retries with memoized earlier steps (default 4, configurable),
+  best-in-class local dev server (`npx inngest-cli dev` — per-step timeline, replay), and
+  `step.sleep`/`step.waitForEvent`, which map onto Heimdallr approval-wait shapes later.
+
+**Standing rule (any provider): queue/event payloads carry IDs only** (tenantId + entity ids),
+never domain content. Every step reads/writes domain state through the DB router — session-less,
+so via control-plane lookup → `getTenantPrisma(decrypt(connectionString))`, never `getTenantDb()`.
+Consequence: Inngest's cloud stores run metadata only, no tenant personal data. Inngest still
+joins the sub-processor list (memo §5.4) for that metadata.
+
+**Run model (closes the `events.md` S4 deferral):** no `Run` collection. `AgentEvent.runId`
+stores the Inngest run ID; the Inngest dashboard/dev server is the run browser; our events
+(`system.queue.run_started/run_finished/run_failed`) are the durable audit trail. Additive if a
+Run model is ever needed.
+
+**Proof route** (merged behind the `jobsEnabled()` env gate — `INNGEST_SIGNING_KEY` or
+`INNGEST_DEV=1`, the `aiEnabled()` idiom): `POST /api/jobs/proof` → event
+`system/proof.requested` → 3-step function `system-proof-run` (`src/lib/jobs/proof.ts`), served
+at `/api/inngest`. Verified 2026-07-16 against `crm_demo` on the local dev server: with
+`?failOnce=1` step 2 failed once and was retried alone (one `run_started`, one `run_finished`
+with `attempts: 2, survivedFailure: true`); with `?failAlways=1` the `onFailure` handler wrote
+`run_failed`. Inngest v4 API note: triggers live in `createFunction`'s first argument
+(`triggers: [{ event }]`) — the three-argument v3 form from older docs throws at module load.

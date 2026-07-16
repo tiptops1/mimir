@@ -153,12 +153,15 @@ Sizing: **S** = comfortably one session · **M** = one full session · split any
   dropping the hardcoded broker name) is deferred to its own session. *Exit met:* lint/build
   green, seed verified idempotent (row counts unchanged across two runs).
 
-- [ ] **S4 — Job-queue spike + decision** · Opus for the eval, tiny code · M
-  Closes the memo's open decision (Inngest / Trigger.dev / Upstash QStash). Criteria: Vercel 60s
-  fit, resumable steps with state in Mongo, per-step retries, cost at your volume, works with
-  cron-job.org-style external triggers. Build one proof route: a 3-step agent job that survives a
-  step failure. Now cheap to test for real — no live user in this env. *Exit:* decision recorded in
-  `decisions.md` + proof route merged behind config.
+- [x] **S4 — Job-queue spike + decision** · Opus for the eval, tiny code · M · ✅ 2026-07-16
+  **Decision: Inngest** (see `decisions.md` 2026-07-16 — Trigger.dev/QStash rejected; Vercel
+  Workflows, GA'd post-memo, is the named runner-up). Proof route shipped behind the
+  `jobsEnabled()` env gate: `POST /api/jobs/proof` → 3-step `system-proof-run`
+  (`src/lib/jobs/proof.ts`, served at `/api/inngest`) — verified on the local dev server: step 2
+  failed once and was retried alone (`run_finished` with `survivedFailure: true`), permanent
+  failure wrote `run_failed` via onFailure. Standing rule recorded: queue payloads carry IDs
+  only, domain state in Mongo through the DB router. Run model closed: no Run collection,
+  `AgentEvent.runId` = Inngest run ID.
 
 - [ ] **S5 — AI metering + model router** · Sonnet · M
   `lib/ai/meter.ts` on the `LeadOneQuota` pattern: per-tenant token/cost ledger + hard quota.

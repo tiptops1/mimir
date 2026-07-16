@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { authorized } from "@/lib/cron-auth";
 import { listActiveTenants, settle } from "@/lib/tenant-cron";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { decrypt } from "@/lib/crypto";
@@ -12,14 +13,6 @@ import type { SourceOutcome } from "@/lib/tenant-cron";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  return req.nextUrl.searchParams.get("key") === secret;
-}
 
 async function handle(req: NextRequest) {
   if (!authorized(req)) {
