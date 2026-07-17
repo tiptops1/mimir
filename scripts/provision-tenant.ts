@@ -91,16 +91,24 @@ async function main() {
     console.log(`✓ Admin ready: ${adminEmail} (ADMIN of ${slug})`);
 
     // 3) Provision the Mímisbrunnr vector index. Budget check first — never
-    //    create the index and then discover the cluster's over cap.
-    console.log(`Reserving a cluster-wide search-index slot…`);
-    await checkAndReserveIndexSlot(control);
-    const tenantClient = new TenantClient({ datasourceUrl: connectionString });
-    try {
-      await ensureVectorIndex(tenantClient);
-    } finally {
-      await tenantClient.$disconnect();
+    //    create the index and then discover the cluster's over cap. Skippable
+    //    (--no-vector-index) for tenants that don't need a knowledge base yet:
+    //    the M0 cluster allows 3 search indexes total, and once they're spent
+    //    the whole provision would hard-fail here (S13b: demo/import tenants
+    //    shouldn't burn — or be blocked by — a slot).
+    if (process.argv.includes("--no-vector-index")) {
+      console.log("– Vector index skipped (--no-vector-index): no knowledge base for this tenant until one is provisioned via rag:provision-index.");
+    } else {
+      console.log(`Reserving a cluster-wide search-index slot…`);
+      await checkAndReserveIndexSlot(control);
+      const tenantClient = new TenantClient({ datasourceUrl: connectionString });
+      try {
+        await ensureVectorIndex(tenantClient);
+      } finally {
+        await tenantClient.$disconnect();
+      }
+      console.log(`✓ Knowledge-base vector index ready for "${slug}"`);
     }
-    console.log(`✓ Knowledge-base vector index ready for "${slug}"`);
 
     console.log("✓ Tenant provisioned. Empty CRM, fully isolated.");
   } finally {

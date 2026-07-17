@@ -322,16 +322,26 @@ into the next phase on autopilot either.
   the first time since no UI queried `KnowledgeChunk` text before S13. Flagged as a follow-up task,
   not a regression in this session's code.
 
-- [ ] **S13b — ETL / onboarding import pipeline** · plan on Opus · M · *pulled forward 2026-07-17*
-  The plug-and-play machinery: source connectors (CSV/spreadsheet export, generic CRM export) →
-  mapping wizard onto the config-driven schema (`FieldDefinition` means no per-customer
-  migration) → dedupe → the same S11 health-classifier quarantine → idempotent, audited import
-  runs as Inngest jobs (IDs-only payloads, S4 rule). Reuses the S11 chunk/quarantine pipeline —
-  that's why it lives here and not later. Tested against synthetic exports (no real customer
-  yet — accepted in `decisions.md`). *Exit:* a synthetic "existing CRM export" lands in a fresh
-  demo tenant end to end, re-runs are idempotent, every imported record traceable to its import
-  run; **customer-side onboarding doc drafted** (OAuth grant, G2 data inventory, designated
-  approver, DPA, exports, autonomy ramp policy).
+- [x] **S13b — ETL / onboarding import pipeline** · plan on Opus · M · *pulled forward 2026-07-17* · ✅ 2026-07-17
+  Shipped as a server-status-driven wizard (`/settings/import`, new "Import" settings tab):
+  upload (checksum-idempotent, re-upload resumes the run) → mapping onto the config-driven
+  schema (deterministic header-synonym suggestion over NATIVE columns + tenant `FieldDefinition`s,
+  saveable as named `ImportMapping` config — no AI) → dry-run report → commit as an Inngest job
+  (`system-import-run`, IDs-only payload, 25-row batch steps). New tenant models
+  `ImportRun`/`ImportRecord`/`ImportMapping` + additive `importRunId` on Company/Contact/Deal
+  (one indexed query = "everything from run X"). Dedupe: SIRET hard key with skip/fillEmpty
+  policy, deterministic `IMPORT-<hash>` placeholder for SIRET-less rows, name/domain matches as
+  non-blocking hints. Health posture: per-row free-text bundles through the S11
+  `classifyBatch`/`partitionByVerdict` unchanged; flagged rows import **minus** their free-text
+  fields + hash-only `QuarantineItem`; `rawText`/`ImportRecord.raw` scrubbed (D3 window closed).
+  Deliberately NOT through the Heimdallr ledger — admin-commanded imports are human actions
+  (rationale in `decisions.md` 2026-07-17). Pure libs in `src/lib/import/` (64 new tests, 155
+  total). `tenant:provision` gained `--no-vector-index` (M0 cap 3/3 would block new tenants).
+  *Exit met:* 13-row synthetic export landed E2E in fresh `import_demo` tenant (10 created /
+  2 dupes skipped / 1 bad-SIRET error / 1 health row quarantined at 0.99 confidence, notes
+  stripped); re-commit and re-upload both converged with zero new writes; both themes + 375px
+  verified; `docs/mimir/onboarding.md` drafted (approver, OAuth/G1, G2 inventory, DPA, export
+  format, autonomy ramp, go-live checklist).
 
 - [ ] **Checkpoint — Phase 2 wrap** · reflection, no code · XS
   Mímisbrunnr (the well) is retrieval infra for Huginn/Muninn/Bragi — check it actually serves what

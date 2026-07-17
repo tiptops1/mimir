@@ -85,6 +85,10 @@ model Company {
   // keyed by FieldDefinition.key — new fields need no schema migration.
   customFields Json?
 
+  // Loose ref -> ImportRun that created this row (null = not imported). One
+  // indexed query answers "everything from run X" — the S13b traceability rule.
+  importRunId String? @db.ObjectId
+
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   contacts    Contact[]
@@ -100,6 +104,7 @@ model Company {
   @@index([ville])
   @@index([priorite])
   @@index([codePostal])
+  @@index([importRunId])
 }
 
 // Opportunity / affaire — a company can be re-prospected across renewals and
@@ -120,12 +125,14 @@ model Deal {
   isPrimary Boolean   @default(true) // the deal mirrored on the pipeline board
   closeDate DateTime?
   customFields Json?
+  importRunId String? @db.ObjectId // loose ref -> ImportRun (S13b traceability)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([companyId])
   @@index([stage])
   @@index([status])
+  @@index([importRunId])
 }
 
 // Business cost / income ledger — the "Finances cockpit". One flexible model
@@ -349,10 +356,12 @@ model Contact {
   companyId   String     @db.ObjectId
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   activities  Activity[]
+  importRunId String?    @db.ObjectId // loose ref -> ImportRun (S13b traceability)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   @@index([companyId])
+  @@index([importRunId])
 }
 
 // Interaction log — calls, emails, meetings, notes, stage changes.
@@ -763,6 +772,63 @@ model KnowledgeChunk {
 // Append-only (AuditLog/AgentEvent discipline): rows are never updated or
 // deleted. Stores hash + verdict ONLY — never the flagged text (D3: no health
 // data persists anywhere in Atlas; recovery = re-ingest source after prompt fix).
+// --- S13b — ETL / onboarding import pipeline --------------------------------
+// An admin-commanded CSV import of an existing CRM export. The run is the audit
+// anchor: file checksum (idempotent upload), saved mapping, per-row ImportRecord
+// plan/outcome, and stats. rawText follows the KnowledgeDocument D3 discipline —
+// scrubbed to null as soon as the job has parsed rows out of it.
+model ImportRun {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  fileName  String
+  checksum  String // sha256(rawText) — an existing non-FAILED run with the same checksum is reused
+  status    String   @default("UPLOADED") // UPLOADED | MAPPED | DRY_RUNNING | DRY_RUN_DONE | COMMITTING | DONE | FAILED
+  mapping   Json? // { columns: [{header, target?: {entity, key, source}}], options: {duplicatePolicy} }
+  mappingId String?  @db.ObjectId // loose ref -> ImportMapping used, if any
+  rawText   String? // CSV text; scrubbed after parse (D3 posture)
+  rowCount  Int      @default(0)
+  stats     Json? // {companiesCreated, companiesUpdated, skipped, contactsCreated, dealsCreated, quarantinedRows, errorRows}
+  error     String?
+  jobRunId  String? // Inngest run ID (AgentEvent.runId convention)
+  createdBy String?  @db.ObjectId // loose id into control-plane User
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([checksum])
+  @@index([status])
+}
+
+// One row of an ImportRun: the planned action, dedupe hints, mapped values
+// (`raw`, scrubbed at finalize — free text may be health-flagged), and the
+// outcome with created-entity ids. `rowKey` is the company upsert key (real
+// SIRET or deterministic IMPORT-<fp> placeholder) so re-runs converge.
+model ImportRecord {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  runId         String   @db.ObjectId // loose ref -> ImportRun
+  rowIndex      Int // position in the source file (0 = first data row)
+  rowKey        String
+  status        String   @default("PLANNED") // PLANNED | CREATED | UPDATED | SKIPPED_DUPLICATE | QUARANTINED_FIELDS | ERROR
+  plannedAction String? // CREATE | UPDATE | SKIP
+  dedupeHints   Json? // [{kind: "name" | "domain", companyId}] — soft matches, never blocking
+  raw           Json? // mapped+coerced payloads; scrubbed at finalize
+  entityIds     Json? // {companyId?, contactId?, dealId?}
+  errors        String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([runId, rowIndex])
+  @@index([runId, status])
+}
+
+// A saved, named column mapping ("Export HubSpot") — config, not code. Reused
+// across runs so a repeat import from the same source CRM skips remapping.
+model ImportMapping {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  mapping   Json // same shape as ImportRun.mapping
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model QuarantineItem {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   docId         String   @db.ObjectId

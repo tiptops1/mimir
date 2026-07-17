@@ -1,0 +1,14 @@
+Raison sociale;N° SIRET;Étape;Prénom;Nom;E-mail;Téléphone;CA (€);Site web;Code postal;Décideur;Date 1er contact;Notes;Montant;Logiciel actuel
+Courtage Horizon SARL;11111111100011;À qualifier;Julien;Mercier;j.mercier@courtage-horizon.fr;06 11 22 33 44;1 200 000 €;https://www.courtage-horizon.fr;75011;Oui;14/03/2025;Premier échange positif, rappeler en septembre.;4 500;Excel
+Assur+ Conseil;22222222200022;RDV obtenu;Sophie;Lambert;s.lambert@assurplus.fr;06 22 33 44 55;850 000;assurplus.fr;69003;Oui;02/04/2025;Intéressés par la gestion des renouvellements.;3 200;HubSpot
+Cabinet Riviera Assurances;33333333300033;Contacté;Marc;Fontaine;m.fontaine@riviera-assur.fr;[ND];2 400 000;www.riviera-assur.fr;06000;Non;28/02/2025;[ND];;Pipedrive
+Protectis Courtage;44444444400044;Gagné;Claire;Dubois;c.dubois@protectis.fr;06 44 55 66 77;560 000;https://protectis.fr;33000;Oui;10/01/2025;Contrat signé, onboarding à planifier.;6 800;Excel
+Groupe Meridien Assurance;55555555500055;Proposition envoyée;Antoine;Roussel;a.roussel@meridien-assurance.fr;06 55 66 77 88;3 100 000;meridien-assurance.fr;13001;Oui;22/05/2025;Proposition envoyée le 20/05, relance prévue.;9 500;Salesforce
+Courtiers du Littoral;66666666600066;À contacter;Émilie;Garnier;e.garnier@littoral-courtage.fr;06 66 77 88 99;[ND];littoral-courtage.fr;17000;Non;;Recommandé par Protectis.;;Aucun
+Fidélia Courtage;77777777700077;Perdu;Hugo;Blanchard;h.blanchard@fidelia-courtage.fr;06 77 88 99 00;430 000;;59000;Oui;05/12/2024;Parti chez un concurrent, garder le contact.;;Excel
+Alliance Prévoyance Sud;88888888800088;Démo réalisée;Nadia;Bensaïd;n.bensaid@alliance-prevoyance.fr;06 88 99 00 11;1 750 000;alliance-prevoyance.fr;34000;Oui;18/06/2025;Démo concluante, attend validation du comité.;7 200;HubSpot
+Courtage Horizon;11111111100011;À qualifier;Julien;Mercier;j.mercier@courtage-horizon.fr;06 11 22 33 44;1 200 000;courtage-horizon.fr;75011;Oui;14/03/2025;Doublon export : même SIRET que la ligne 2.;;Excel
+Cabinet Nova Assurance;;À contacter;Laure;Petit;l.petit@nova-assurance.fr;06 99 00 11 22;680 000;nova-assurance.fr;44000;Oui;30/06/2025;Pas de SIRET dans l'ancien CRM.;2 100;Excel
+Cabinet Nova Assurance SARL;;À contacter;Laure;Petit;l.petit@nova-assurance.fr;06 99 00 11 22;680 000;nova-assurance.fr;44000;Oui;30/06/2025;Doublon sans SIRET de la ligne précédente.;;Excel
+Santé Courtage Occitanie;99999999900099;Contacté;Paul;Vidal;p.vidal@sante-courtage.fr;06 12 34 56 78;920 000;sante-courtage.fr;31000;Oui;08/07/2025;Le dirigeant est en arrêt maladie longue durée suite à un cancer, chimiothérapie en cours — reprendre contact après son traitement.;5 000;Excel
+Courtage Atlantique;1234;À qualifier;Marie;Le Goff;m.legoff@courtage-atlantique.fr;06 98 76 54 32;510 000;courtage-atlantique.fr;29200;Non;12/06/2025;SIRET tronqué dans l'export source.;;Excel

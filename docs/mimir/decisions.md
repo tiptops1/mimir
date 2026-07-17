@@ -366,3 +366,35 @@ at the cap (`IndexBudgetExceededError`) rather than silently skipping, so this s
 the next `tenant:provision` run rather than being rediscovered as a mystery failure at S13/onboarding.
 
 Commit — see S12 entry, `docs/mimir/roadmap.md`.
+
+## 2026-07-17 — S13b: import commits are human actions (no Heimdallr ledger), quarantine at field granularity
+
+**Decision: the onboarding import does NOT route through the Heimdallr ledger.** An import the
+admin explicitly commits from the wizard (`/settings/import`) is a human action — the same class
+as every existing server action — not an autonomous agent proposal. D5's "one bridge" governs
+agent side effects; wrapping a human bulk import in PROPOSED→APPROVED would be ceremony with no
+autonomy semantics. Audit instead = `AuditLog` `IMPORT_COMMIT` at the action boundary + the
+`AgentEvent` stream from the job (`run_started`/`quarantined`/`imported`/`run_finished`/
+`run_failed`, `module: system`, `category: import`), mirroring how the S11 ingest job audits itself.
+
+**Decision: import-time health quarantine strips fields, not rows.** A CRM migration row whose
+free-text note is health-flagged is still imported — minus every mapped free-text field — with
+`ImportRecord.status = QUARANTINED_FIELDS` and a `QuarantineItem` (docId = run id, seq = row
+index, hash + verdict only). Blocking the whole company row on one note would break migrations;
+D3 only forbids persisting the flagged *text*. Same fail-closed posture as ingest: classifier
+unavailable → the batch throws → run FAILED, nothing written. The D3 window (`ImportRun.rawText`,
+`ImportRecord.raw` holding pre-classification text) is closed by scrubbing rawText at parse and
+all record payloads at finalize — verified null in E2E.
+
+**Idempotency keys:** file `sha256` at run level (re-upload → same run), SIRET-or-deterministic
+placeholder (`IMPORT-<sha256(normalizedName|codePostal)[:12]>`) as the company upsert key at row
+level. Re-commit of a DONE run converged to zero new writes in E2E (import_demo tenant, 13-row
+synthetic fixture: 10 created / 2 skipped / 1 error / 1 quarantined).
+
+**Accepted: tested against synthetic exports only** — no real customer export exists yet; the
+mapping synonym table and coercers will need a revision pass at the first real onboarding
+(flagged in `docs/mimir/onboarding.md`, itself a draft for the same reason).
+
+**Operational note:** `tenant:provision` gained `--no-vector-index` — the M0 cap being 3/3 (see
+S12 entry) would otherwise hard-block provisioning any new tenant; demo/import tenants without a
+knowledge base skip the slot instead. `import_demo` was provisioned this way.
