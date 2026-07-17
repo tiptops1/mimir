@@ -1,8 +1,11 @@
 import "dotenv/config";
 import { execSync } from "node:child_process";
 import bcrypt from "bcryptjs";
+import { PrismaClient as TenantClient } from "@prisma/client";
 import { PrismaClient as ControlClient } from "../src/generated/control";
 import { encrypt } from "../src/lib/crypto";
+import { checkAndReserveIndexSlot } from "../src/lib/rag/index-budget";
+import { ensureVectorIndex } from "../src/lib/rag/vector-index";
 
 /**
  * Provision a NEW tenant: create its isolated data DB on the cluster, register
@@ -86,6 +89,19 @@ async function main() {
       create: { userId: user.id, tenantId: tenant.id, role: "ADMIN" },
     });
     console.log(`✓ Admin ready: ${adminEmail} (ADMIN of ${slug})`);
+
+    // 3) Provision the Mímisbrunnr vector index. Budget check first — never
+    //    create the index and then discover the cluster's over cap.
+    console.log(`Reserving a cluster-wide search-index slot…`);
+    await checkAndReserveIndexSlot(control);
+    const tenantClient = new TenantClient({ datasourceUrl: connectionString });
+    try {
+      await ensureVectorIndex(tenantClient);
+    } finally {
+      await tenantClient.$disconnect();
+    }
+    console.log(`✓ Knowledge-base vector index ready for "${slug}"`);
+
     console.log("✓ Tenant provisioned. Empty CRM, fully isolated.");
   } finally {
     await control.$disconnect();

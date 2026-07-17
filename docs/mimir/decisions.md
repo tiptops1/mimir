@@ -345,3 +345,24 @@ ongoing visibility if real-scale ingestion later requires a paid tier upgrade.
 **Not resolved here, for S12:** Vector index provisioning, retrieval, and the M0 cluster's 3-search-index cap.
 
 Commit 269673b.
+
+## 2026-07-17 — S12: index budget is cluster-wide (control plane), M0 cap now fully spent
+
+**Decision: the search-index budget counter lives in the control plane (`SearchIndexBudget`
+singleton), not a per-tenant collection.** Atlas's search-index cap is per-cluster, not per
+tenant DB — `AiBudget`/`LeadOneQuota`'s per-tenant shape (S5/inherited baseline) would leave each
+tenant blind to what other tenants on the same cluster have already spent. Confirmed the real
+number in-repo: `scripts/create-search-indexes.ts`'s own comment says **M0 allows 3 search
+indexes**, not the memo's 2,500/cluster figure (that number is presumably a paid-tier count or a
+different limit — memo is stale here, this file wins per the header rule).
+
+**Consequence, not hypothetical:** 2 of 3 were already spent by the inherited `Company`/`Contact`
+text-search indexes before S12 wrote a line of code. Provisioning `crm_demo`'s
+`KnowledgeChunk` vector index spent the 3rd. **`mimir-dev` is now at the M0 cap (3/3).**
+Onboarding a second tenant with a knowledge base is blocked until the cluster is upgraded to
+Flex/M10 — a billing action Nicolas does himself in the Atlas console, not something this repo's
+scripts do automatically. `checkAndReserveIndexSlot` (`src/lib/rag/index-budget.ts`) hard-blocks
+at the cap (`IndexBudgetExceededError`) rather than silently skipping, so this surfaces loudly at
+the next `tenant:provision` run rather than being rediscovered as a mystery failure at S13/onboarding.
+
+Commit — see S12 entry, `docs/mimir/roadmap.md`.

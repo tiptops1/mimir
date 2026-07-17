@@ -284,12 +284,26 @@ into the next phase on autopilot either.
   pass.** E2E verified: clean doc → ingested with embeddings (rawText scrubbed); health doc →
   quarantined (hash+verdict only); checksum dedup prevents re-ingest.
 
-- [ ] **S12 — Per-tenant vector index + retrieval** · Sonnet · M
-  Index provisioning wired into `tenant:provision` + an index-budget counter (2,500/cluster cap is
-  the scaling constraint — count from day one; **the new cluster gets its own budget**).
-  `lib/rag/retrieve.ts` returning passages with source refs, through the DB router only. Atlas trap:
-  `$search` on a missing index returns `[]`, not an error — provisioning must verify the index
-  exists.
+- [x] **S12 — Per-tenant vector index + retrieval** · Sonnet · M · ✅ 2026-07-17
+  `SearchIndexBudget` singleton added to the **control plane** (`prisma/control/schema.prisma`),
+  not the tenant DB — the real Atlas cap is **3 search indexes per cluster on M0** (not the memo's
+  2,500 figure; see `decisions.md`), shared across every tenant, so a per-tenant counter couldn't
+  see it. `src/lib/rag/index-budget.ts` (`checkAndReserveIndexSlot`, atomic, throws
+  `IndexBudgetExceededError` at cap) + `src/lib/rag/vector-index.ts` (`ensureVectorIndex` —
+  `createSearchIndexes` with a `vectorSearch` definition over `KnowledgeChunk.embedding`, 768 dims
+  cosine; `isVectorIndexReady` — closes the "`$search` on a missing index returns `[]`" trap via
+  `$listSearchIndexes`). Wired into `scripts/provision-tenant.ts` (budget check before index
+  creation, fails the whole provision loudly). `src/lib/rag/retrieve.ts`:
+  `retrieve(prisma, query, opts?)` embeds the query (`embedTexts(..., "RETRIEVAL_QUERY")`, S5
+  metering reused), runs `$vectorSearch` via `aggregateRaw`, returns `{docId, chunkId, text,
+  score}` — the exact `AgentAction.sources` shape already documented at `events.md:137`, so S14
+  can drop results into a ledger proposal with no reshaping. `npm run rag:provision-index`
+  backfills tenants provisioned before this session (`crm_demo`). *Exit met:* index built and
+  verified `READY`/queryable against `crm_demo`; `retrieve()` returned a real passage (score 0.91,
+  correct `docId`/`chunkId`) for a query against actual S11-ingested content; 4 new tests (91
+  total); lint/build clean. **M0 cap is now fully spent (3/3)** — onboarding tenant #2 with a
+  knowledge base requires the Flex/M10 upgrade first (Nicolas does this manually in the Atlas
+  console; `checkAndReserveIndexSlot` will hard-block, not silently skip, until then).
 
 - [ ] **S13 — RAG demo surface** · Sonnet · S
   Minimal query UI with cited passages. Read-only, no side effects — this is the sales demo.

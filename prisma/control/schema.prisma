@@ -87,6 +87,18 @@ model User {
   memberships  Membership[]
 }
 
+// Cluster-wide Atlas Search index count (Atlas caps indexes per cluster, not
+// per DB/tenant — M0 = 3). Singleton row, atomically incremented on every
+// successful index provision. Lives in the control plane (not a tenant DB)
+// because the budget must be visible across every tenant sharing this cluster.
+model SearchIndexBudget {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  singleton String   @unique @default("default")
+  used      Int      @default(2) // pre-seeded: Company + Contact text indexes (scripts/create-search-indexes.ts)
+  limit     Int      @default(3) // M0 cap; raise after the Flex/M10 upgrade
+  updatedAt DateTime @updatedAt
+}
+
 // Links a user to a tenant with a per-tenant role.
 model Membership {
   id       String @id @default(auto()) @map("_id") @db.ObjectId

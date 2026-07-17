@@ -21,6 +21,7 @@
     "tenant:seed-demo": "tsx scripts/seed-demo-data.ts",
     "user:add": "tsx scripts/add-user.ts",
     "search:indexes": "tsx scripts/create-search-indexes.ts",
+    "rag:provision-index": "tsx scripts/rag/provision-vector-index.ts",
     "enrich:all": "tsx prisma/enrich-all.ts",
     "enrich:websites": "tsx scripts/enrich-websites.ts",
     "import:200-1802": "tsx scripts/dedup-and-import.ts",
