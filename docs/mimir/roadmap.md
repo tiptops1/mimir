@@ -276,11 +276,13 @@ into the next phase on autopilot either.
   numbers in `decisions.md` 2026-07-17. No fetching/scraping involved — synthetic data only, so
   the datacenter-IP note didn't apply.
 
-- [ ] **S11 — Ingestion + chunking + health classifier** · plan on Opus · M
+- [x] **S11 — Ingestion + chunking + health classifier** · plan on Opus · M · ✅ 2026-07-17
   Pipeline: source doc → chunk → **Haiku health classifier (prompt = tenant config)** → quarantine
   flagged content **before storage/embedding** → embed → store. Quarantine is append-only and
   auditable. This is the D3 posture; it cannot be retrofitted. *Exit:* classifier prompt in config;
-  quarantine path unit-tested with health-flavored fixtures; runs as queue jobs (S4).
+  quarantine path unit-tested with health-flavored fixtures; runs as queue jobs (S4). **All 87 tests
+  pass.** E2E verified: clean doc → ingested with embeddings (rawText scrubbed); health doc →
+  quarantined (hash+verdict only); checksum dedup prevents re-ingest.
 
 - [ ] **S12 — Per-tenant vector index + retrieval** · Sonnet · M
   Index provisioning wired into `tenant:provision` + an index-budget counter (2,500/cluster cap is

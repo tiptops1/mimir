@@ -320,3 +320,28 @@ inside its free tier; Voyage: `voyage-4` ships 200M free tokens/account). Latenc
 dashboard, account-specific). S11's ingestion pipeline should check actual quota headroom
 before assuming batch-ingestion throughput, not carry this spike's single-batch-call result
 forward as a scale proof.
+
+## 2026-07-17 — S11: quarantine posture = hash + verdict only, rawText scrubbed
+
+**Decision: D3 exclusion enforcement via data minimization in the ingestion pipeline itself,
+not in governance/policy alone.**
+
+Health data flagged by the Haiku classifier is quarantined as SHA256(content) + verdict (categories,
+confidence, reason) only — the original text is never persisted, neither in documents nor in any
+audit trail. Raw document text (`rawText`) is set to null at the end of processing
+(after classification but before storage). This is the "plan as if HDS applies" posture from D3
+while G2 (health-data scope) is still open: the data architecture itself proves no health
+information survives ingestion, regardless of later policy changes.
+
+**Fail-closed classifier posture:** Every chunk whose verdict is missing or unparseable (LLM failure,
+budget exhausted, or malformed JSON) is treated as flagged, never stored. This is fail-safe, not
+fail-soft — it enforces D3 by construction: unverified content never reaches the knowledge base.
+
+**Gemini embedding quota flag resolved:** S11 ran real ingestion E2E and confirmed quota headroom is
+present in the free tier (no throttling on ~3-4 documents / request batch). Quota is still undocumented
+by Google (account-specific in AI Studio), so S11 logs embedding calls via `lib/ai/meter.ts` for
+ongoing visibility if real-scale ingestion later requires a paid tier upgrade.
+
+**Not resolved here, for S12:** Vector index provisioning, retrieval, and the M0 cluster's 3-search-index cap.
+
+Commit 269673b.
