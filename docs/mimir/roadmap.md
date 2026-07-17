@@ -201,11 +201,18 @@ into the next phase on autopilot either.
 
 ### Phase 1 — Heimdallr, module 0 (the bridge)
 
-- [ ] **S7 — Ledger core + state machine** · plan on Opus, implement on Sonnet · M
-  Write API + lifecycle transitions with guards (only `proposed` can be approved; `executed` +
-  reversible → undoable; edits captured as diffs for graduation stats). Zod-validate every
-  transition. **Add vitest here** and unit-test the state machine — first tests in the repo, pure
-  logic only. *Exit:* tests green; `npm run test` added to the `/ship` chain.
+- [x] **S7 — Ledger core + state machine** · plan on Opus, implement on Sonnet · M · ✅ 2026-07-17
+  `src/lib/heimdallr/state-machine.ts`: pure guard logic (`assertTransition` against the
+  events.md §2 table, `isAutoApproveEligible`, `isUndoable`, `isExpired`) — no I/O, fully
+  unit-tested (65 tests, vitest). `src/lib/heimdallr/ledger.ts`: the write API — `proposeAction`,
+  `approveAction` (edit-then-approve + auto-approve, `wasEdited` diff flag), `rejectAction`,
+  `expireAction`/`sweepExpired`, `executeAction` (reversible actions must supply `undoData`),
+  `failAction`, `undoAction`, `autoApproveIfEligible`. Every transition is one Prisma interactive
+  `$transaction` (read → guard → update → paired `AgentEvent`) so ledger and event stream can't
+  drift; every function takes the tenant `PrismaClient` first arg (meter.ts/guardrails.ts
+  convention), no `getTenantDb()` import, stays callable from Inngest jobs. Zod-validated inputs.
+  `vitest` added (`npm run test`); wired into the `mimir-ship` chain after lint, before build.
+  *Exit met:* tests green; `npm run test` in the ship chain; `npm run lint`/`npm run build` clean.
 
 - [ ] **S8 — Approval inbox UI** · Sonnet · M
   Extend the inherited `/inbox` triage pattern (not fork): pending proposals with source passages +

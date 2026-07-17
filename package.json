@@ -10,6 +10,7 @@
     "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "postinstall": "npm run prisma:generate",
     "prisma:generate": "prisma generate --schema=prisma/control/schema.prisma && prisma generate --schema=prisma/tenant/schema.prisma",
     "db:push": "prisma db push --schema=prisma/tenant/schema.prisma",
@@ -67,6 +68,7 @@
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

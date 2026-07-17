@@ -19,6 +19,7 @@ Run this exact sequence from inside the `mimir/` repo, only after the user expli
 
 ```bash
 npm run lint
+npm run test
 npm run build          # runs prisma:generate for both schemas first
 git add -A && git commit -m "..."
 git push               # Vercel auto-deploys from main
