@@ -254,20 +254,27 @@ into the next phase on autopilot either.
   `AutonomyConfig.level` dropped 2→1 and the inbox rendered the "Disjoncteur déclenché" banner;
   scratch data cleaned up after; lint/build clean.
 
-- [ ] **Checkpoint — Phase 1 wrap** · reflection, no code · XS
-  Heimdallr (the bridge) is the substrate every later module proposes actions through — this is
-  the highest-leverage checkpoint to get right. Demo the full propose → approve/edit/reject →
-  execute → undo loop on `crm_demo` with a hand-inserted proposal. Does the breaker/graduation
-  design (S9) hold up against a real edit, or does it need adjusting before Mímisbrunnr starts
-  writing proposals against it? Revisit whether any inbox UX gaps found while demoing are worth
-  a follow-up session before Phase 2, or can ride along later.
+- [x] **Checkpoint — Phase 1 wrap** · reflection, no code · XS · ✅ 2026-07-17
+  Demoed propose → approve / edit-then-approve / undo on `crm_demo` with hand-inserted
+  `AgentAction` rows (reject already proven at S8); all scratch data reverted after, inbox back
+  to 0 pending. Ledger/approval/undo-bookkeeping loop confirmed solid; inbox UX had no gaps
+  worth a follow-up. **Two real gaps logged in `decisions.md` for Phase 2/3 to not silently
+  inherit as solved:** (1) nothing calls `executeAction` yet — no module exists to apply a
+  domain change and execute it, expected until a real module ships; (2) `undoAction` only flips
+  ledger state, it never reverts the domain data `undoData` describes — flagged for S14
+  (Huginn's draft-reply execution path, the first realistically-undoable action) to design
+  around explicitly.
 
 ### Phase 2 — Mímisbrunnr, module 1 (the well)
 
-- [ ] **S10 — Embedding spike + decision** · S · **run locally**
-  Gemini embeddings vs Voyage on ~50 real-ish French insurance chunks: retrieval quality, price,
-  dimension/index cost. Record in `decisions.md`. Remember datacenter-IP scraping limits if any
-  fetching is involved.
+- [x] **S10 — Embedding spike + decision** · S · **run locally** · ✅ 2026-07-17
+  `scripts/rag/embedding-spike.ts` + `scripts/rag/spike-data.ts` (50 synthetic French courtier
+  chunks, 20 labeled eval queries, kept in the repo for re-runs). **Decision: Gemini
+  `gemini-embedding-001` at `outputDimensionality: 768`** — 100%/100% recall@1/@3 vs Voyage
+  `voyage-4`'s 95%/100%, no new vendor while G2 (HDS scope) is still open, and Matryoshka
+  dimension flexibility directly serves the S12 M0-index-cap constraint. Full rationale +
+  numbers in `decisions.md` 2026-07-17. No fetching/scraping involved — synthetic data only, so
+  the datacenter-IP note didn't apply.
 
 - [ ] **S11 — Ingestion + chunking + health classifier** · plan on Opus · M
   Pipeline: source doc → chunk → **Haiku health classifier (prompt = tenant config)** → quarantine

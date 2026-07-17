@@ -236,3 +236,87 @@ Nornir's hero surface** — S17's scope now says so explicitly (the S5 `AiUsage`
 already exists; it only has a CLI report today). And the customer-side onboarding requirements
 (OAuth grant, G2 data inventory, designated approver, DPA, exports for ETL, autonomy ramp
 policy) need a real onboarding doc before customer #1 — attached to the ETL session's exit.
+
+## 2026-07-17 — Checkpoint: Phase 1 (Heimdallr) wrap
+
+Demoed the full loop on `crm_demo` with hand-inserted `AgentAction` rows (reusing S8's
+`scripts/heimdallr/seed-demo-proposal.ts`): propose → approve (verified in DB), edit-then-approve
+(`wasEdited: true`, `editedPayload` persisted, `decidedBy` recorded), reject (already proven at
+S8), execute → undo. All scratch data reverted after; `crm_demo`'s inbox is back to 0 pending.
+
+**Real gap found, not a bug: nothing calls `executeAction` today.** `approveActionSA` only
+transitions PROPOSED → APPROVED. No module exists yet to actually apply the domain change and call
+`executeAction(..., { undoData })` — that's expected (Huginn/Bragi/etc. don't exist until Phase
+2+), but it means the "approve → execute" half of the loop has never run end-to-end except via a
+throwaway demo script (`executeAction` called manually, deleted after). **Action for whichever
+module writes the first real proposal:** each module's own execution path is responsible for
+calling `executeAction` after approval — the ledger does not do this automatically, and nothing
+currently sweeps APPROVED rows to execute them.
+
+**Real gap found, more load-bearing: `undoAction` never reverts domain data.** Verified directly —
+after undo, the `Company.notes` field written by the demo's "execution" step was still mutated;
+`undoAction` (`src/lib/heimdallr/ledger.ts`) only flips ledger state (EXECUTED → UNDONE) and writes
+the `undone` `AgentEvent`. `undoData` is stored on the row but nothing reads it back. **This must be
+fixed or explicitly designed around before any module ships an undoable action** — right now
+"annuler" in the inbox UI gives the human the impression the change was reverted when it wasn't.
+Two ways to close this before Phase 3 (Huginn is the first module whose actions will realistically
+be undone by a human): (a) give `undoAction` an optional module-supplied revert callback/adapter
+keyed on `category` or `type`, invoked inside the same transaction; or (b) keep `undoAction` as
+pure ledger bookkeeping and require every module's execution path to also register a matching undo
+handler that the inbox action calls first. Not decided here — flag for whoever designs Huginn's
+draft-reply execution path (S14), since that's the first real reversible action.
+
+**Breaker/graduation design (S9) not re-verified this session** — S9's own exit criteria already
+demonstrated the level 2→1 demotion and inbox banner end-to-end; no new information since then to
+suggest it needs adjusting.
+
+**Inbox UX**: no gaps found worth a follow-up session. Details/payload/sources/trigger rendering,
+filters, and the undo tray all read correctly against real (if synthetic) data.
+
+**Verdict: Heimdallr's ledger/approval/undo-bookkeeping loop is solid. The execute-and-undo
+*domain-effect* wiring is the one open thread Mímisbrunnr/Huginn must not silently inherit as
+"already solved."** Recorded here rather than silently rolling into Phase 2.
+
+## 2026-07-17 — S10: embedding provider = Gemini (`gemini-embedding-001`, dims=768)
+
+**Decision: Gemini `gemini-embedding-001` at `outputDimensionality: 768`, not Voyage.**
+
+Ran `scripts/rag/embedding-spike.ts` (kept in the repo — cheap to re-run if this needs
+revisiting) against `scripts/rag/spike-data.ts`: 50 synthetic French courtier/insurance chunks
+across 10 topics (auto, habitation, santé, RC pro, assurance vie, procédure sinistre,
+résiliation/Loi Hamon, cotisations, garanties complémentaires, relation client), 20 labeled
+eval queries (`query → expected chunk id`), recall@1/@3 scored by cosine similarity. Compared
+`gemini-embedding-001` (768 dims, Matryoshka-truncated from a 3072 default) against `voyage-4`
+(1024 dims, Voyage's current general-purpose/multilingual model — not the older `voyage-3` the
+roadmap named, since Voyage's lineup moved on and `voyage-4` is also the one with a real free
+tier). Pricing/API shapes verified live against `ai.google.dev`/`docs.voyageai.com` on
+2026-07-17, not from training-data memory (S5's stated discipline).
+
+**Results:** Gemini 100% recall@1, 100% recall@3. Voyage 95% recall@1 (1 miss — confused two
+adjacent auto-coverage-type chunks, "tous risques" vs "au tiers"), 100% recall@3. Both
+effectively free at this scale (Gemini: ~3.3k tokens ≈ $0.0005 at paid-tier pricing, well
+inside its free tier; Voyage: `voyage-4` ships 200M free tokens/account). Latency comparable
+(~1.4s for 50 chunks, both providers, single batch call).
+
+**Why Gemini despite near-parity:**
+- **No new vendor.** Gemini is already wired in (`ai-extract.ts`, `lib/ai/router.ts`,
+  `GEMINI_API_KEY`) and already on the sub-processor list. Voyage would be a new data
+  processor — real weight while **G2 (HDS/health-data scope) is still open** and Huginn hasn't
+  ingested anything yet; minimizing new processors before that gate closes is the safer default,
+  not a marginal convenience.
+- **Flexible output dimensionality is the direct answer to the S12 constraint.** `decisions.md`
+  (S0 entry) already flags the M0 cluster's 3-search-index cap as binding at S12. Gemini's
+  128–3072 Matryoshka range means the dimension can be tuned to index-cost budget without a
+  provider or architecture change; Voyage's dims are fixed per model.
+- **Voyage's real advantages didn't apply here.** `input_type` query/document asymmetric
+  prompting and domain-specialized models (`voyage-law-2`, 16k context) are aimed at
+  legal/contract-heavy corpora — not this phase's generic broker-document shape. **Flag
+  `voyage-law-2` as the first thing to re-evaluate if/when Legal (Phase 6, S23) needs its own
+  retrieval index** — that's the corpus it's actually built for.
+- Recall difference (100% vs 95%, n=20) isn't strong evidence on its own — noted, not leaned on.
+
+**Not resolved here, flag before S11 ingests at real scale:** free-tier RPM/TPM for
+`gemini-embedding-001` couldn't be confirmed from public docs (Google points to the AI Studio
+dashboard, account-specific). S11's ingestion pipeline should check actual quota headroom
+before assuming batch-ingestion throughput, not carry this spike's single-batch-call result
+forward as a scale proof.
