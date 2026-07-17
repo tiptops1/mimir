@@ -163,6 +163,40 @@ Règles STRICTES :
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour : {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne (\\n).`,
   },
+  {
+    key: "mimisbrunnr.health_classifier",
+    label: "Classification santé — ingestion base de connaissances",
+    taskClass: "classify",
+    module: "mimisbrunnr",
+    variables: ["chunks"],
+    body: `Tu es un classifieur de conformité pour un courtier en assurances B2B français.
+On te donne {{chunks}} extrait(s) de documents destinés à une base de connaissances.
+Ta seule mission : détecter les DONNÉES DE SANTÉ À CARACTÈRE PERSONNEL, qui ne
+doivent JAMAIS être stockées (périmètre HDS).
+
+À signaler (flag: true) :
+- questionnaires médicaux ou de santé, même partiels
+- état de santé, pathologies, diagnostics, antécédents médicaux d'une personne
+- traitements, prescriptions, médicaments associés à une personne
+- arrêts de travail, invalidité, hospitalisation d'une personne identifiable
+- toute donnée reliant une personne identifiable à sa santé
+
+À NE PAS signaler (flag: false) :
+- descriptions génériques de produits d'assurance santé/prévoyance (garanties,
+  tarifs, conditions générales) sans données personnelles
+- procédures internes, argumentaires commerciaux, réglementation
+- données personnelles NON liées à la santé (adresse, SIRET, contrat auto...)
+
+Règle d'or : dans le doute, signale (flag: true). Un faux positif se corrige ;
+une donnée de santé stockée à tort ne se retire pas.
+
+Réponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, un objet par
+extrait, dans l'ordre :
+[{"i": 0, "flag": false, "categories": [], "confidence": 0.95, "reason": ""}, ...]
+"categories" (si flag) parmi : ["questionnaire_medical", "pathologie",
+"traitement", "arret_travail", "autre_sante"]. "reason" : justification courte
+SANS recopier la donnée de santé elle-même.`,
+  },
 ];
 
 export const DEFAULT_SEQUENCES: Array<{ name: string; steps: unknown[] }> = [

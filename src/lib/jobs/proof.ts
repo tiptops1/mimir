@@ -1,9 +1,6 @@
-import { NonRetriableError } from "inngest";
 import { z } from "zod";
 import { inngest } from "./client";
-import { controlPrisma } from "@/lib/control-db";
-import { getTenantPrisma } from "@/lib/tenant-db";
-import { decrypt } from "@/lib/crypto";
+import { tenantPrismaById } from "./tenant";
 
 // S4 proof job: a 3-step agent run that survives a step failure. Demonstrates
 // the pattern every future agent job follows — payload is IDs only, each step
@@ -19,17 +16,6 @@ export const proofPayload = z.object({
   // observable without waiting out real retries.
   failAlways: z.boolean().optional().default(false),
 });
-
-async function tenantPrismaById(tenantId: string) {
-  const tenant = await controlPrisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { connectionString: true },
-  });
-  if (!tenant) {
-    throw new NonRetriableError(`Unknown tenant: ${tenantId}`);
-  }
-  return getTenantPrisma(decrypt(tenant.connectionString));
-}
 
 export const proofRun = inngest.createFunction(
   {

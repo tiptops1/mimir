@@ -720,3 +720,59 @@ model PromptTemplate {
   @@unique([key, version])
   @@index([key, active])
 }
+
+// --- Mimisbrunnr (S11) — knowledge base ingestion ---------------------------
+// Generic ontology (events.md Path C rule 2): knowledge document / chunk /
+// quarantine — vertical vocabulary lives in config, never in model names.
+
+model KnowledgeDocument {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  sourceType String // "manual" | "upload" | "import" — open vocab, string not enum
+  sourceRef  Json? // pointer to origin (import run, file name, ...)
+  checksum   String // sha256(rawText) — idempotent re-ingest key
+  status     String  @default("PENDING") // PENDING | PROCESSING | INGESTED | FAILED
+  // Scrubbed (set null) at the end of processing — D3 exclusion posture: the
+  // raw source may contain health data; only classifier-passed chunks persist.
+  rawText    String?
+
+  chunkCount       Int     @default(0)
+  quarantinedCount Int     @default(0)
+  error            String?
+  ingestRunId      String? // Inngest run ID (AgentEvent.runId convention)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([checksum])
+  @@index([status])
+}
+
+model KnowledgeChunk {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  docId      String    @db.ObjectId // loose ref -> KnowledgeDocument
+  seq        Int // position within the document
+  text       String // clean (classifier-passed) content only
+  embedding  Float[] // 768 dims — Gemini gemini-embedding-001 (S10 decision)
+  embeddedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([docId, seq])
+}
+
+// Append-only (AuditLog/AgentEvent discipline): rows are never updated or
+// deleted. Stores hash + verdict ONLY — never the flagged text (D3: no health
+// data persists anywhere in Atlas; recovery = re-ingest source after prompt fix).
+model QuarantineItem {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  docId         String   @db.ObjectId
+  seq           Int
+  contentHash   String // sha256 of the flagged chunk — NEVER the text
+  verdict       Json // { categories: string[], confidence, reason } from the classifier
+  promptKey     String // pins the classifier prompt...
+  promptVersion Int //    ...and its exact version (audit trail)
+  at            DateTime @default(now())
+
+  @@index([docId])
+  @@index([at])
+}
