@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mimir — Agentic Platform Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#060913;
+    --night:#0c1222;
+    --panel:#111a30;
+    --panel-2:#0e1628;
+    --line:#26314d;
+    --line-soft:#1b2540;
+    --bone:#e9e3d3;
+    --mist:#8f9cb3;
+    --dim:#5c6a85;
+    --brass:#c9a44c;
+    --brass-soft:rgba(201,164,76,.14);
+    --well:#4fd8c4;
+    --well-soft:rgba(79,216,196,.12);
+    --ember:#c05b47;
+    --ember-soft:rgba(192,91,71,.12);
+    --live:#6fbf83;
+    --disp:'Cinzel',Georgia,serif;
+    --body:'Alegreya Sans','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{
+    background:var(--abyss);
+    background-image:radial-gradient(1200px 600px at 50% -10%,#101a33 0%,transparent 60%);
+    color:var(--bone);
+    font-family:var(--body);
+    font-size:17px;line-height:1.55;
+    padding:0 0 96px;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+  /* ---------- header ---------- */
+  header{padding:72px 0 40px;text-align:center;position:relative}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--brass);margin-bottom:20px;
+  }
+  h1{
+    font-family:var(--disp);font-weight:500;font-size:clamp(44px,7vw,74px);
+    letter-spacing:.14em;line-height:1.05;color:var(--bone);
+  }
+  h1 .rune{color:var(--brass)}
+  .subtitle{max-width:620px;margin:20px auto 0;color:var(--mist);font-size:18px}
+  .subtitle em{color:var(--bone);font-style:normal}
+  .meta{margin-top:26px;display:flex;gap:22px;justify-content:center;flex-wrap:wrap;
+    font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.06em}
+  .meta b{color:var(--mist);font-weight:500}
+
+  /* ---------- section chrome ---------- */
+  section{margin-top:88px}
+  .sec-head{display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--line-soft);
+    padding-bottom:14px;margin-bottom:30px}
+  .sec-num{font-family:var(--mono);font-size:12px;color:var(--brass);letter-spacing:.2em}
+  h2{font-family:var(--disp);font-weight:500;font-size:24px;letter-spacing:.1em;text-transform:uppercase}
+  .sec-note{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.05em}
+  @media(max-width:640px){.sec-note{display:none}}
+
+  /* ---------- the trunk diagram ---------- */
+  .trunk-wrap{position:relative;padding:8px 0}
+  .trunk{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);
+    background:linear-gradient(to bottom,transparent,var(--brass) 6%,var(--brass) 94%,transparent);
+    opacity:.45;z-index:0}
+  @media(max-width:760px){.trunk{left:18px}}
+
+  .tier{position:relative;z-index:1;margin-bottom:22px}
+  .tier-label{
+    display:flex;align-items:center;gap:12px;margin-bottom:12px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);
+  }
+  .tier-label::after{content:'';flex:1;height:1px;background:var(--line-soft)}
+  .tier-label .stat{letter-spacing:.08em}
+  .stat-live{color:var(--live)}
+  .stat-plan{color:var(--brass)}
+  .stat-gate{color:var(--ember)}
+
+  .cards{display:grid;gap:12px}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .cols-3{grid-template-columns:1fr 1fr 1fr}
+  .cols-4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:860px){.cols-3,.cols-4{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.cols-2,.cols-3,.cols-4{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+    padding:16px 18px;position:relative;
+  }
+  .card .name{font-family:var(--disp);font-size:15px;letter-spacing:.08em;color:var(--bone);margin-bottom:2px}
+  .card .role{font-size:14px;color:var(--brass);font-weight:500;margin-bottom:8px}
+  .card p{font-size:14px;color:var(--mist)}
+  .card .tag{
+    position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
+  }
+  .card code{font-family:var(--mono);font-size:12px;color:var(--well);background:rgba(79,216,196,.07);
+    padding:1px 5px;border-radius:3px}
+
+  /* hero cards: ledger + well */
+  .card-hero{
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+    border-color:var(--brass);border-width:1px;padding:22px 24px;
+    box-shadow:0 0 40px rgba(201,164,76,.06);
+  }
+  .card-hero .name{font-size:20px;letter-spacing:.12em}
+  .card-well{
+    border-color:var(--well);
+    box-shadow:0 0 46px rgba(79,216,196,.08);
+    background:
+      radial-gradient(420px 130px at 50% 115%,var(--well-soft),transparent 70%),
+      linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+  }
+  .card-well .role{color:var(--well)}
+  .card-hero p{font-size:15px}
+
+  .flow-note{
+    text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--dim);margin:4px 0 22px;position:relative;z-index:1;
+  }
+  .flow-note b{color:var(--brass);font-weight:500}
+
+  /* pills inside foundation */
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--mist);border:1px solid var(--line);
+    border-radius:99px;padding:3px 10px;letter-spacing:.03em}
+
+  /* ---------- build sequence ---------- */
+  .seq{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  @media(max-width:900px){.seq{grid-template-columns:repeat(4,1fr)}}
+  @media(max-width:600px){.seq{grid-template-columns:repeat(2,1fr)}}
+  .step{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+    padding:14px 12px;display:flex;flex-direction:column;gap:6px;min-height:150px;
+  }
+  .step .n{font-family:var(--disp);font-size:26px;color:var(--brass);line-height:1}
+  .step .t{font-size:13.5px;font-weight:700;letter-spacing:.02em}
+  .step .d{font-size:12px;color:var(--mist);line-height:1.45}
+  .step .g{margin-top:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ember)}
+  .step .g.ok{color:var(--dim)}
+  .step-root{border-color:var(--brass)}
+  .step-well{border-color:var(--well)} .step-well .n{color:var(--well)}
+  .seq-cap{margin-top:14px;font-size:14px;color:var(--dim);text-align:center}
+  .seq-cap b{color:var(--mist);font-weight:500}
+
+  /* ---------- autonomy ramp ---------- */
+  .ramp{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);
+    border-radius:8px;overflow:hidden;background:var(--panel-2)}
+  @media(max-width:700px){.ramp{grid-template-columns:1fr 1fr}}
+  .rung{padding:18px 16px;border-right:1px solid var(--line-soft);position:relative}
+  .rung:last-child{border-right:none}
+  @media(max-width:700px){.rung:nth-child(2){border-right:none}.rung:nth-child(-n+2){border-bottom:1px solid var(--line-soft)}}
+  .rung .lvl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--brass);margin-bottom:6px}
+  .rung .lt{font-size:14px;font-weight:700;margin-bottom:6px}
+  .rung p{font-size:12.5px;color:var(--mist)}
+  .rung-active{background:var(--brass-soft)}
+  .rung-active::after{content:'MVP launches here';position:absolute;top:10px;right:12px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+  .ramp-rules{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px}
+  @media(max-width:700px){.ramp-rules{grid-template-columns:1fr}}
+  .rule{border-left:2px solid var(--line);padding:4px 0 4px 14px;font-size:13.5px;color:var(--mist)}
+  .rule b{color:var(--bone);font-weight:700;display:block;font-size:13px;margin-bottom:2px}
+  .rule.warn{border-color:var(--ember)}
+  .rule.gold{border-color:var(--brass)}
+
+  /* ---------- gates ---------- */
+  .gates{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:700px){.gates{grid-template-columns:1fr}}
+  .gate{border:1px solid rgba(192,91,71,.45);background:linear-gradient(180deg,var(--ember-soft),transparent 60%),var(--panel-2);
+    border-radius:8px;padding:20px 22px}
+  .gate .gid{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ember);margin-bottom:8px}
+  .gate .gt{font-family:var(--disp);font-size:17px;letter-spacing:.06em;margin-bottom:10px}
+  .gate p{font-size:14px;color:var(--mist);margin-bottom:8px}
+  .gate .act{font-size:13.5px;color:var(--bone)}
+  .gate .act b{color:var(--ember);font-weight:700}
+
+  /* ---------- structural retrofits ---------- */
+  .retro{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:860px){.retro{grid-template-columns:1fr}}
+
+  /* ---------- economics ---------- */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft)}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);font-weight:500}
+  td{color:var(--mist)}
+  td:first-child{color:var(--bone)}
+  tr.total td{color:var(--bone);font-weight:700;border-top:1px solid var(--line)}
+  .econ-note{margin-top:14px;font-size:14px;color:var(--dim)}
+  .econ-note b{color:var(--brass);font-weight:500}
+
+  footer{margin-top:96px;text-align:center;font-family:var(--mono);font-size:11px;
+    color:var(--dim);letter-spacing:.08em;line-height:2}
+
+  /* ---------- time savings ---------- */
+  .assume-note{font-size:13.5px;color:var(--dim);margin-bottom:18px;line-height:1.6}
+  .assume-note b{color:var(--mist);font-weight:500}
+  table.savings th:not(:first-child),table.savings td:not(:first-child){text-align:right}
+  table.savings td:first-child{font-weight:500}
+  .save-hrs{color:var(--well)!important;font-weight:700!important}
+  tr.total-row td{color:var(--bone);font-weight:700;border-top:1px solid var(--brass)}
+  tr.total-row td.save-hrs{color:var(--well)}
+
+  .scale-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+  @media(max-width:700px){.scale-grid{grid-template-columns:1fr 1fr}}
+  .scale-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:20px 18px;text-align:center;position:relative;overflow:hidden}
+  .scale-card .n-cust{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  .scale-card .hrs{font-family:var(--disp);font-size:34px;color:var(--well);letter-spacing:.02em;line-height:1}
+  .scale-card .hrs-lbl{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.1em;
+    text-transform:uppercase;margin-top:4px}
+  .scale-card .fte{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);
+    font-family:var(--mono);font-size:12.5px;color:var(--brass)}
+  .scale-card .fte b{font-size:17px;display:block;color:var(--brass)}
+  .scale-card .bar{position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--well),var(--brass))}
+  .scale-cap{margin-top:16px;font-size:13.5px;color:var(--dim);text-align:center}
+  .scale-cap b{color:var(--bone);font-weight:500}
+
+  /* ---------- tools & platforms ---------- */
+  .tool-card{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
+  .tool-card .name{font-family:var(--disp);font-size:16px;letter-spacing:.08em;color:var(--bone);margin-bottom:2px}
+  .tool-card .role{font-size:13px;color:var(--brass);font-weight:500;margin-bottom:10px}
+  .tool-lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);margin:10px 0 6px}
+  .pill-existing{font-family:var(--mono);font-size:11px;border-radius:99px;padding:3px 10px;
+    letter-spacing:.02em;color:var(--well);border:1px solid rgba(79,216,196,.35);background:var(--well-soft);
+    display:inline-block;margin:0 6px 6px 0}
+  .pill-new{font-family:var(--mono);font-size:11px;border-radius:99px;padding:3px 10px;
+    letter-spacing:.02em;color:var(--brass);border:1px solid rgba(201,164,76,.4);background:var(--brass-soft);
+    display:inline-block;margin:0 6px 6px 0}
+  .pill-open{font-family:var(--mono);font-size:11px;border-radius:99px;padding:3px 10px;
+    letter-spacing:.02em;color:var(--ember);border:1px solid rgba(192,91,71,.4);background:var(--ember-soft);
+    display:inline-block;margin:0 6px 6px 0}
+  .tool-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:22px;font-size:13px;color:var(--mist);
+    font-family:var(--mono);align-items:center}
+  .tool-legend span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="eyebrow">Agentic operations platform · decision memo, rendered</div>
+  <h1>M<span class="rune">I</span>MIR</h1>
+  <p class="subtitle">The well beneath the tree. Every module drinks from one knowledge base, and every action crosses one watched bridge — built on the <em>Vision RM</em> multi-tenant spine that is already in production.</p>
+  <div class="meta">
+    <span>STATUS <b>planning · nothing built</b></span>
+    <span>DECIDED <b>2026-07-15</b></span>
+    <span>GTM <b>Path C — build horizontal, sell vertical</b></span>
+  </div>
+</header>
+
+<!-- ================= LAYERED ARCHITECTURE ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">I</span>
+    <h2>The Cosmos — layered architecture</h2>
+    <span class="sec-note">read bottom-up: roots → well → bridge → realms</span>
+  </div>
+
+  <div class="trunk-wrap">
+    <div class="trunk" aria-hidden="true"></div>
+
+    <!-- Realms: the six modules -->
+    <div class="tier">
+      <div class="tier-label">The Realms — agentic modules <span class="stat stat-plan">● planned</span></div>
+      <div class="cards cols-3">
+        <div class="card">
+          <span class="tag">Module 2</span>
+          <div class="name">Huginn</div>
+          <div class="role">Support drafting</div>
+          <p>Drafts replies to client email at <code>draft_approve</code>. Emits graduation stats from the first draft ever shown. <b style="color:var(--ember)">Gated on G2.</b></p>
+        </div>
+        <div class="card">
+          <span class="tag">Module 3</span>
+          <div class="name">Muninn</div>
+          <div class="role">Tech support · RCA docs</div>
+          <p>Root-cause and support documentation. Consumes the well and writes through the bridge.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Module 4</span>
+          <div class="name">Nornir</div>
+          <div class="role">Telemetry dashboards</div>
+          <p>Reads the threads of fate — structured events emitted since module 0. Dashboards defer; events never do.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Module 5</span>
+          <div class="name">Bragi</div>
+          <div class="role">Marketing content</div>
+          <p>Stateless generation plugged into the well. Safely last in the sequence.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Module 6</span>
+          <div class="name">Forseti</div>
+          <div class="role">Compliance tracking UI</div>
+          <p>Audit substrate already exists (<code>AuditLog</code>, ledger); this is UI only.</p>
+        </div>
+        <div class="card">
+          <span class="tag">Shipped</span>
+          <div class="name">Midgard</div>
+          <div class="role">Sales & finance — live today</div>
+          <p>Lead One pipeline, sequences, cold outreach, Finances cockpit. Not in scope — already deployed.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-note">every side-effect passes down through <b>one bridge</b> — no module ships its own approval flow (D5)</div>
+
+    <!-- The bridge: ledger -->
+    <div class="tier">
+      <div class="tier-label">The Bridge — module zero <span class="stat stat-plan">● build first</span></div>
+      <div class="cards">
+        <div class="card card-hero">
+          <span class="tag">Module 0 · D5</span>
+          <div class="name">Heimdallr — Agent Action Ledger + Approval Inbox</div>
+          <p>One unified ledger and approval surface shared by every module. Every agent proposal is <b>visible, explainable</b> (source passages, triggering email), <b>editable, reversible</b>. Doubles as the GDPR audit trail and the debugging tool. Extends the existing <code>/inbox</code> triage, <code>AuditLog</code> and outreach ledger patterns — never forks them.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-note">modules retrieve from <b>one well</b> — per-tenant, quarantined at ingestion</div>
+
+    <!-- The well: RAG -->
+    <div class="tier">
+      <div class="tier-label">The Well — knowledge <span class="stat stat-plan">● module 1</span></div>
+      <div class="cards">
+        <div class="card card-hero card-well">
+          <span class="tag">Module 1 · D3 · D4</span>
+          <div class="name">Mímisbrunnr — RAG Knowledge Base</div>
+          <p>Per-tenant vector index on <b>MongoDB Atlas native Vector Search</b> (D4) — riding the existing DB-per-tenant model, no second database. Read-only, no side effects, demo-able on its own. An <b>ingestion-side health classifier</b> quarantines flagged content <i>before</i> storage or embedding (D3 exclusion posture) — you cannot retrofit "we never stored it."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-note">reasoning is <b>API-billed, never Claude Pro</b> — Pro/Max is for build sessions only</div>
+
+    <!-- Runtime + retrofits -->
+    <div class="tier">
+      <div class="tier-label">The Forge — runtime & structural retrofits <span class="stat stat-plan">● with module 0–1</span></div>
+      <div class="cards cols-4">
+        <div class="card">
+          <div class="role">AI runtime</div>
+          <p>Gemini 2.5 Flash primary; Claude API routed — Haiku classifies, Sonnet faces customers. All cron/batch work through <b>Batch API (−50%)</b> + cache reads (−90%).</p>
+        </div>
+        <div class="card">
+          <div class="role">Job queue</div>
+          <p>Vercel 60s + cron-job.org is not an agent runtime. Each agent step = its own sub-60s invocation, resumable, state in Mongo.</p>
+        </div>
+        <div class="card">
+          <div class="role">AI metering & quotas</div>
+          <p>Per-tenant, on the <code>LeadOneQuota</code> pattern. The one margin risk. <b>Must exist before customer #2</b> touches anything agentic.</p>
+        </div>
+        <div class="card">
+          <div class="role">Index budget</div>
+          <p>Vector/search indexes multiply per tenant — the real scaling constraint (2,500/cluster hard cap). Dedicated Search Nodes land ~customer 5–15.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Foundation -->
+    <div class="tier" style="margin-bottom:0">
+      <div class="tier-label">The Roots — Vision RM spine <span class="stat stat-live">● deployed, in production</span></div>
+      <div class="cards">
+        <div class="card" style="border-color:var(--line);padding:20px 22px">
+          <span class="tag">Phases 0–3 live</span>
+          <div class="name">Yggdrasil — the multi-tenant spine</div>
+          <p>Control plane (<code>crm_control</code>, Prisma) → tenant router (<code>tenantId</code> → AES-256-GCM-decrypted connection) → one isolated Mongo DB per customer on a shared Atlas cluster → config-driven schema (<code>FieldDefinition</code>, <code>StageDefinition</code>) → per-tenant OAuth integrations. Customer #1 is live: don't break it. Every agentic feature ships behind per-tenant config, <b>default off</b>.</p>
+          <div class="pill-row">
+            <span class="pill">Next.js 16 · Vercel</span>
+            <span class="pill">MongoDB Atlas · Prisma 6</span>
+            <span class="pill">Gmail · Calendar · Fireflies</span>
+            <span class="pill">jose JWT auth</span>
+            <span class="pill">cron-job.org schedules</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BUILD SEQUENCE ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">II</span>
+    <h2>The Path — build sequence</h2>
+    <span class="sec-note">dependency logic: the well feeds everything; the bridge prevents the costly v2 consolidation</span>
+  </div>
+  <div class="seq">
+    <div class="step step-root">
+      <div class="n">0</div>
+      <div class="t">Ledger + inbox</div>
+      <div class="d">Thin. Every proposal visible, editable, reversible. Events start flowing here.</div>
+      <div class="g ok">no gate</div>
+    </div>
+    <div class="step step-well">
+      <div class="n">1</div>
+      <div class="t">RAG knowledge base</div>
+      <div class="d">Per-tenant vector index. Read-only, demo-able. Health classifier at ingestion.</div>
+      <div class="g ok">no gate</div>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <div class="t">Support drafting</div>
+      <div class="d">Launches at draft_approve. Graduation stats from day one.</div>
+      <div class="g">⚠ gated on G2</div>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <div class="t">RCA docs</div>
+      <div class="d">Consumes RAG + ledger.</div>
+      <div class="g ok">—</div>
+    </div>
+    <div class="step">
+      <div class="n">4</div>
+      <div class="t">Telemetry</div>
+      <div class="d">Reads events already emitted since step 0. Events can't be backfilled.</div>
+      <div class="g ok">—</div>
+    </div>
+    <div class="step">
+      <div class="n">5</div>
+      <div class="t">Marketing</div>
+      <div class="d">Stateless, plugs into RAG. Safely last.</div>
+      <div class="g ok">—</div>
+    </div>
+    <div class="step">
+      <div class="n">6</div>
+      <div class="t">Compliance UI</div>
+      <div class="d">Substrate exists; UI only.</div>
+      <div class="g ok">—</div>
+    </div>
+  </div>
+  <p class="seq-cap">Pull-forward from Path B: <b>per-tenant branding</b> — cheap, demo-valuable. Premium track in parallel: approval inbox as hero surface → Cmd+K palette → dashboards-as-config → <b>MCP connector</b> (the customer's own Claude Pro chats with their CRM at zero platform cost) → global undo → morning briefing → automation builder → white-label.</p>
+</section>
+
+<!-- ================= AUTONOMY RAMP ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">III</span>
+    <h2>The Ramp — graduated autonomy (D2)</h2>
+    <span class="sec-note">per-tenant, per-action-category config setting from day one</span>
+  </div>
+  <div class="ramp">
+    <div class="rung">
+      <div class="lvl">LVL 0</div>
+      <div class="lt">off</div>
+      <p>Category disabled entirely for this tenant.</p>
+    </div>
+    <div class="rung rung-active">
+      <div class="lvl">LVL 1</div>
+      <div class="lt">draft_approve</div>
+      <p>Agent drafts; a human approves, edits or rejects in the inbox. Every event lands in the ledger.</p>
+    </div>
+    <div class="rung">
+      <div class="lvl">LVL 2</div>
+      <div class="lt">auto_send_with_undo</div>
+      <p>Sends on its own; reversible through the ledger's undo window.</p>
+    </div>
+    <div class="rung">
+      <div class="lvl">LVL 3</div>
+      <div class="lt">autonomous</div>
+      <p>Full autonomy for the category, still fully logged.</p>
+    </div>
+  </div>
+  <div class="ramp-rules">
+    <div class="rule gold"><b>Graduation is earned by data</b>e.g. ≥95% of drafts sent unedited over several weeks — measured from the first draft ever shown.</div>
+    <div class="rule warn"><b>Circuit breaker</b>Edit-rate or negative-reply spike auto-demotes a category back to draft_approve (the outreach bounce-breaker pattern, reused).</div>
+    <div class="rule warn"><b>Never graduates</b>Anything committing money, anything legal, anything the health classifier flagged. Regardless of stats.</div>
+  </div>
+</section>
+
+<!-- ================= GATES ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">IV</span>
+    <h2>The Gates — blocking, external lead time</h2>
+    <span class="sec-note">neither blocks starting modules 0–1</span>
+  </div>
+  <div class="gates">
+    <div class="gate">
+      <div class="gid">GATE G1 · blocks customer #2</div>
+      <div class="gt">Google OAuth → Production + CASA</div>
+      <p>External → Testing refresh tokens die every ~7 days — tolerable for customer #1, fatal for customer #2. Gmail is a restricted scope: CASA verification takes weeks-to-months and a few hundred–few thousand €/yr via an authorized lab.</p>
+      <p class="act"><b>Action:</b> start now, independent of everything else. Longest external dependency on the platform.</p>
+    </div>
+    <div class="gate">
+      <div class="gid">GATE G2 · blocks support-automation ingestion</div>
+      <div class="gt">Health-data decision (HDS)</div>
+      <p>Support automation ingests client correspondence; for a health broker that's where questionnaires médicaux live. HDS scope would rule out plain Atlas + Vercel for that data. Working lean: contractual carve-out + ingestion-side quarantine.</p>
+      <p class="act"><b>Action:</b> ask what a typical month of client email contains → decide exclusion vs HDS <b>before a single client email is ingested</b>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ECONOMICS ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">V</span>
+    <h2>The Hoard — cost snapshot</h2>
+    <span class="sec-note">2026-07 rates · verify before quoting</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Monthly</th><th>1 customer</th><th>5 customers</th><th>20 customers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Atlas</td><td>M0 free / Flex €10–30</td><td>M10 ~€60</td><td>M10–M20 + Search Nodes €250–450</td></tr>
+      <tr><td>Claude runtime (API)</td><td>€10–25</td><td>€50–125</td><td>€200–500</td></tr>
+      <tr><td>Vercel</td><td>free</td><td>Pro €20</td><td>Pro €20</td></tr>
+      <tr><td>Build subscription (Pro/Max)</td><td>€20–100</td><td>same</td><td>same</td></tr>
+      <tr class="total"><td>Total</td><td>~€40–150</td><td>~€150–300</td><td>~€500–1,000</td></tr>
+    </tbody>
+  </table>
+  <p class="econ-note">Per-tenant runtime, routed sensibly: <b>~€8–25/mo</b> (unrouted ~€30–60; heavy autonomous loops €100+ — hence metering). At ~€150–300/customer/mo pricing with €15–40 variable cost per tenant, margin is healthy. The only margin risk is <b>unmetered agentic usage</b>.</p>
+</section>
+
+<!-- ================= STANDING RULES ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">VI</span>
+    <h2>The Law — standing rules</h2>
+    <span class="sec-note">inherited from the brief; agentic modules will test every one</span>
+  </div>
+  <div class="cards cols-3 retro">
+    <div class="card"><div class="role">Config, not code</div><p>Now including <b>prompts</b>. Prompt templates live alongside <code>FieldDefinition</code>, seeded per vertical. The broker prompt pack is a sellable asset, not source.</p></div>
+    <div class="card"><div class="role">Generic ontology, vertical labels</div><p>Data-model names stay generic (knowledge base, conversations, playbooks); French broker vocabulary lives in labels/config — the stage-definition pattern.</p></div>
+    <div class="card"><div class="role">Router only</div><p>Tenant data only through the DB router — agent steps too. Never a hardcoded connection.</p></div>
+    <div class="card"><div class="role">Don't break the live app</div><p>Customer #1 is in production. Every agentic feature ships behind per-tenant config, default off.</p></div>
+    <div class="card"><div class="role">One bridge</div><p>Every side-effectful agent action goes through the ledger. No exceptions, no per-module forks.</p></div>
+    <div class="card"><div class="role">Events from day one</div><p>Emit structured events immediately; build dashboards later. Events cannot be backfilled.</p></div>
+  </div>
+</section>
+
+<!-- ================= TIME SAVINGS ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">VII</span>
+    <h2>The Ledger of Hours — what one customer sees</h2>
+    <span class="sec-note">per customer, scaled by the size of <em>their own</em> client book</span>
+  </div>
+
+  <p class="assume-note"><b>This is the number shown to the customer</b> — a single broker looking at their own dashboard, not Nicolas's total across the tenant base. The axis here is how many clients <em>that broker</em> manages, since that's what actually drives email/document/lookup volume. Three functions (Nornir, Bragi, Forseti) run on a fixed monthly cadence regardless of book size; three scale directly with it. <b>Illustrative rates</b> — calibrate against Christopher's real volumes before quoting anyone.</p>
+
+  <table class="savings">
+    <thead>
+      <tr><th>Function</th><th>Manual → Mimir</th><th>5 clients</th><th>20 clients</th><th>50 clients</th><th>100 clients</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Mímisbrunnr — knowledge lookup</td><td>scales ~0.055 hr/client</td><td>0.3 hrs</td><td>1.1 hrs</td><td>2.8 hrs</td><td>5.5 hrs</td></tr>
+      <tr><td>Huginn — support drafting</td><td>8 min → 1.5 min/email</td><td>0.3 hrs</td><td>1.3 hrs</td><td>3.3 hrs</td><td>6.5 hrs</td></tr>
+      <tr><td>Muninn — RCA / support docs</td><td>90 min → 15 min/doc</td><td>0.4 hrs</td><td>1.5 hrs</td><td>3.8 hrs</td><td>7.5 hrs</td></tr>
+      <tr><td>Nornir — telemetry reporting</td><td>fixed monthly cycle</td><td>3.75 hrs</td><td>3.75 hrs</td><td>3.75 hrs</td><td>3.75 hrs</td></tr>
+      <tr><td>Bragi — marketing content</td><td>fixed content cadence</td><td>4.7 hrs</td><td>4.7 hrs</td><td>4.7 hrs</td><td>4.7 hrs</td></tr>
+      <tr><td>Forseti — compliance reporting</td><td>fixed monthly audit</td><td>4.5 hrs</td><td>4.5 hrs</td><td>4.5 hrs</td><td>4.5 hrs</td></tr>
+      <tr class="total-row"><td>Total, all six modules live</td><td>—</td><td class="save-hrs">13.9 hrs</td><td class="save-hrs">16.9 hrs</td><td class="save-hrs">22.7 hrs</td><td class="save-hrs">32.5 hrs</td></tr>
+    </tbody>
+  </table>
+
+  <div class="scale-grid">
+    <div class="scale-card"><div class="bar" style="width:25%"></div>
+      <div class="n-cust">5 clients managed</div>
+      <div class="hrs">13.9</div><div class="hrs-lbl">hours back / mo</div>
+      <div class="fte">≈<b>€417</b>/mo value · 1.7 days back</div>
+    </div>
+    <div class="scale-card"><div class="bar" style="width:50%"></div>
+      <div class="n-cust">20 clients managed</div>
+      <div class="hrs">16.9</div><div class="hrs-lbl">hours back / mo</div>
+      <div class="fte">≈<b>€507</b>/mo value · 2.1 days back</div>
+    </div>
+    <div class="scale-card"><div class="bar" style="width:75%"></div>
+      <div class="n-cust">50 clients managed</div>
+      <div class="hrs">22.7</div><div class="hrs-lbl">hours back / mo</div>
+      <div class="fte">≈<b>€681</b>/mo value · 2.8 days back</div>
+    </div>
+    <div class="scale-card"><div class="bar" style="width:100%"></div>
+      <div class="n-cust">100 clients managed</div>
+      <div class="hrs">32.5</div><div class="hrs-lbl">hours back / mo</div>
+      <div class="fte">≈<b>€975</b>/mo value · 4.1 days back</div>
+    </div>
+  </div>
+  <p class="scale-cap">Value uses <b>€30/hr</b> fully-loaded staff time — swap in the customer's own admin rate for a real quote. Days back assume an <b>8-hour day</b>. This is a floor: it only counts hours saved, not deals closed faster or replies sent before a lead goes cold.</p>
+</section>
+
+<!-- ================= TOOLS & PLATFORMS ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">VIII</span>
+    <h2>The Instruments — tools & platforms per module</h2>
+    <span class="sec-note">what already exists vs. what has to be added</span>
+  </div>
+
+  <div class="tool-legend">
+    <span><span class="dot" style="background:var(--well)"></span>already in the stack (brief §5)</span>
+    <span><span class="dot" style="background:var(--brass)"></span>new, to be added for Mimir</span>
+    <span><span class="dot" style="background:var(--ember)"></span>open decision — not yet chosen</span>
+  </div>
+
+  <div class="cards cols-2">
+    <div class="tool-card">
+      <div class="name">Heimdallr</div>
+      <div class="role">Ledger + approval inbox — module 0</div>
+      <p style="font-size:13.5px;color:var(--mist)">Extends <code>/inbox</code>, <code>AuditLog</code> and the outreach ledger. The only genuinely new piece is a runtime that can run agent steps outside the request/response cycle.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">MongoDB Atlas</span><span class="pill-existing">Next.js 16 / Vercel</span><span class="pill-existing">Prisma 6</span><span class="pill-existing">jose JWT auth</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Resumable job queue</span><span class="pill-new">Event schema (structured, from day one)</span>
+      <div class="tool-lbl">Open decision</div>
+      <span class="pill-open">Queue provider — Inngest / Trigger.dev / Upstash QStash (all Vercel-compatible)</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Mímisbrunnr</div>
+      <div class="role">RAG knowledge base — module 1</div>
+      <p style="font-size:13.5px;color:var(--mist)">Rides the existing DB-per-tenant model — no second database. The chunking/embedding pipeline and the health classifier are the new build.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">MongoDB Atlas Vector Search</span><span class="pill-existing">Same shared Atlas cluster</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Ingestion / chunking pipeline</span><span class="pill-new">Ingestion-side health classifier (Haiku prompt)</span><span class="pill-new">Per-tenant vector index provisioning</span>
+      <div class="tool-lbl">Open decision</div>
+      <span class="pill-open">Embedding model — Gemini text-embedding vs. Voyage AI</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Huginn</div>
+      <div class="role">Support drafting — module 2 · gated on G2</div>
+      <p style="font-size:13.5px;color:var(--mist)">Reuses the whole Gmail ingestion pipeline that already feeds activities. New work is the draft surface and the support-prompt config.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">Gmail / Calendar OAuth (MAIN identity)</span><span class="pill-existing">Gemini 2.5 Flash / Claude API</span><span class="pill-existing">Activity ingestion + AI enrichment</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Draft surface in Heimdallr inbox</span><span class="pill-new">Per-tenant support-prompt pack (config)</span><span class="pill-new">HDS quarantine tie-in</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Muninn</div>
+      <div class="role">Tech support / RCA docs — module 3</div>
+      <p style="font-size:13.5px;color:var(--mist)">Consumes the well and the ledger; document export already has a home in the doc-generation skills.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">Activity / Task data</span><span class="pill-existing">docx / pdf generation skills</span><span class="pill-existing">Claude API (Sonnet)</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">RCA prompt templates (config)</span><span class="pill-new">Generated-doc versioning + storage</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Nornir</div>
+      <div class="role">Telemetry dashboards — module 4</div>
+      <p style="font-size:13.5px;color:var(--mist)">Mostly charting, not AI — the real prerequisite is that every prior module has been emitting events since day one (they can't be backfilled).</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">Recharts</span><span class="pill-existing">SavedView / widgets-as-config pattern</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Event taxonomy across all modules</span><span class="pill-new">Optional Haiku narrative summaries ("what changed this week")</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Bragi</div>
+      <div class="role">Marketing content — module 5</div>
+      <p style="font-size:13.5px;color:var(--mist)">To actually automate this branch: content generation is solved by the well + Sonnet, but nothing today <b>publishes</b> anything — that connector is the real gap.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">Claude API (Sonnet, customer-facing)</span><span class="pill-existing">Mímisbrunnr for brand/product facts</span><span class="pill-existing">Heimdallr for pre-publish approval</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Per-tenant brand-voice prompt pack (config)</span><span class="pill-new">Content-calendar config</span>
+      <div class="tool-lbl">Open decision</div>
+      <span class="pill-open">Publishing connector — Buffer/Later (social) · Brevo/Mailchimp (newsletter)</span><span class="pill-open">Image generation provider, if visuals are in scope</span>
+    </div>
+
+    <div class="tool-card">
+      <div class="name">Forseti</div>
+      <div class="role">Compliance tracking UI — module 6</div>
+      <p style="font-size:13.5px;color:var(--mist)">The audit substrate already exists end to end — this module is genuinely UI-only, the cheapest module in the sequence.</p>
+      <div class="tool-lbl">Existing</div>
+      <span class="pill-existing">AuditLog + Heimdallr ledger</span><span class="pill-existing">Tailwind v4 design-token system</span><span class="pill-existing">docx / pdf export skills</span>
+      <div class="tool-lbl">New</div>
+      <span class="pill-new">Scheduled compliance-snapshot generation</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING MODEL ================= -->
+<section class="wrap">
+  <div class="sec-head">
+    <span class="sec-num">IX</span>
+    <h2>The Toll — pricing model, by customer volume</h2>
+    <span class="sec-note">for Nicolas · cost-plus at a medium-low margin, not a premium-SaaS margin</span>
+  </div>
+
+  <p class="assume-note"><b>Same tiers as §VII</b> — how many clients the customer manages — because that's also what drives Nicolas's cost to serve (AI runtime scales with support/RCA/lookup volume; Atlas, Vercel and the build subscription are near-fixed per tenant). "Medium-low margin" is read here as <b>~30% gross margin</b>, well under the 70–85% a typical SaaS product runs — deliberately, to price for Path C's early adopters before volume justifies a premium. Recompute once real Vercel/Atlas/Claude invoices exist; the memo's cost snapshot (§V) is the source for the cost column.</p>
+
+  <table class="savings">
+    <thead>
+      <tr><th>Client-book tier</th><th>Cost to serve /mo</th><th>Price /mo</th><th>Gross margin</th><th>Customer's value /mo</th><th>Customer ROI</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Up to 5 clients</td><td>€45</td><td>€65</td><td>31%</td><td>€417</td><td class="save-hrs">6.4×</td></tr>
+      <tr><td>Up to 20 clients</td><td>€60</td><td>€89</td><td>33%</td><td>€507</td><td class="save-hrs">5.7×</td></tr>
+      <tr><td>Up to 50 clients</td><td>€90</td><td>€129</td><td>30%</td><td>€681</td><td class="save-hrs">5.3×</td></tr>
+      <tr><td>Up to 100 clients</td><td>€140</td><td>€199</td><td>30%</td><td>€975</td><td class="save-hrs">4.9×</td></tr>
+    </tbody>
+  </table>
+
+  <p class="scale-cap" style="margin-top:18px">Reads as: <b>€65–199/mo</b> depending on tier, holding Nicolas's margin near <b>30%</b> throughout, while the customer still sees a <b>5–6× return</b> on the subscription in hours-saved value alone — before counting faster replies or deals that don't go cold. Margin compresses slightly at the low end because the €35–40 infra floor (Atlas + Vercel + amortized build subscription) doesn't shrink with a small client book — the same dynamic the memo flags for customer #1 vs #2 in reverse: <b>small tenants are the least profitable per euro, large ones the most</b>, so the real margin lever is total tenant count (§V), not any single customer's tier.</p>
+  <p class="scale-cap"><b>Two levers to raise the margin later without raising it above "medium-low" prematurely:</b> Batch API + prompt caching (already assumed in the cost column, −50%/−90% per the memo) and amortizing the €35 infra floor across more tenants as the book grows past customer #2–3.</p>
+</section>
+
+<footer>
+  MIMIR · agentic platform blueprint · companion render of the 2026-07-15 decision memo<br>
+  when this page and the memo disagree, the memo wins · when the memo and the code disagree, the code wins
+</footer>
+
+</body>
+</html>

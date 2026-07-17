@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Building2, Users, Trophy, Flame } from "lucide-react";
 import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
-import { PageHeader } from "@/components/page-header";
-import { Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
 import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { OutreachPausedBanner } from "@/components/outreach/paused-banner";
 import { TaskList, type TaskRow } from "@/components/task-list";
 import { FinanceKpiStrip } from "@/components/finance-kpi-strip";
+import { Observatory, type ObservatoryRealm } from "@/components/observatory";
 import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { ACTIVITY_TYPES } from "@/lib/constants";
@@ -16,6 +16,13 @@ import { getStageDefs } from "@/lib/stage-config";
 import { getGoogleConnection } from "@/lib/integrations";
 import { computeFinanceCockpit } from "@/lib/finance-cockpit";
 import { getNumberSetting, SETTINGS } from "@/lib/settings";
+
+const eur = (n: number) =>
+  new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
@@ -46,6 +53,8 @@ export default async function DashboardPage({
     googleConn,
     todayTasksRaw,
     staleCompanies,
+    leadsSourced,
+    leadsValidated,
   ] =
     await Promise.all([
       prisma.company.count(),
@@ -97,6 +106,8 @@ export default async function DashboardPage({
           dernierContact: true,
         },
       }),
+      prisma.leadCandidate.count(),
+      prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
     ]);
 
   const [financeCockpit, financeCash, outreachConfig] = await Promise.all([
@@ -125,6 +136,49 @@ export default async function DashboardPage({
 
   const firstName = session.name?.split(" ")[0] || "";
 
+  const observatoryRealms: ObservatoryRealm[] = [
+    {
+      slug: "relation",
+      label: "Relation",
+      role: "Suivi commercial — sociétés, contacts, pipeline",
+      status: "live",
+      stats: [
+        { value: String(total), label: "sociétés suivies" },
+        { value: String(contactsCount), label: "contacts" },
+      ],
+      href: "/companies",
+    },
+    {
+      slug: "chasse",
+      label: "Chasse",
+      role: "Génération de leads — courtiers et intermédiaires",
+      status: "live",
+      stats: [
+        { value: String(leadsSourced), label: "leads sourcés" },
+        { value: String(leadsValidated), label: "validés" },
+      ],
+      href: "/leadone",
+    },
+    {
+      slug: "tresor",
+      label: "Trésor",
+      role: "Coûts, abonnements, rentabilité",
+      status: "live",
+      stats: [
+        { value: eur(financeCockpit.net), label: "net ce mois" },
+        { value: eur(financeCockpit.openPipeline), label: "pipeline ouvert" },
+      ],
+      href: "/finances",
+    },
+    {
+      slug: "mimir",
+      label: "Mimir",
+      role: "Agents autonomes — pas encore construit",
+      status: "planned",
+      stats: [],
+    },
+  ];
+
   const kpis = [
     { label: "Sociétés", value: total, icon: Building2, color: "text-indigo-600", tile: "bg-brand-subtle", href: "/companies" },
     { label: "Contacts", value: contactsCount, icon: Users, color: "text-sky-600", tile: "bg-sky-50", href: "/contacts" },
@@ -136,15 +190,17 @@ export default async function DashboardPage({
 
   return (
     <div>
-      <PageHeader
-        title={`Bonjour${firstName ? `, ${firstName}` : ""} 👋`}
-        subtitle="Voici l'état de votre prospection"
-      >
-        <LinkButton href="/pipeline" variant="secondary">
-          Ouvrir le pipeline
-        </LinkButton>
-        <LinkButton href="/companies/new">+ Société</LinkButton>
-      </PageHeader>
+      <div className="p-4 sm:p-6">
+        <Observatory
+          realms={observatoryRealms}
+          hub={{
+            label: "Vision RM",
+            caption: firstName ? `Bonjour, ${firstName}` : "Bonjour",
+            stat: `${total} sociétés · ${observatoryRealms.filter((r) => r.status === "live").length} royaumes actifs`,
+          }}
+          tenantLabel={session.name || session.email}
+        />
+      </div>
 
       <div className="space-y-6 p-6">
         {outreachConfig?.paused && (

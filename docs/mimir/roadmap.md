@@ -287,8 +287,65 @@ into the next phase on autopilot either.
   All seven realms exist. Step back further than the per-phase checkpoints: demo the platform
   end-to-end across modules, review the original memo's D1–D5 against what actually got built and
   note where reality diverged and why, and decide what's next — harden/polish existing modules,
-  pick up the parallel premium track, or scope a genuinely new module. This is also the moment to
+  pick up the parallel UI/premium tracks, or scope a genuinely new module. This is also the moment to
   revisit the permanent-parallel-vs-merge-back question (§0.5) with a full platform to judge it by.
+
+### Cosmos UI track (parallel, can run alongside Heimdallr phases)
+
+The Mimir UI pivoted to a dark-first cosmic universe design (one realm per agent module, orbital
+home surface, abyss/bone/brass palette). Phase 1 (realm tokens + grouped sidebar) shipped in commit
+`e740bcd` but is still on the light theme — these sessions reconcile dark-first theming and build
+the continuity/motion layer. Reference the `mimir-cosmos` skill and approved concept prototype for
+the full design system.
+
+- [x] **C1 — Dark theme + realm layer reconciliation** · **Sonnet** · S · ✅ 2026-07-17
+  Reconciled dark `[data-theme="dark"]` tokens in `globals.css` with the abyss/bone/brass/well/
+  ember/live palette from `docs/mimir-architecture.html`: brand → brass (was indigo), surfaces →
+  abyss/panel/panel-2, text → bone/mist/dim, realm accents reassigned (chasse → well teal,
+  tresor → live green, mimir → ember, since brass moved to neutral `--brand`). Light theme and
+  the light-default toggle behavior left untouched — confirmed with Nicolas to defer the
+  default-theme flip to a later Cosmos session.
+  *Exit:* sidebar grouped by realm with correct hues in light and dark; `data-realm` attribute set
+  on app shell from route segment.
+
+- [x] **C2 — Navigation continuity + realm shifts** · **Sonnet** · M · ✅ 2026-07-17
+  Enabled `experimental.viewTransition`, anchored sidebar/topbar (`viewTransitionName`, never
+  animate), wrapped routed content in `<ViewTransition>` scoped to a `realm-shift` type applied
+  only to sidebar links that cross realms (`realmForPath` comparison). CSS: `.realm-shift`
+  crossfade+rise keyframes, `prefers-reduced-motion` kills all view-transition animation.
+  *Exit:* realm changes feel like travel, not replacement — verified in-browser (Relation→Chasse→
+  Trésor crossfades + hue sweep, sidebar/topbar anchored, both themes, no console errors).
+
+- [x] **C2.5 — Cosmos observatory (orbital home surface)** · **Sonnet** · M · ✅ 2026-07-17
+  Not originally scoped in C1–C4 — added mid-session per Nicolas's request for the full visual
+  reinvention from the approved concept artifact ("Mimir — Le Cosmos"), not just accent theming.
+  Replaced `/dashboard`'s greeting header with `src/components/observatory.tsx`: starfield canvas,
+  SVG light-threads, a real-data hub + four realm orbs (relation/chasse/tresor live with real
+  counts; mimir shown as "planifié" — no fake Heimdallr/Mímisbrunnr stats), hover/pin instrument
+  panel. Hero is always dark (scoped `data-theme="dark"` on an inner wrapper, not `<html>`) — this
+  exposed and fixed a real C1 bug: `relation`'s `--realm: var(--brand)` fallback only resolves at
+  its declaring element (`:root`), so a nested dark scope below `<html>` never picked it up
+  without an explicit `[data-theme="dark"] [data-realm="relation"]` rule (added to `globals.css`).
+  Below-the-fold dashboard content (todo list, finance strip, KPI grid, activity feed) relocated
+  unchanged beneath the hero. Added `Fraunces` display serif (`--font-display`), scoped to the
+  observatory only. Also fixed an unrelated ESLint gap: `.claude/worktrees/**` wasn't excluded,
+  so a stray leftover worktree's generated code was failing repo-wide lint.
+  *Exit:* verified in-browser — real stats per orb match live `crm_demo` data, hero stays dark in
+  both themes while below-fold content follows the toggle, mobile 2-col grid fallback, no
+  hydration/console errors, `npm run lint`/`build` clean.
+
+- [ ] **C3 — Shared-element morphs + Suspense reveals** · **Sonnet** · M
+  Implement shared-element morphs (row name → detail header) on companies, contacts, deals. Add
+  Suspense skeleton reveals. Reference `references/mechanics.md` for implementation recipes; don't
+  re-derive.
+  *Exit:* "deeper into a realm" transitions morph the row smoothly into the detail view.
+
+- [ ] **C4 — Atmosphere + final polish** · **Sonnet** · S
+  Add header auras (realm-subtle gradient in `PageHeader`), realm-tinted chart primary series,
+  `::selection` styling. Run `design-review` at both themes. Verify "cosmos outside, clarity
+  inside" — immersive surfaces stay vibrant, working surfaces (tables, filters) keep design-system
+  density.
+  *Exit:* visual polish complete; design review green at both themes.
 
 **Parallel premium track** (slot into gaps, one S-session each): per-tenant branding pull-forward →
 Cmd+K palette on Atlas Search → MCP connector.

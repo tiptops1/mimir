@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { logout } from "@/app/actions/auth";
-import { REALMS } from "@/lib/realms";
+import { REALMS, realmForPath, type RealmSlug } from "@/lib/realms";
 import { cn, initialsFromName } from "@/lib/utils";
 
 const NAV = [
@@ -45,17 +45,26 @@ function NavItem({
   item,
   pathname,
   badge,
+  realmSlug,
+  currentRealm,
 }: {
   item: { href: string; label: string; icon: typeof Settings };
   pathname: string;
   badge: number;
+  realmSlug?: RealmSlug;
+  currentRealm?: RealmSlug;
 }) {
   const active =
     pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
+  const crossesRealm =
+    realmSlug !== undefined &&
+    currentRealm !== undefined &&
+    realmSlug !== currentRealm;
   return (
     <Link
       href={item.href}
+      transitionTypes={crossesRealm ? ["realm-shift"] : []}
       className={cn(
         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-100",
         active
@@ -98,6 +107,7 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const pathname = usePathname();
+  const currentRealm = realmForPath(pathname);
 
   const badgeFor = (href: string) =>
     href === "/inbox"
@@ -110,6 +120,7 @@ export function Sidebar({
 
   return (
     <aside
+      style={{ viewTransitionName: "cosmos-sidebar" }}
       className={cn(
         "flex h-full w-60 shrink-0 flex-col border-r border-border bg-card",
         className,
@@ -132,6 +143,8 @@ export function Sidebar({
                   item={item}
                   pathname={pathname}
                   badge={badgeFor(item.href)}
+                  realmSlug={realm.slug}
+                  currentRealm={currentRealm}
                 />
               ))}
             </div>

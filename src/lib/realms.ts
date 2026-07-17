@@ -3,6 +3,8 @@
  * A realm is a group of modules sharing one accent identity; hue values live
  * in globals.css keyed by the slug, components only ever read realm tokens
  * (bg-realm, text-realm, …). Modules join the cosmos by adding a route here.
+ * Dark-theme hues trace back to the abyss/bone/brass/well/ember/live palette
+ * in docs/mimir-architecture.html (see C1, docs/mimir/roadmap.md).
  */
 export type RealmSlug = "relation" | "chasse" | "tresor" | "mimir";
 
