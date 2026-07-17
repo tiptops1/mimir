@@ -15,6 +15,7 @@ import {
   Wallet,
   Settings,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { logout } from "@/app/actions/auth";
@@ -32,13 +33,14 @@ const NAV = [
   { href: "/inbox", label: "Boîte de réception", icon: Inbox },
   { href: "/finances", label: "Finances", icon: Wallet },
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
+  { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck },
 ];
 
 // Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms
 // whose modules don't exist yet (e.g. Mimir before S7) simply render nothing.
 const GROUPS = REALMS.map((realm) => ({
   realm,
-  items: NAV.filter((item) => realm.routes.includes(item.href.slice(1))),
+  items: NAV.filter((item) => realm.routes.includes(item.href.split("/")[1])),
 })).filter((g) => g.items.length > 0);
 
 function NavItem({
@@ -96,6 +98,7 @@ export type SidebarProps = {
   pendingCount?: number;
   todoCount?: number;
   leadOneCount?: number;
+  heimdallrPendingCount?: number;
   className?: string;
 };
 
@@ -104,6 +107,7 @@ export function Sidebar({
   pendingCount = 0,
   todoCount = 0,
   leadOneCount = 0,
+  heimdallrPendingCount = 0,
   className,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -116,7 +120,9 @@ export function Sidebar({
         ? todoCount
         : href === "/leadone"
           ? leadOneCount
-          : 0;
+          : href === "/heimdallr/inbox"
+            ? heimdallrPendingCount
+            : 0;
 
   return (
     <aside

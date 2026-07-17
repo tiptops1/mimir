@@ -214,10 +214,26 @@ into the next phase on autopilot either.
   `vitest` added (`npm run test`); wired into the `mimir-ship` chain after lint, before build.
   *Exit met:* tests green; `npm run test` in the ship chain; `npm run lint`/`npm run build` clean.
 
-- [ ] **S8 — Approval inbox UI** · Sonnet · M
-  Extend the inherited `/inbox` triage pattern (not fork): pending proposals with source passages +
-  triggering context, approve / edit-then-approve / reject, French labels from config, design tokens
-  only. *Exit:* full loop demo-able on `crm_demo` with a hand-inserted proposal.
+- [x] **S8 — Approval inbox UI** · Sonnet · M · ✅ 2026-07-17
+  New route `/heimdallr/inbox` (own page, not a fork of `/inbox` — different data shape,
+  same reuse-the-pattern approach): `src/lib/heimdallr/queries.ts` (read-side companion to
+  `ledger.ts`: `listPendingActions`/`countPendingActions`/`listUndoTrayActions`/
+  `listAutonomyConfigs`), `src/app/actions/heimdallr.ts` (`approveActionSA`/
+  `approveEditedActionSA`/`rejectActionSA`/`undoActionSA`, `verifySession()` → `decidedBy`),
+  `heimdallr-action-row.tsx` (expandable payload/sources/trigger detail, edit-then-approve
+  textarea), `heimdallr-inbox-filters.tsx` (category/module/text, `useUrlFilters`), an undo
+  tray section gated on `isUndoable` (state-machine.ts, reused not re-derived). Sidebar:
+  `/heimdallr/inbox` added to `NAV` under the `mimir` realm group (route already registered
+  in `realms.ts`); fixed a latent bug this exposed — `GROUPS` matched `item.href.slice(1)`
+  against `realm.routes`, which breaks for any nested route (only worked before because
+  every existing href was a single segment); now uses `item.href.split("/")[1]`. Layout
+  gained a `heimdallrPendingCount` badge (mirrors `pendingCount`). One-off demo script
+  `scripts/heimdallr/seed-demo-proposal.ts` (`npx tsx`, not in the seed chain) calls
+  `proposeAction()` against a real `crm_demo` company. *Exit met:* verified in-browser —
+  seeded proposal renders category/module/payload/sources/trigger; Approuver, Modifier puis
+  approuver, and Rejeter each tested end-to-end and the row leaves the pending list; dark
+  theme confirmed via computed styles (abyss/bone tokens, no literal colors in the diff); no
+  horizontal overflow at 375px; lint/build clean.
 
 - [ ] **S9 — Undo + circuit breaker** · Sonnet · S
   Generalize the inherited outreach bounce-breaker: per-category edit-rate / negative-signal breaker

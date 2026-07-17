@@ -23,14 +23,16 @@ export default async function AppLayout({
   startOfTomorrow.setHours(0, 0, 0, 0);
   startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-  const [pendingCount, todoCount, leadOneCount, notifications] = await Promise.all([
-    prisma.pendingContact.count({ where: { status: "PENDING" } }),
-    prisma.task.count({
-      where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
-    }),
-    prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
-    getNotificationSummary(prisma),
-  ]);
+  const [pendingCount, todoCount, leadOneCount, heimdallrPendingCount, notifications] =
+    await Promise.all([
+      prisma.pendingContact.count({ where: { status: "PENDING" } }),
+      prisma.task.count({
+        where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
+      }),
+      prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
+      prisma.agentAction.count({ where: { status: "PROPOSED" } }),
+      getNotificationSummary(prisma),
+    ]);
 
   const user = {
     name: session.name,
@@ -46,6 +48,7 @@ export default async function AppLayout({
           pendingCount={pendingCount}
           todoCount={todoCount}
           leadOneCount={leadOneCount}
+          heimdallrPendingCount={heimdallrPendingCount}
           user={user}
         />
         <main className="flex-1 overflow-y-auto bg-background">
@@ -57,6 +60,7 @@ export default async function AppLayout({
               pendingCount={pendingCount}
               todoCount={todoCount}
               leadOneCount={leadOneCount}
+              heimdallrPendingCount={heimdallrPendingCount}
               user={user}
             />
             <GlobalSearch isAdmin={session.role === "ADMIN"} />
