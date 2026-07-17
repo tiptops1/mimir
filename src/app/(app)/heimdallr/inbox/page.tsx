@@ -55,6 +55,9 @@ export default async function HeimdallrInboxPage({
   const undoable = undoTray.filter((a) =>
     isUndoable(a.reversible, a.executedAt, undoWindowFor(a.category), now),
   );
+  const breakerTripped = autonomyConfigs.filter(
+    (c) => c.level === 1 && c.lastBreakerReason,
+  );
 
   return (
     <div>
@@ -75,6 +78,24 @@ export default async function HeimdallrInboxPage({
         <HeimdallrInboxFilters
           categories={autonomyConfigs.map((c) => ({ value: c.category, label: c.label }))}
         />
+
+        {breakerTripped.length > 0 && (
+          <Card className="mb-4 border-warning/40 bg-warning/10 p-4">
+            <p className="mb-2 text-sm font-semibold text-foreground">
+              ⚠ Disjoncteur déclenché
+            </p>
+            <ul className="space-y-1 text-sm text-muted">
+              {breakerTripped.map((c) => (
+                <li key={c.category}>
+                  <span className="font-medium text-foreground">{c.label}</span>
+                  {" — "}
+                  {c.lastBreakerReason}
+                  {c.lastBreakerTrippedAt && ` (le ${formatDate(c.lastBreakerTrippedAt)})`}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
 
         {pending.length === 0 ? (
           <EmptyState

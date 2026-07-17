@@ -71,3 +71,48 @@ export function isUndoable(
 export function isExpired(expiresAt: Date | null, now: Date): boolean {
   return expiresAt !== null && expiresAt.getTime() < now.getTime();
 }
+
+/** A trailing-window count pair for the circuit breaker (edit-rate or negative-signal). */
+export type BreakerSignal = { sample: number; count: number };
+
+export type BreakerDecision = {
+  trip: boolean;
+  reason: "edit_rate" | "negative_signal" | null;
+  editRatePct: number | null;
+  negativeSignalPct: number | null;
+};
+
+/**
+ * Per-category circuit breaker (S9), generalizing the inherited outreach
+ * bounce-breaker (lib/outreach/guardrails.ts bounceBreakerReason) from a
+ * tenant-wide pause to a per-category demotion. Each signal is independently
+ * gated by breakerMinSample — below sample, its rate is noise and stays null,
+ * same as bounceBreakerReason returning null under BREAKER_MIN_SAMPLE.
+ * negativeSignal is module-supplied and optional: no module produces one yet
+ * (Huginn doesn't exist until Phase 2), so edit-rate alone can trip today.
+ */
+export function breakerDecision(input: {
+  editRate: BreakerSignal;
+  negativeSignal?: BreakerSignal;
+  editRateThresholdPct: number;
+  negativeSignalThresholdPct: number;
+  breakerMinSample: number;
+}): BreakerDecision {
+  const { editRate, negativeSignal, editRateThresholdPct, negativeSignalThresholdPct, breakerMinSample } =
+    input;
+
+  const editRatePct =
+    editRate.sample >= breakerMinSample ? (editRate.count / editRate.sample) * 100 : null;
+  const negativeSignalPct =
+    negativeSignal && negativeSignal.sample >= breakerMinSample
+      ? (negativeSignal.count / negativeSignal.sample) * 100
+      : null;
+
+  if (editRatePct !== null && editRatePct >= editRateThresholdPct) {
+    return { trip: true, reason: "edit_rate", editRatePct, negativeSignalPct };
+  }
+  if (negativeSignalPct !== null && negativeSignalPct >= negativeSignalThresholdPct) {
+    return { trip: true, reason: "negative_signal", editRatePct, negativeSignalPct };
+  }
+  return { trip: false, reason: null, editRatePct, negativeSignalPct };
+}

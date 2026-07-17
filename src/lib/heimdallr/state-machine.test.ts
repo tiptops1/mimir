@@ -3,6 +3,7 @@ import {
   ALLOWED_TRANSITIONS,
   InvalidTransitionError,
   assertTransition,
+  breakerDecision,
   isAutoApproveEligible,
   isExpired,
   isUndoable,
@@ -88,5 +89,74 @@ describe("isExpired", () => {
 
   it("is not expired when expiresAt is null", () => {
     expect(isExpired(null, now)).toBe(false);
+  });
+});
+
+describe("breakerDecision", () => {
+  const thresholds = { editRateThresholdPct: 20, negativeSignalThresholdPct: 5, breakerMinSample: 10 };
+
+  it("does not trip below the sample floor, even at a high rate", () => {
+    const decision = breakerDecision({ editRate: { sample: 5, count: 5 }, ...thresholds });
+    expect(decision).toEqual({ trip: false, reason: null, editRatePct: null, negativeSignalPct: null });
+  });
+
+  it("trips on edit-rate over threshold", () => {
+    const decision = breakerDecision({ editRate: { sample: 20, count: 5 }, ...thresholds });
+    expect(decision.trip).toBe(true);
+    expect(decision.reason).toBe("edit_rate");
+    expect(decision.editRatePct).toBe(25);
+  });
+
+  it("trips on edit-rate exactly at threshold (>=)", () => {
+    const decision = breakerDecision({ editRate: { sample: 100, count: 20 }, ...thresholds });
+    expect(decision.trip).toBe(true);
+    expect(decision.reason).toBe("edit_rate");
+  });
+
+  it("does not trip when edit-rate is under threshold", () => {
+    const decision = breakerDecision({ editRate: { sample: 100, count: 10 }, ...thresholds });
+    expect(decision.trip).toBe(false);
+    expect(decision.editRatePct).toBe(10);
+  });
+
+  it("trips on negative-signal over threshold when edit-rate is fine", () => {
+    const decision = breakerDecision({
+      editRate: { sample: 100, count: 5 },
+      negativeSignal: { sample: 20, count: 2 },
+      ...thresholds,
+    });
+    expect(decision.trip).toBe(true);
+    expect(decision.reason).toBe("negative_signal");
+    expect(decision.negativeSignalPct).toBe(10);
+  });
+
+  it("ignores negative-signal under its own sample floor", () => {
+    const decision = breakerDecision({
+      editRate: { sample: 100, count: 5 },
+      negativeSignal: { sample: 3, count: 3 },
+      ...thresholds,
+    });
+    expect(decision.trip).toBe(false);
+    expect(decision.negativeSignalPct).toBeNull();
+  });
+
+  it("prefers edit-rate as the reported reason when both trip", () => {
+    const decision = breakerDecision({
+      editRate: { sample: 100, count: 30 },
+      negativeSignal: { sample: 20, count: 5 },
+      ...thresholds,
+    });
+    expect(decision.trip).toBe(true);
+    expect(decision.reason).toBe("edit_rate");
+  });
+
+  it("does not trip when both signals are under threshold", () => {
+    const decision = breakerDecision({
+      editRate: { sample: 100, count: 5 },
+      negativeSignal: { sample: 20, count: 0 },
+      ...thresholds,
+    });
+    expect(decision.trip).toBe(false);
+    expect(decision.reason).toBeNull();
   });
 });

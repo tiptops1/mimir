@@ -235,10 +235,24 @@ into the next phase on autopilot either.
   theme confirmed via computed styles (abyss/bone tokens, no literal colors in the diff); no
   horizontal overflow at 375px; lint/build clean.
 
-- [ ] **S9 — Undo + circuit breaker** · Sonnet · S
-  Generalize the inherited outreach bounce-breaker: per-category edit-rate / negative-signal breaker
-  that auto-demotes to `draft_approve` + writes an `AgentEvent`. Undo window on reversible actions.
-  *Exit:* breaker unit-tested; demotion visible in the inbox.
+- [x] **S9 — Undo + circuit breaker** · Sonnet · S · ✅ 2026-07-17
+  Undo window was already fully implemented at S7/S8 (`isUndoable`, `undoAction`, the inbox's
+  "Actions annulables" tray) — nothing new needed there. Added the circuit breaker: `AutonomyConfig`
+  gained `lastBreakerTrippedAt`/`lastBreakerReason` (additive); `state-machine.ts` gained
+  `breakerDecision` (pure, generalizes `lib/outreach/guardrails.ts`'s `bounceBreakerReason` from a
+  tenant-wide pause to a per-category demotion, evaluating edit-rate and an optional module-supplied
+  negative-signal independently, each gated by its own `breakerMinSample`); `ledger.ts` gained
+  `demoteCategory` (level → 1, writes paired `breaker_tripped` + `level_changed` `AgentEvent`s per
+  events.md §3), `evaluateBreaker` (queries trailing `graduationWindowDays` edit-rate from
+  `AgentAction.wasEdited`, calls the pure decision, demotes on trip), and `sweepBreachedCategories`
+  (iterates level≥2 categories — exported like `sweepExpired`, not yet wired to a cron, since no
+  Inngest cron infra exists for either sweep yet). Inbox gained a warning banner surfacing any
+  category still sitting at its demoted level with a reason. No module produces a real
+  negative-signal yet (Huginn doesn't exist until Phase 2) — the breaker runs on edit-rate alone
+  today. *Exit met:* 8 new `breakerDecision` unit tests (73 total, all green); verified end-to-end
+  against `crm_demo` — seeded edit-heavy `AgentAction` rows, ran `evaluateBreaker`, confirmed
+  `AutonomyConfig.level` dropped 2→1 and the inbox rendered the "Disjoncteur déclenché" banner;
+  scratch data cleaned up after; lint/build clean.
 
 - [ ] **Checkpoint — Phase 1 wrap** · reflection, no code · XS
   Heimdallr (the bridge) is the substrate every later module proposes actions through — this is

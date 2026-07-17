@@ -696,6 +696,11 @@ model AutonomyConfig {
   pausedReason String?
   pausedAt     DateTime?
 
+  // last breaker demotion (S9) — distinct from the kill switch above: this is
+  // level -> 1, not a full stop
+  lastBreakerTrippedAt DateTime?
+  lastBreakerReason    String?
+
   updatedAt DateTime @updatedAt
 }
 

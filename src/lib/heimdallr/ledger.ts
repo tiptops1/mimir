@@ -1,11 +1,13 @@
-import type { AgentAction, Prisma, PrismaClient } from "@prisma/client";
+import type { AgentAction, AutonomyConfig, Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import {
   assertTransition,
+  breakerDecision,
   isAutoApproveEligible,
   isExpired,
   isUndoable,
   type ActionStatus,
+  type BreakerSignal,
 } from "./state-machine";
 
 // The Heimdallr write API (D5): the only code path allowed to move an
@@ -327,4 +329,107 @@ export async function autoApproveIfEligible(
     return null;
   }
   return approveAction(prisma, id, {});
+}
+
+/**
+ * Demote a category to level 1 (draft_approve) when the breaker trips.
+ * No-op (returns null) if the category doesn't exist or is already <= 1 —
+ * there's nothing to demote. Writes both events.md §3 verbs: `breaker_tripped`
+ * (the rate numbers that caused it) and `level_changed` (the level move
+ * itself), in one transaction so ledger and event stream can't drift.
+ */
+export async function demoteCategory(
+  prisma: PrismaClient,
+  category: string,
+  reason: string,
+  data: { editRatePct: number | null; negativeSignalPct: number | null },
+): Promise<AutonomyConfig | null> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.autonomyConfig.findUnique({ where: { category } });
+    if (!current || current.level <= 1) return null;
+    const now = new Date();
+    const config = await tx.autonomyConfig.update({
+      where: { category },
+      data: { level: 1, lastBreakerTrippedAt: now, lastBreakerReason: reason },
+    });
+    await tx.agentEvent.create({
+      data: {
+        module: "system",
+        category,
+        action: "breaker_tripped",
+        data: { ...data, from: current.level, to: 1, reason },
+      },
+    });
+    await tx.agentEvent.create({
+      data: {
+        module: "system",
+        category,
+        action: "level_changed",
+        data: { from: current.level, to: 1, cause: "breaker" },
+      },
+    });
+    return config;
+  });
+}
+
+/**
+ * Check one category's trailing edit-rate (AgentAction.wasEdited over
+ * graduationWindowDays) — and an optional module-supplied negative-signal —
+ * against its AutonomyConfig thresholds, demoting on trip. No-op if the
+ * category isn't level >= 2 (already not auto-approving, nothing to trip).
+ * Returns the computed decision either way, tripped or not.
+ */
+export async function evaluateBreaker(
+  prisma: PrismaClient,
+  category: string,
+  now: Date = new Date(),
+  negativeSignal?: BreakerSignal,
+): Promise<ReturnType<typeof breakerDecision> | null> {
+  const config = await prisma.autonomyConfig.findUnique({ where: { category } });
+  if (!config || config.level < 2) return null;
+
+  const since = new Date(now.getTime() - config.graduationWindowDays * 86_400_000);
+  const [sample, count] = await Promise.all([
+    prisma.agentAction.count({ where: { category, decidedAt: { gte: since } } }),
+    prisma.agentAction.count({
+      where: { category, decidedAt: { gte: since }, wasEdited: true },
+    }),
+  ]);
+
+  const decision = breakerDecision({
+    editRate: { sample, count },
+    negativeSignal,
+    editRateThresholdPct: config.editRateThresholdPct,
+    negativeSignalThresholdPct: config.negativeSignalThresholdPct,
+    breakerMinSample: config.breakerMinSample,
+  });
+
+  if (decision.trip) {
+    await demoteCategory(prisma, category, decision.reason!, {
+      editRatePct: decision.editRatePct,
+      negativeSignalPct: decision.negativeSignalPct,
+    });
+  }
+  return decision;
+}
+
+/**
+ * Sweep every level>=2 category through evaluateBreaker. Same shape as
+ * sweepExpired — exported for a future cron wire-up, not called from one yet
+ * (no Inngest cron infra exists for either sweep today).
+ */
+export async function sweepBreachedCategories(
+  prisma: PrismaClient,
+  now: Date = new Date(),
+): Promise<number> {
+  const categories = await prisma.autonomyConfig.findMany({
+    where: { level: { gte: 2 } },
+    select: { category: true },
+  });
+  let demoted = 0;
+  for (const { category } of categories) {
+    const decision = await evaluateBreaker(prisma, category, now);
+    if (decision?.trip) demoted += 1;
+  }
+  return demoted;
 }
