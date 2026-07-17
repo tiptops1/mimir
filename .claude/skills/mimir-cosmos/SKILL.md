@@ -31,10 +31,16 @@ components. If a realm change makes a button look different, that's a physics vi
      feels the border crossing.
    - *Back*: reverse of the way in. The sidebar and topbar are **anchored** — they never
      animate; they are the fixed stars you navigate by.
-3. **The cosmos stays quiet.** Motion budget is unchanged: ≤ 400ms morphs, 150/210ms
-   exit/enter, nothing loops, nothing bounces, `prefers-reduced-motion` collapses everything
-   to instant swaps. Vibrant ≠ busy: at rest the app is as calm as before — the life shows
-   when you *move*.
+3. **The cosmos stays quiet — with one sanctioned ambient layer.** Motion budget is unchanged:
+   ≤ 400ms morphs, 150/210ms exit/enter, nothing bounces, `prefers-reduced-motion` collapses
+   everything to instant swaps. Vibrant ≠ busy: the life shows when you *move*. **The one
+   exception to "nothing loops" (decided 2026-07-17):** a barely-perceptible **ambient drift**
+   (starfield/aura breathing) is allowed in the realm atmosphere layer only — behind the
+   `PageHeader` aura and empty/hero zones, **never behind text-dense surfaces** (tables, forms,
+   editors, lists). It must be transform/opacity only (GPU-cheap, no layout/paint churn), slow
+   enough that you notice it only when you look for it, and fully removed — not paused, absent —
+   under `prefers-reduced-motion`. If a reviewer's eye is drawn to the background while reading,
+   it's too much: dial it down or delete it.
 
 ## Realms are config, not code
 
@@ -67,7 +73,8 @@ buttons stay neutral — the realm is the sky, not the furniture.
    crossfade on realm crossings; in-realm crossfades.
 3. **Morphs**: list-row → detail-header shared elements on companies, contacts, deals;
    Suspense skeleton reveals.
-4. **Atmosphere**: header auras, realm-tinted charts, `::selection`.
+4. **Atmosphere**: header auras, realm-tinted charts, `::selection`, and the sanctioned
+   **ambient drift layer** (law 3's exception — atmosphere zones only, reduced-motion removes it).
 
 Implementation recipes (CSS + TSX for every mechanism above) are in `references/mechanics.md` —
 copy from there rather than re-deriving. After any phase, run `design-review` and check the

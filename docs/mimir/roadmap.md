@@ -190,14 +190,14 @@ into the next phase on autopilot either.
   out of scope (separate module story; would misrepresent the dormant-by-default outreach engine).
   *Exit met:* demo tenant realistic enough to demo against; documented in CLAUDE.md.
 
-- [ ] **Checkpoint — Phase 0 wrap** · reflection, no code · XS
-  S0–S6 built: the standalone environment, refreshed docs, the Heimdallr event/ledger schema
-  (unimplemented behavior, schema only), the job-queue decision, AI metering + routing, and a
-  demo-able `crm_demo` tenant. Before starting Heimdallr proper (S7): demo `crm_demo` end to end,
-  re-read the memo's D1–D5 against what actually got built, and decide whether Phase 1's scope
-  (S7–S9) still matches reality — e.g. does the ledger design need anything the S4/S5 sessions
-  revealed? Any new feature ideas surfaced while building the demo data belong here, not as a
-  side quest in a later session.
+- [x] **Checkpoint — Phase 0 wrap** · reflection, no code · XS · ✅ 2026-07-17
+  Ran as a full platform-vision alignment review against the owner's stated end-state (agentic
+  platform for *every* business area, hierarchical agent org, plug-and-play onboarding,
+  immersive UI). Four decisions closed — see `decisions.md` 2026-07-17: **Odin** orchestration
+  layer approved as Phase 5; **Customer Success → Legal → HR** realms committed as Phase 6;
+  **ETL/onboarding pulled into Phase 2** (S13b); cosmos **ambient-motion amendment** sanctioned.
+  S17 (Nornir) rescoped around the business pilot dashboard + token-usage UI. Phase 1 scope
+  (S7–S9) confirmed unchanged — the vision makes the ledger *more* load-bearing, not less.
 
 ### Phase 1 — Heimdallr, module 0 (the bridge)
 
@@ -249,6 +249,17 @@ into the next phase on autopilot either.
   Minimal query UI with cited passages. Read-only, no side effects — this is the sales demo.
   *Exit:* demo on `crm_demo` against a seeded knowledge base.
 
+- [ ] **S13b — ETL / onboarding import pipeline** · plan on Opus · M · *pulled forward 2026-07-17*
+  The plug-and-play machinery: source connectors (CSV/spreadsheet export, generic CRM export) →
+  mapping wizard onto the config-driven schema (`FieldDefinition` means no per-customer
+  migration) → dedupe → the same S11 health-classifier quarantine → idempotent, audited import
+  runs as Inngest jobs (IDs-only payloads, S4 rule). Reuses the S11 chunk/quarantine pipeline —
+  that's why it lives here and not later. Tested against synthetic exports (no real customer
+  yet — accepted in `decisions.md`). *Exit:* a synthetic "existing CRM export" lands in a fresh
+  demo tenant end to end, re-runs are idempotent, every imported record traceable to its import
+  run; **customer-side onboarding doc drafted** (OAuth grant, G2 data inventory, designated
+  approver, DPA, exports, autonomy ramp policy).
+
 - [ ] **Checkpoint — Phase 2 wrap** · reflection, no code · XS
   Mímisbrunnr (the well) is retrieval infra for Huginn/Muninn/Bragi — check it actually serves what
   they'll need before building on it. Demo the RAG query surface, sanity-check retrieval quality
@@ -279,6 +290,9 @@ into the next phase on autopilot either.
 
 - [ ] **S16 — Muninn: RCA templates (config) + doc generation + versioning** · Sonnet · M
 - [ ] **S17 — Nornir: dashboards as config** (SavedView/widget pattern over events emitted since S7) · Sonnet · M
+      **Hero surface (rescoped 2026-07-17): the business pilot dashboard** — the whole company
+      at a glance — plus agent-activity feed and the **token-usage UI** over the S5
+      `AiUsage`/`AiBudget` data (today CLI-only in `scripts/ai/usage-report.ts`).
 - [ ] **S18 — Bragi (part 1): brand-voice pack + content calendar config + generate-to-ledger** · Sonnet · M
       Publishing connector is a separate decision spike — don't bundle it.
 - [ ] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.
@@ -289,6 +303,37 @@ into the next phase on autopilot either.
   note where reality diverged and why, and decide what's next — harden/polish existing modules,
   pick up the parallel premium track, or scope a genuinely new module. This is also the moment to
   revisit the permanent-parallel-vs-merge-back question (§0.5) with a full platform to judge it by.
+
+### Phase 5 — Odin, the orchestration layer *(committed 2026-07-17, see `decisions.md`)*
+
+The hierarchical agent org: a top-level agent sets objectives and cascades directives down to
+module agents (CEO → Directors → Managers → Employees). Directives are tenant config; **every
+decision at every level still flows through the Heimdallr ledger**, and per-category
+`AutonomyConfig` keeps governing execution rights — the hierarchy sets objectives, never
+bypasses D2. Deliberately sequenced after Phase 4 so it's designed against real module agents,
+not guesses.
+
+- [ ] **S20 — Odin design (no code)** · Opus, plan mode · M
+      Directive schema, objective decomposition, agent-to-agent delegation shape, how directives
+      map onto autonomy categories, what the ledger records at each hierarchy level. Same
+      "worth over-thinking" tier as S2 — this is the second schema that can't be backfilled.
+- [ ] **S21 — Odin implementation** · Sonnet · M (split if S20 says so)
+
+- [ ] **Checkpoint — Phase 5 wrap** · reflection, no code · XS
+
+### Phase 6 — New realms *(committed 2026-07-17, priority order fixed)*
+
+- [ ] **S22 — Customer Success realm** · plan on Opus · M
+      Health scoring, renewal motion, churn signals, CS agent proposing through the ledger.
+      Closest to existing data (renewal deals already seeded in `crm_demo`) — that's why it's
+      first.
+- [ ] **S23 — Legal: grow Forseti** · Sonnet · M
+      From compliance-tracking UI into a draft-and-approve legal agent (contract review, terms
+      drafting). **Never graduates past `draft_approve` — permanent, code-enforced** (same
+      defense-in-depth as the health floor).
+- [ ] **S24 — HR realm** · plan on Opus · M
+      Hiring pipeline, onboarding docs, policy Q&A over Mímisbrunnr. Last on purpose: least
+      defined, least urgent for the broker vertical. Scope it fresh at the time.
 
 **Parallel premium track** (slot into gaps, one S-session each): per-tenant branding pull-forward →
 Cmd+K palette on Atlas Search → MCP connector.

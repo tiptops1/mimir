@@ -198,3 +198,41 @@ Decisions closed here:
 - **`scripts/test-ai-insight.ts` now needs a tenant slug** (`crm_demo` default) instead of being
   DB-free — metering means every AI call writes an `AiUsage` row, so a "no DB touched" probe is no
   longer possible.
+
+## 2026-07-17 — Phase 0 checkpoint: platform-vision alignment review
+
+Full review of the memo/roadmap against the owner's stated end-state: a fully agentic platform
+piloting *every* business area of a company (sales, pipeline gen, finance, marketing, outreach,
+legal, HR, tech support, customer success, product knowledge, RAG), with a hierarchical agent
+org (CEO → Directors → Managers → Employees) issuing top-down directives, plug-and-play
+onboarding, and an immersive connected UI. Verdict: the vision is the platform's end-state, not
+a different platform — the memo planned the first seven realms of it. Four decisions closed:
+
+1. **Odin — orchestration layer, approved as Phase 5.** A top-level agent sets objectives and
+   cascades directives down to module agents. Directives are tenant config; **every decision at
+   every level of the hierarchy still flows through the Heimdallr ledger** — the hierarchy sets
+   *objectives*, per-category `AutonomyConfig` governs *execution rights*. D2 (graduated
+   autonomy, circuit breaker, never-graduates list) stays fully intact underneath it. Gets its
+   own Opus plan-mode design session (S20) before any code; not pulled earlier because it needs
+   real module agents to direct.
+2. **Three new realms committed, in priority order: Customer Success → Legal → HR** (Phase 6).
+   CS first (health scoring, renewals, churn signals — closest to existing data). Legal = growing
+   Forseti from compliance UI into a draft-and-approve legal agent (never-graduates rule holds
+   forever there). HR last (least defined, least urgent for the broker vertical).
+3. **ETL/onboarding module pulled forward into Phase 2**, built alongside Mímisbrunnr ingestion
+   (S13b) since it reuses the same chunk/quarantine pipeline and Inngest queue. Scope: source
+   connectors → mapping wizard onto the config-driven schema → dedupe → health-classifier
+   quarantine → idempotent, audited import runs. Accepted costs, recorded consciously: Huginn
+   slips one session, and with no real customer to migrate yet it's tested against synthetic
+   exports only.
+4. **Cosmos amendment — subtle ambient motion layer sanctioned.** The "nothing loops" law gets
+   one narrow exception: a barely-perceptible ambient drift (starfield/aura) in the realm
+   atmosphere layer only — never behind text-dense surfaces, transform/opacity only, fully
+   disabled under `prefers-reduced-motion`. Full dynamic backgrounds rejected (readability,
+   battery, reads as flashy not premium). `mimir-cosmos` skill amended.
+
+Also closed: **the business pilot dashboard ("whole company at a glance") + token-usage UI are
+Nornir's hero surface** — S17's scope now says so explicitly (the S5 `AiUsage`/`AiBudget` data
+already exists; it only has a CLI report today). And the customer-side onboarding requirements
+(OAuth grant, G2 data inventory, designated approver, DPA, exports for ETL, autonomy ramp
+policy) need a real onboarding doc before customer #1 — attached to the ETL session's exit.
