@@ -20,6 +20,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated Prisma client (if output to repo)
     "src/generated/**",
+    // Stray git worktrees under .claude/worktrees/ carry their own copies of
+    // generated/build output — the src/generated/** ignore above only
+    // matches the root path, not nested worktree copies.
+    ".claude/worktrees/**",
   ]),
 ]);
 

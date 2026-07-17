@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { RealmScope } from "@/components/realm-scope";
@@ -48,7 +49,10 @@ export default async function AppLayout({
           user={user}
         />
         <main className="flex-1 overflow-y-auto bg-background">
-          <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6">
+          <header
+            style={{ viewTransitionName: "cosmos-topbar" }}
+            className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6"
+          >
             <MobileSidebar
               pendingCount={pendingCount}
               todoCount={todoCount}
@@ -62,7 +66,13 @@ export default async function AppLayout({
               <NotificationsBell summary={notifications} />
             </div>
           </header>
-          {children}
+          <ViewTransition
+            enter={{ "realm-shift": "realm-shift", default: "none" }}
+            exit={{ "realm-shift": "realm-shift", default: "none" }}
+            default="none"
+          >
+            {children}
+          </ViewTransition>
         </main>
       </div>
     </RealmScope>
