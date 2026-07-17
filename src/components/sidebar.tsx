@@ -16,6 +16,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { logout } from "@/app/actions/auth";
@@ -34,6 +35,7 @@ const NAV = [
   { href: "/finances", label: "Finances", icon: Wallet },
   { href: "/analytics", label: "Analytique", icon: BarChart3 },
   { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck },
+  { href: "/mimisbrunnr", label: "Mímisbrunnr", icon: BookOpen },
 ];
 
 // Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms

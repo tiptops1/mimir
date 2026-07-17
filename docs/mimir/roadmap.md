@@ -305,9 +305,22 @@ into the next phase on autopilot either.
   knowledge base requires the Flex/M10 upgrade first (Nicolas does this manually in the Atlas
   console; `checkAndReserveIndexSlot` will hard-block, not silently skip, until then).
 
-- [ ] **S13 — RAG demo surface** · Sonnet · S
-  Minimal query UI with cited passages. Read-only, no side effects — this is the sales demo.
-  *Exit:* demo on `crm_demo` against a seeded knowledge base.
+- [x] **S13 — RAG demo surface** · Sonnet · S · ✅ 2026-07-17
+  `/mimisbrunnr` (new route, joined the existing `mimir` realm — `src/lib/realms.ts`,
+  `src/components/sidebar.tsx`, no new realm needed). Server component mirroring
+  `heimdallr/inbox/page.tsx`'s pattern (`verifySession` → `getTenantDb` → read `searchParams.q`)
+  with a plain GET `<form>`, not a debounced client fetch — `retrieve()` calls the Gemini
+  embedding API per query, so per-keystroke firing would burn AI budget for no benefit on a demo
+  page. Calls `retrieve()` (S12) directly, batch-fetches `KnowledgeDocument` titles for display
+  (UI-only enrichment, doesn't touch `retrieve.ts`'s stable `Passage[]` contract that S14 depends
+  on). Read-only — no server action, no ledger, no `AgentEvent`. *Exit met:* verified in-browser
+  against `crm_demo` — query "base de données CRM" returned the real seeded passage with correct
+  document title and a plausible score (0.90); sidebar grouping/ember accent correct; no
+  horizontal overflow at 375px; dark theme confirmed; lint/build clean. **Found, not fixed here:**
+  the one seeded `KnowledgeDocument`'s text is mojibake (ingested via curl through a cp1252
+  PowerShell console during S11 testing — the exact trap CLAUDE.md warns about) — now visible for
+  the first time since no UI queried `KnowledgeChunk` text before S13. Flagged as a follow-up task,
+  not a regression in this session's code.
 
 - [ ] **S13b — ETL / onboarding import pipeline** · plan on Opus · M · *pulled forward 2026-07-17*
   The plug-and-play machinery: source connectors (CSV/spreadsheet export, generic CRM export) →

@@ -35,8 +35,8 @@ export const REALMS: Realm[] = [
   {
     slug: "mimir",
     label: "Mimir",
-    // Agent modules land here from S7 on (heimdallr first).
-    routes: ["heimdallr"],
+    // Agent modules land here from S7 on (heimdallr first, mimisbrunnr S13).
+    routes: ["heimdallr", "mimisbrunnr"],
   },
 ];
 
