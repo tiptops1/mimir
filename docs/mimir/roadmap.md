@@ -343,7 +343,7 @@ into the next phase on autopilot either.
   verified; `docs/mimir/onboarding.md` drafted (approver, OAuth/G1, G2 inventory, DPA, export
   format, autonomy ramp, go-live checklist).
 
-- [ ] **Checkpoint — Phase 2 wrap** · reflection, no code · XS
+- [x] **Checkpoint — Phase 2 wrap** · reflection, no code · XS · ✅ 2026-07-17
   Mímisbrunnr (the well) is retrieval infra for Huginn/Muninn/Bragi — check it actually serves what
   they'll need before building on it. Demo the RAG query surface, sanity-check retrieval quality
   against the S10 embedding decision now that real chunks are indexed, and confirm the index-budget
