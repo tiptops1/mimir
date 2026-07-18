@@ -54,3 +54,38 @@ export async function listUndoTrayActions(prisma: PrismaClient): Promise<AgentAc
 export async function listAutonomyConfigs(prisma: PrismaClient): Promise<AutonomyConfig[]> {
   return prisma.autonomyConfig.findMany({ orderBy: { category: "asc" } });
 }
+
+/**
+ * Trailing-window unedited/sample counts for one category's graduation eligibility
+ * (events.md "Graduation-math inputs" eligible set): status ∈ {APPROVED, EXECUTED, UNDONE}
+ * and autonomyLevelAtProposal == 1 — only human-reviewed drafts count toward earning level 2.
+ * Same window-math shape as evaluateBreaker's count pair in ledger.ts.
+ */
+export async function getUneditedStats(
+  prisma: PrismaClient,
+  category: string,
+  graduationWindowDays: number,
+  now: Date = new Date(),
+): Promise<{ sample: number; count: number }> {
+  const since = new Date(now.getTime() - graduationWindowDays * 86_400_000);
+  const eligible: Prisma.AgentActionWhereInput = {
+    category,
+    status: { in: ["APPROVED", "EXECUTED", "UNDONE"] },
+    autonomyLevelAtProposal: 1,
+    decidedAt: { gte: since },
+  };
+  const [sample, count] = await Promise.all([
+    prisma.agentAction.count({ where: eligible }),
+    prisma.agentAction.count({ where: { ...eligible, wasEdited: false } }),
+  ]);
+  return { sample, count };
+}
+
+/** AutonomyConfig rows currently eligible to graduate (level 1, maxLevel >= 2) — used by
+ * both the graduation sweep and the inbox's progress display. */
+export async function listGraduationCandidates(prisma: PrismaClient): Promise<AutonomyConfig[]> {
+  return prisma.autonomyConfig.findMany({
+    where: { level: 1, maxLevel: { gte: 2 } },
+    orderBy: { category: "asc" },
+  });
+}

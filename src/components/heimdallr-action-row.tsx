@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Button, Textarea } from "@/components/ui";
+import { Button, Input, Textarea } from "@/components/ui";
 import {
   approveActionSA,
   approveEditedActionSA,
@@ -11,21 +11,32 @@ import {
 
 type Source = { docId?: string; chunkId?: string; quote?: string; score?: number };
 type Trigger = { kind?: string; [key: string]: unknown };
+type DraftPayload = { to?: string; subject?: string; body?: string; inReplyTo?: string };
+
+const DRAFT_TYPE = "email.draft_reply";
 
 export function HeimdallrActionRow({
   id,
+  type,
   payload,
   sources,
   trigger,
 }: {
   id: string;
+  type: string;
   payload: unknown;
   sources: unknown;
   trigger: unknown;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+
+  const isDraft = type === DRAFT_TYPE && payload !== null && typeof payload === "object";
+  const draft = isDraft ? (payload as DraftPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
+  const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
+  const [editedBody, setEditedBody] = useState(draft?.body ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -42,10 +53,16 @@ export function HeimdallrActionRow({
   const submitEdited = () =>
     startTransition(async () => {
       setError(null);
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(editedPayload);
-      } catch {
+      const parsed = draft
+        ? { ...draft, subject: editedSubject, body: editedBody }
+        : (() => {
+            try {
+              return JSON.parse(editedPayload);
+            } catch {
+              return undefined;
+            }
+          })();
+      if (parsed === undefined) {
         setError("JSON invalide.");
         return;
       }
@@ -68,9 +85,28 @@ export function HeimdallrActionRow({
       {open && (
         <div className="w-full max-w-xl rounded-lg border border-border bg-surface-2 p-3 text-left text-xs">
           <p className="mb-1 font-medium text-foreground">Contenu proposé</p>
-          <pre className="max-h-48 overflow-auto rounded-md bg-card p-2 text-[11px] text-muted">
-            {JSON.stringify(payload, null, 2)}
-          </pre>
+          {draft ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">À : </span>
+                {draft.to ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Objet : </span>
+                {draft.subject ?? "—"}
+              </p>
+              <div>
+                <span className="font-medium text-foreground">Corps : </span>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {draft.body ?? "—"}
+                </pre>
+              </div>
+            </div>
+          ) : (
+            <pre className="max-h-48 overflow-auto rounded-md bg-card p-2 text-[11px] text-muted">
+              {JSON.stringify(payload, null, 2)}
+            </pre>
+          )}
 
           {sourceList.length > 0 && (
             <div className="mt-2">
@@ -99,13 +135,30 @@ export function HeimdallrActionRow({
 
       {editing && (
         <div className="flex w-full max-w-xl flex-col gap-2">
-          <Textarea
-            value={editedPayload}
-            onChange={(e) => setEditedPayload(e.target.value)}
-            disabled={pending}
-            rows={6}
-            className="font-mono text-xs"
-          />
+          {draft ? (
+            <>
+              <Input
+                value={editedSubject}
+                onChange={(e) => setEditedSubject(e.target.value)}
+                disabled={pending}
+                placeholder="Objet"
+              />
+              <Textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                disabled={pending}
+                rows={6}
+              />
+            </>
+          ) : (
+            <Textarea
+              value={editedPayload}
+              onChange={(e) => setEditedPayload(e.target.value)}
+              disabled={pending}
+              rows={6}
+              className="font-mono text-xs"
+            />
+          )}
           <div className="flex justify-end gap-2">
             <Button
               type="button"

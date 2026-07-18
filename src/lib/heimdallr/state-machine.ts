@@ -116,3 +116,32 @@ export function breakerDecision(input: {
   }
   return { trip: false, reason: null, editRatePct, negativeSignalPct };
 }
+
+/** A trailing-window unedited/sample pair for graduation math — same shape as BreakerSignal. */
+export type GraduationDecision = { graduate: boolean; uneditedPct: number | null };
+
+/**
+ * Per-category graduation check (S15), the promotion counterpart to breakerDecision's
+ * demotion. events.md "Graduation-math inputs": unedited-rate over the trailing window,
+ * gated by the same breakerMinSample floor so a thin sample stays silent (null) rather
+ * than graduating on noise.
+ */
+export function graduationDecision(input: {
+  unedited: BreakerSignal; // { sample, count } — count = unedited actions in window
+  graduationUneditedPct: number;
+  breakerMinSample: number;
+}): GraduationDecision {
+  const { unedited, graduationUneditedPct, breakerMinSample } = input;
+  const uneditedPct =
+    unedited.sample >= breakerMinSample ? (unedited.count / unedited.sample) * 100 : null;
+  return { graduate: uneditedPct !== null && uneditedPct >= graduationUneditedPct, uneditedPct };
+}
+
+/**
+ * Never-graduates floor (events.md "Never-graduates enforcement" #1): a category can only
+ * earn level 2 from level 1, and only if its configured ceiling (money/legal ship at
+ * maxLevel: 1) allows it.
+ */
+export function isGraduationEligible(level: number, maxLevel: number): boolean {
+  return level === 1 && maxLevel >= 2;
+}

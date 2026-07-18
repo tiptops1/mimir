@@ -4,8 +4,10 @@ import {
   InvalidTransitionError,
   assertTransition,
   breakerDecision,
+  graduationDecision,
   isAutoApproveEligible,
   isExpired,
+  isGraduationEligible,
   isUndoable,
   type ActionStatus,
 } from "./state-machine";
@@ -158,5 +160,43 @@ describe("breakerDecision", () => {
     });
     expect(decision.trip).toBe(false);
     expect(decision.reason).toBeNull();
+  });
+});
+
+describe("graduationDecision", () => {
+  const thresholds = { graduationUneditedPct: 95, breakerMinSample: 10 };
+
+  it("does not graduate below the sample floor, even at a perfect rate", () => {
+    const decision = graduationDecision({ unedited: { sample: 5, count: 5 }, ...thresholds });
+    expect(decision).toEqual({ graduate: false, uneditedPct: null });
+  });
+
+  it("graduates when unedited-rate is over threshold", () => {
+    const decision = graduationDecision({ unedited: { sample: 20, count: 19 }, ...thresholds });
+    expect(decision.graduate).toBe(true);
+    expect(decision.uneditedPct).toBe(95);
+  });
+
+  it("graduates exactly at threshold (>=)", () => {
+    const decision = graduationDecision({ unedited: { sample: 100, count: 95 }, ...thresholds });
+    expect(decision.graduate).toBe(true);
+  });
+
+  it("does not graduate when unedited-rate is under threshold", () => {
+    const decision = graduationDecision({ unedited: { sample: 100, count: 90 }, ...thresholds });
+    expect(decision.graduate).toBe(false);
+    expect(decision.uneditedPct).toBe(90);
+  });
+});
+
+describe("isGraduationEligible", () => {
+  it.each([
+    [0, 3, false], // level 0 (off) never graduates directly to 2
+    [1, 3, true],
+    [1, 1, false], // maxLevel 1 — never-graduates floor (finance/legal)
+    [2, 3, false], // already past the 1 -> 2 graduation step
+    [3, 3, false],
+  ])("level=%i maxLevel=%i -> %s", (level, maxLevel, expected) => {
+    expect(isGraduationEligible(level, maxLevel)).toBe(expected);
   });
 });

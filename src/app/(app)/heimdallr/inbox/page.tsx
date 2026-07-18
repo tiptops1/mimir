@@ -10,8 +10,10 @@ import {
   countPendingActions,
   listUndoTrayActions,
   listAutonomyConfigs,
+  listGraduationCandidates,
+  getUneditedStats,
 } from "@/lib/heimdallr/queries";
-import { isUndoable } from "@/lib/heimdallr/state-machine";
+import { graduationDecision, isUndoable } from "@/lib/heimdallr/state-machine";
 import { formatDate } from "@/lib/utils";
 
 const MODULE_TONE = {
@@ -39,11 +41,12 @@ export default async function HeimdallrInboxPage({
   const moduleFilter = typeof sp.module === "string" ? sp.module : "";
   const hasFilters = Boolean(q || category || moduleFilter);
 
-  const [pending, totalPending, undoTray, autonomyConfigs] = await Promise.all([
+  const [pending, totalPending, undoTray, autonomyConfigs, graduationCandidates] = await Promise.all([
     listPendingActions(prisma, { q, category, module: moduleFilter }),
     countPendingActions(prisma),
     listUndoTrayActions(prisma),
     listAutonomyConfigs(prisma),
+    listGraduationCandidates(prisma),
   ]);
 
   const labelFor = (cat: string) =>
@@ -57,6 +60,21 @@ export default async function HeimdallrInboxPage({
   );
   const breakerTripped = autonomyConfigs.filter(
     (c) => c.level === 1 && c.lastBreakerReason,
+  );
+
+  // Read-only progress display — no mutation on render. The actual level 1 -> 2
+  // promotion happens via scripts/heimdallr/run-graduation-sweep.ts (evaluateGraduation),
+  // same deferred-cron posture as the breaker sweep (S9).
+  const graduationProgress = await Promise.all(
+    graduationCandidates.map(async (c) => {
+      const { sample, count } = await getUneditedStats(prisma, c.category, c.graduationWindowDays, now);
+      const decision = graduationDecision({
+        unedited: { sample, count },
+        graduationUneditedPct: c.graduationUneditedPct,
+        breakerMinSample: c.breakerMinSample,
+      });
+      return { category: c.category, label: c.label, sample, count, ...decision, config: c };
+    }),
   );
 
   return (
@@ -91,6 +109,25 @@ export default async function HeimdallrInboxPage({
                   {" — "}
                   {c.lastBreakerReason}
                   {c.lastBreakerTrippedAt && ` (le ${formatDate(c.lastBreakerTrippedAt)})`}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        {graduationProgress.length > 0 && (
+          <Card className="mb-4 p-4">
+            <p className="mb-2 text-sm font-semibold text-foreground">
+              Progression vers le niveau 2
+            </p>
+            <ul className="space-y-1 text-sm text-muted">
+              {graduationProgress.map((g) => (
+                <li key={g.category}>
+                  <span className="font-medium text-foreground">{g.label}</span>
+                  {" — "}
+                  {g.uneditedPct !== null
+                    ? `${g.uneditedPct.toFixed(1)}% non modifié (${g.count}/${g.sample}, seuil ${g.config.graduationUneditedPct}%, échantillon min ${g.config.breakerMinSample})`
+                    : `échantillon insuffisant (${g.sample}/${g.config.breakerMinSample})`}
                 </li>
               ))}
             </ul>
@@ -135,6 +172,7 @@ export default async function HeimdallrInboxPage({
                       <td className="px-4 py-3">
                         <HeimdallrActionRow
                           id={a.id}
+                          type={a.type}
                           payload={a.payload}
                           sources={a.sources}
                           trigger={a.trigger}

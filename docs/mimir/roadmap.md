@@ -1,15 +1,15 @@
 # Mimir — dev roadmap, Claude Code session plan
 
 > Companion to `AGENTIC-PLATFORM-DECISION-MEMO.md`. This is the execution plan: one checkbox ≈ one
-> Claude Code session. Tick as you go — this file is the cross-session memory, same as the Vision RM
-> roadmaps. Lives at `docs/mimir/roadmap.md` **in the Mimir repo**.
+> Claude Code session. Tick as you go — this file is **Mimir's** cross-session memory, in the same
+> spirit as the earlier CRM baseline roadmaps. Lives at `docs/mimir/roadmap.md` **in the Mimir repo**.
 >
 > Ritual per session (unchanged from the brief): **plan mode → approve → execute → lint → build →
 > commit → update this file → `/clear`.** Push to `main` only on an explicit "push".
 >
 > **Revised 2026-07-15 — D6: separate environment.** Mimir is no longer built inside the baseline
 > repo. It gets its **own repo, own Atlas cluster, own Vercel project, own cron schedules, own
-> secrets**, seeded from a duplicate of the Vision RM baseline at its current commit. See §0.5 and
+> secrets**, seeded from a duplicate of the CRM baseline at its current commit. See §0.5 and
 > S0. Everything below assumes that split.
 
 ---
@@ -46,7 +46,7 @@ the memo's rate snapshot is dated 2026-07 and explicitly says verify before quot
 
 Two independent environments from now on:
 
-| | **Vision RM (prod baseline)** | **Mimir (new)** |
+| | **CRM baseline (prod)** | **Mimir (new)** |
 |---|---|---|
 | Repo | the baseline repo | new repo, seeded from the baseline repo @ `719f842` |
 | Atlas | `crm-railway` cluster (legacy name), prod data | **new project/cluster**, no prod data, ever |
@@ -68,7 +68,7 @@ proving ground whose modules get **merged back** into the baseline repo once val
 changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 
 **Baseline discipline (new standing rules):**
-- The duplicated Vision RM code is a **baseline, not a fork to improve**. Bug fixes that belong to
+- The duplicated baseline code is a **baseline, not a fork to improve**. Bug fixes that belong to
   the baseline product go in the baseline repo and get pulled across — not fixed only in Mimir.
 - Anything gated to tenant #1 in the baseline (legacy IMAP/ICS/`FIREFLIES_API_KEY` fallbacks,
   `TENANT1_SLUG` assumptions, hardcoded single-tenant seed config) is **dead weight on day one** —
@@ -117,7 +117,7 @@ into the next phase on autopilot either.
 
 ### Phase −1 — Environment split (new, blocks everything)
 
-- [x] **S0 — New repo + environment, Vision RM duplicated as baseline** · **Opus, plan mode** · M · ✅ 2026-07-15
+- [x] **S0 — New repo + environment, CRM baseline duplicated** · **Opus, plan mode** · M · ✅ 2026-07-15
   Run **outside** the baseline repo (it creates a sibling repo). Do not touch the baseline repo
   in this session.
   Scope: decide the duplication mechanic (clone/fork vs. copy-source) and record why; create the new
@@ -139,8 +139,8 @@ into the next phase on autopilot either.
 
 - [x] **S1 — Docs + CLAUDE.md refactor** · Sonnet · S · ✅ 2026-07-15
   `CLAUDE.md` rewritten for this repo (Mimir identity, pointers to `docs/mimir/*`, the standing
-  rules, `mimir-ship`/`mimir-env-guard` ritual, no Vision-RM-only content). `docs/roadmap.md` +
-  `docs/product-roadmap.md` (Vision RM's own dated build logs) deleted — not Mimir's history.
+  rules, `mimir-ship`/`mimir-env-guard` ritual, no baseline-only content). `docs/roadmap.md` +
+  `docs/product-roadmap.md` (the baseline's own dated build logs) deleted — not Mimir's history.
   `docs/VISION-RM-BRIEF.md` renamed to `docs/CRM-BASELINE-BRIEF.md` and genericized in place
   (tenant-slug/domain examples, dead script references removed) as the baseline architecture
   reference. `README.md`/`INTEGRATIONS.md`/`docs/architecture.md` genericized + corrected for
@@ -365,7 +365,7 @@ into the next phase on autopilot either.
   published. `mimir/.env` (repo root, this repo's own file — not `avelior-analytics/`) has
   `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_OAUTH_REDIRECT_URI` all set, redirect URI
   `http://localhost:3001/api/integrations/google/callback` matching Mimir's dev port (3001, not
-  Vision RM's 3000) — confirmed also registered as an Authorized redirect URI on the Google Cloud
+  the baseline's 3000) — confirmed also registered as an Authorized redirect URI on the Google Cloud
   client itself. Actual OAuth-flow completion (clicking through consent) deferred to S14b as its
   first functional check, since that's real code exercise rather than config verification.
 - [x] **S14b — Draft pipeline** · plan on Opus · M · ✅ 2026-07-18
@@ -391,10 +391,27 @@ into the next phase on autopilot either.
   re-check with Inngest dev up before relying on the live cron path, but doesn't affect S14b's
   fixture-driven verification above. Also still open: `sweepExpired` has no cron; Gmail `threadId`
   not persisted (S15 send path resolves via `rfc822msgid:`).
-- [ ] **S15 — Draft surface + graduation stats** · Sonnet · M
-  Drafts render in the Heimdallr inbox; approve/edit/reject events feed graduation stats **from the
-  first draft ever shown**. Graduation math + never-graduates list (money, legal, health-flagged) as
-  pure, tested functions.
+- [x] **S15 — Draft surface + graduation stats** · Sonnet · M · ✅ 2026-07-18
+  `HeimdallrActionRow` gained a type-aware branch for `email.draft_reply`: To/Objet/Corps display
+  instead of raw JSON, and edit-then-approve switched from a JSON textarea to structured
+  Objet/Corps fields for that type (generic JSON view/edit unchanged for every other type).
+  Graduation math mirrors S9's breaker shape exactly: `graduationDecision`/`isGraduationEligible`
+  (pure, `state-machine.ts`, 9 new unit tests) — unedited-rate over `graduationWindowDays`, gated
+  by `breakerMinSample`, never-graduates floor is `level === 1 && maxLevel >= 2` (excludes
+  `finance.commitment`/`legal.communication`'s `maxLevel: 1` by construction). `getUneditedStats`/
+  `listGraduationCandidates` (read, `queries.ts`) + `promoteCategory`/`evaluateGraduation`/
+  `sweepGraduationEligible` (write, `ledger.ts`, one transaction, `level_changed` event with
+  `cause: "graduation"` carrying the rate numbers). Not wired to a cron — same deferred posture as
+  `sweepBreachedCategories` (S9); runs manually via `scripts/heimdallr/run-graduation-sweep.ts`.
+  Inbox gained a read-only "Progression vers le niveau 2" card (no mutation on render) showing
+  live unedited%/sample per eligible category. *Exit met:* `npm run test` green (171 total,
+  82 in state-machine.test.ts); verified end-to-end against `crm_demo` — a real S14b fixture
+  draft rendered To/Objet/Corps, edit-then-approve round-tripped with `wasEdited: true` and the
+  correct `editedPayload`, the progress card updated live (0/10 → 1/10); seeded 40 synthetic
+  approved actions (38 unedited) to hit the 95% threshold, ran the sweep, confirmed
+  `AutonomyConfig.level` flipped 1→2 with the expected `level_changed` event, then confirmed the
+  sweep and the progress card both correctly went silent post-graduation. All scratch data
+  reverted (including the fixture row's original PROPOSED state) after; lint/build clean.
 
 - [ ] **Checkpoint — Phase 3 wrap** · reflection, no code · XS
   Huginn is the first module that writes real proposals against a real inbound channel (email) —
@@ -403,6 +420,9 @@ into the next phase on autopilot either.
   first draft, and look for anything Huginn needed that Phase 1/2 didn't provide (a retrieval gap,
   an autonomy-category gap, a UX gap in the inbox). Good moment to ask whether Muninn/Nornir/Bragi
   in Phase 4 still make sense in the planned order, or whether what shipped here reprioritizes them.
+  **Additions proposed at this checkpoint (2026-07-18):** new **Freyja paid-marketing realm** (S25 —
+  ad connectors + autonomous campaign agent) and a **pixel-art "Le Bureau" easter egg** (C5). Confirm
+  scope and log both in `decisions.md` before building.
 
 ### Phase 4 — Remaining realms (order per memo)
 
@@ -452,6 +472,35 @@ not guesses.
 - [ ] **S24 — HR realm** · plan on Opus · M
       Hiring pipeline, onboarding docs, policy Q&A over Mímisbrunnr. Last on purpose: least
       defined, least urgent for the broker vertical. Scope it fresh at the time.
+
+- [ ] **S25 — Freyja: paid-marketing realm (ad connectors + autonomous campaign agent)** · plan on Opus · M
+      *(new — proposed at the Phase 3 checkpoint 2026-07-18)* A dedicated **marketing realm** —
+      working name **Freyja** (goddess of allure/prosperity; the demand-gen counterpart to Bragi's
+      brand/content work, S18). Two halves, and the split matters:
+      **(a) Insight — connectors + one pane of glass.** Per-tenant OAuth connectors to the paid-ad
+      platforms — **Google Ads** and **Meta (Facebook/Instagram) Ads** first, LinkedIn/TikTok later —
+      each a *config-driven* connector (credentials + account IDs as tenant config, never hardcoded;
+      same per-tenant integration pattern as Gmail/Calendar in `INTEGRATIONS.md`). Pull campaign
+      metrics (spend, impressions, clicks, CPC/CPA/ROAS, conversions) on a cron into a normalized
+      `CampaignInsight` shape so every platform reads the same, and surface them in **one unified
+      dashboard** (reuse the Nornir S17 SavedView/widget pattern — don't build a second dashboard
+      engine). Read-only until (b) is trusted.
+      **(b) Action — the autonomous marketing agent.** The agent reasons over the unified insight and
+      **proposes campaign decisions** — budget shifts, pausing losers, scaling winners, bid/audience
+      tweaks, creative rotation — to *make campaigns powerful and effective*. **Every decision goes
+      through the Heimdallr ledger (D5, no exceptions)**: new autonomy categories (e.g.
+      `marketing.budget_change`, `marketing.campaign_pause`, `marketing.bid_adjust`) start at
+      `level: 0` (propose-only), and only graduate per the S9/S15 breaker+graduation math once the
+      approve/edit history earns it. **Spend is real money — cap the blast radius:** a hard
+      per-category `maxLevel` and a max-daily-budget-delta guardrail so even a graduated agent can't
+      swing spend without a human, mirroring the `finance.commitment` posture.
+      *Model:* plan on **Opus** (connector-normalization + autonomy-category design is
+      schema-that-can't-be-backfilled tier); implement on **Sonnet**; the runtime agent runs on
+      **Sonnet** for the decision drafts (per §0 runtime table — customer/spend-facing reasoning),
+      **Haiku** for metric summarization/classification. Split into S25a (connectors + insight
+      dashboard) and S25b (autonomous agent + new autonomy categories) if it grows past M.
+      *Depends on:* S7 ledger, S17 Nornir dashboard pattern; benefits from S18 Bragi brand voice for
+      ad-copy suggestions. Log the realm name + autonomy categories in `decisions.md` when scoped.
 
 ### Cosmos UI track (parallel, can run alongside Heimdallr phases)
 
@@ -510,6 +559,39 @@ the full design system.
   density.
   *Exit:* visual polish complete; design review green at both themes.
 
+- [ ] **C5 — 🥚 Easter egg: "Le Bureau" — pixel-art agents' house at work** · plan on Opus, implement on Sonnet · M
+  *(new — proposed at the Phase 3 checkpoint 2026-07-18)* A hidden tab in the cosmos that renders
+  the Mimir agents as **pixel-art characters working in an office** — Heimdallr, Huginn, Muninn,
+  Nornir, Bragi, Forseti, Odin (and Freyja once S25 lands) each a little Norse pixel character that
+  walks around, sits at its desk, and animates what it's doing (typing = drafting, reading =
+  retrieving, waiting = a pending ledger proposal). Pure delight surface; not on the main nav —
+  unlocked by an egg (e.g. a Konami sequence or clicking the Mimir well glyph N times).
+  **Source repo:** vendor **https://github.com/pixel-agents-hq/pixel-agents** — it visualizes Claude
+  Code agents as pixel characters in an office via the Claude Code Hooks API (React 19 + Vite +
+  Canvas 2D webview, Fastify server). Reskin it into the Mimir cosmos: abyss/bone/brass palette,
+  Norse-character sprites, the office framed as the realms' shared "bureau." Decide the vendor
+  mechanic at plan time — embed the `webview-ui` as a route vs. run its standalone CLI/server behind
+  the egg — and record it in `decisions.md` (don't fork-to-improve; treat it as a vendored dep).
+  **Model:** *build* the integration on **Sonnet** (plan the vendoring approach on **Opus** — pulling
+  a foreign monorepo into the app shell is an architecture call). *The pixel agents themselves are
+  driven by **Claude Code** via its Hooks API* — that's the repo's runtime, unchanged; no extra API
+  model is wired for the animation. (If you later auto-generate sprite variants instead of hand-
+  drawing them, that's an image model — but see the asset note below: the intent is **your own art**.)
+  **Where to feed your own pixel art (do this by hand — this is the fun part):** drop your sprites
+  into the vendored **`webview-ui/public/assets/`** tree —
+  • **characters** → one folder per Norse agent with its PNG sprite sheet + a `manifest.json`
+    declaring rotation groups and per-state animation frames (idle / walk / type / read / wait);
+  • **furniture, floors, walls** (the "house") → folders under `webview-ui/public/assets/furniture/`,
+    each a PNG + `manifest.json` (the repo already ships open-source office assets there as the
+    template to copy).
+  For art kept **outside** the repo, use the app's Settings → **"Add Asset Directory"** and follow
+  the format in the repo's **`docs/external-assets.md`**. Map each Norse agent → its realm accent so
+  the pixel character's palette matches its cosmos hue.
+  *Exit:* egg unlocks the hidden tab; the seven+ agents render and animate; at least one agent
+  visibly reacts to a real Mimir event (a pending Heimdallr proposal → that agent shows "waiting");
+  reskinned to the cosmos palette; both themes sane; documented in `decisions.md` (vendor mechanic +
+  where custom art goes).
+
 **Parallel premium track** (slot into gaps, one S-session each): per-tenant branding pull-forward →
 Cmd+K palette on Atlas Search → MCP connector.
 
@@ -527,7 +609,7 @@ Cmd+K palette on Atlas Search → MCP connector.
 5. **Keep CLAUDE.md short and stable**; per-module docs loaded on demand. Every line is paid on
    every session. The inherited CLAUDE.md is longer than this repo needs — S1 fixes that.
 6. **Don't run the dev server or screenshots unless the session is UI work.**
-7. **Never open both repos in one session.** Cross-repo work (pulling a Vision RM fix across) is its
+7. **Never open both repos in one session.** Cross-repo work (pulling a baseline fix across) is its
    own small session with an explicit diff, not a side quest.
 
 ## 4. Bug rules

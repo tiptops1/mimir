@@ -1,10 +1,13 @@
 import type { AgentAction, AutonomyConfig, Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { getUneditedStats } from "./queries";
 import {
   assertTransition,
   breakerDecision,
+  graduationDecision,
   isAutoApproveEligible,
   isExpired,
+  isGraduationEligible,
   isUndoable,
   type ActionStatus,
   type BreakerSignal,
@@ -432,4 +435,87 @@ export async function sweepBreachedCategories(
     if (decision?.trip) demoted += 1;
   }
   return demoted;
+}
+
+/**
+ * Promote a category 1 -> 2 (draft_approve -> auto_with_undo). No-op (returns null)
+ * if the category doesn't exist or isn't graduation-eligible (isGraduationEligible) —
+ * money/legal's maxLevel: 1 floor makes this permanently a no-op for them. Writes a
+ * single `level_changed` event, cause "graduation" — unlike the breaker there's no
+ * separate diagnostic verb reserved for graduation, so the rate numbers that earned
+ * it live in this event's data (events.md §1/§3).
+ */
+export async function promoteCategory(
+  prisma: PrismaClient,
+  category: string,
+  data: { uneditedPct: number | null; sample: number },
+): Promise<AutonomyConfig | null> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.autonomyConfig.findUnique({ where: { category } });
+    if (!current || !isGraduationEligible(current.level, current.maxLevel)) return null;
+    const config = await tx.autonomyConfig.update({
+      where: { category },
+      data: { level: 2 },
+    });
+    await tx.agentEvent.create({
+      data: {
+        module: "system",
+        category,
+        action: "level_changed",
+        data: { from: current.level, to: 2, cause: "graduation", ...data },
+      },
+    });
+    return config;
+  });
+}
+
+/**
+ * Check one category's trailing unedited-rate (AgentAction.wasEdited over
+ * graduationWindowDays, events.md eligible set) against its AutonomyConfig
+ * thresholds, promoting on graduate. No-op (returns null) if the category isn't
+ * graduation-eligible (level != 1 or maxLevel < 2 — the never-graduates floor).
+ * Returns the computed decision either way, graduated or not.
+ */
+export async function evaluateGraduation(
+  prisma: PrismaClient,
+  category: string,
+  now: Date = new Date(),
+): Promise<(ReturnType<typeof graduationDecision> & { sample: number }) | null> {
+  const config = await prisma.autonomyConfig.findUnique({ where: { category } });
+  if (!config || !isGraduationEligible(config.level, config.maxLevel)) return null;
+
+  const { sample, count } = await getUneditedStats(prisma, category, config.graduationWindowDays, now);
+
+  const decision = graduationDecision({
+    unedited: { sample, count },
+    graduationUneditedPct: config.graduationUneditedPct,
+    breakerMinSample: config.breakerMinSample,
+  });
+
+  if (decision.graduate) {
+    await promoteCategory(prisma, category, { uneditedPct: decision.uneditedPct, sample });
+  }
+  return { ...decision, sample };
+}
+
+/**
+ * Sweep every graduation-eligible category (level 1, maxLevel >= 2) through
+ * evaluateGraduation. Same shape as sweepBreachedCategories — exported for a
+ * future cron wire-up, not called from one yet (no Inngest cron infra exists
+ * for any sweep today; run manually via scripts/heimdallr/run-graduation-sweep.ts).
+ */
+export async function sweepGraduationEligible(
+  prisma: PrismaClient,
+  now: Date = new Date(),
+): Promise<number> {
+  const categories = await prisma.autonomyConfig.findMany({
+    where: { level: 1, maxLevel: { gte: 2 } },
+    select: { category: true },
+  });
+  let graduated = 0;
+  for (const { category } of categories) {
+    const decision = await evaluateGraduation(prisma, category, now);
+    if (decision?.graduate) graduated += 1;
+  }
+  return graduated;
 }
