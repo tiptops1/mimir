@@ -83,6 +83,9 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 **Human/business track (runs in parallel, not Claude Code work):**
 - [ ] **G1** — start Google OAuth Production + CASA process now. Longest external lead time.
       *Note: the Mimir environment needs its own OAuth client too — G1 work should account for it.*
+      *Not a blocker for S14: a Testing-mode client (own client ID, test users added manually,
+      per `INTEGRATIONS.md` §1) fully exercises the draft pipeline. CASA only required before a
+      real, unaffiliated tenant goes live (Testing mode caps at 100 test users, tokens expire ~7d).*
 - [x] **G2** — ~~ask the baseline's business contact what a typical month of client email contains →
       close the HDS decision~~ **before Huginn ingests anything**. **Closed 2026-07-18 by a modeled
       corpus** (no real client yet): assumed vertical = multi-line FR brokerage; 42-email labeled
@@ -355,12 +358,23 @@ into the next phase on autopilot either.
   counter is tracking correctly. Is G2 (HDS scope) resolved yet? Phase 3 is gated on it — if not,
   decide whether to reorder Phase 4 work ahead of Huginn rather than idling.
 
-### Phase 3 — Huginn, module 2 · ✅ G2 closed 2026-07-18 · ⚠ S14 still needs G1 (OAuth prod) for live Gmail
+### Phase 3 — Huginn, module 2 · ✅ G2 closed 2026-07-18 · G1 (OAuth prod/CASA) only gates real tenant go-live, not S14 build
 
-- [ ] **S14 — Draft pipeline** · plan on Opus · M
+- [x] **S14a — Mimir OAuth client setup** · **human, no Claude Code model needed** · XS · ✅ 2026-07-18
+  Fresh Google Cloud project + OAuth client in Testing mode, test user added, consent screen not
+  published. `mimir/.env` (repo root, this repo's own file — not `avelior-analytics/`) has
+  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_OAUTH_REDIRECT_URI` all set, redirect URI
+  `http://localhost:3001/api/integrations/google/callback` matching Mimir's dev port (3001, not
+  Vision RM's 3000) — confirmed also registered as an Authorized redirect URI on the Google Cloud
+  client itself. Actual OAuth-flow completion (clicking through consent) deferred to S14b as its
+  first functional check, since that's real code exercise rather than config verification.
+- [ ] **S14b — Draft pipeline** · plan on Opus · M
   Reuse the inherited Gmail ingestion path; classify support-shaped email (Haiku) → retrieve (S12) →
   draft (Sonnet) → write ledger proposal. Support-prompt pack is per-tenant config. HDS quarantine
-  applies upstream (S11). *Needs a Mimir-environment OAuth client — see the G1 note in §1.*
+  applies upstream (S11). Assumes S14a's Testing-mode OAuth client + env vars already in place — no
+  CASA needed, works immediately, refresh tokens just expire ~7d (reconnect from dashboard). G1's
+  CASA/verification track only becomes a hard blocker at real-tenant go-live, since Testing mode caps
+  at 100 explicitly-added test users. See G1 note in §1.
 - [ ] **S15 — Draft surface + graduation stats** · Sonnet · M
   Drafts render in the Heimdallr inbox; approve/edit/reject events feed graduation stats **from the
   first draft ever shown**. Graduation math + never-graduates list (money, legal, health-flagged) as
