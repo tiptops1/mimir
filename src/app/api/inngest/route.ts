@@ -4,6 +4,7 @@ import { proofRun } from "@/lib/jobs/proof";
 import { ingestDocument } from "@/lib/jobs/ingest";
 import { processImportRun } from "@/lib/jobs/import-run";
 import { huginnDraftEmail, huginnScan } from "@/lib/jobs/huginn-draft";
+import { muninnDraftRca } from "@/lib/jobs/muninn-draft";
 
 // Inngest execution endpoint — every step of every job arrives here as its
 // own sub-60s invocation (the memo §5.1 architecture). Requests are verified
@@ -15,5 +16,12 @@ export const maxDuration = 60;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [proofRun, ingestDocument, processImportRun, huginnScan, huginnDraftEmail],
+  functions: [
+    proofRun,
+    ingestDocument,
+    processImportRun,
+    huginnScan,
+    huginnDraftEmail,
+    muninnDraftRca,
+  ],
 });

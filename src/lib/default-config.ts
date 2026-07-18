@@ -225,6 +225,129 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
 {"support": true|false, "category": "...", "confidence": 0.0-1.0, "reason": "justification courte"}`,
   },
   {
+    key: "muninn.rca_doc.section.contexte",
+    label: "Muninn — section Contexte",
+    taskClass: "draft",
+    module: "muninn",
+    variables: [],
+    body: `Tu rédiges la section "Contexte" d'un document d'analyse (RCA) pour un
+cabinet de courtage en assurances B2B français. On te donne un objet JSON
+(activité : résumé, corps, sentiment) et des extraits de la base de
+connaissances du cabinet (passages).
+
+Décris factuellement ce qui s'est passé : qui est concerné, quelle demande ou
+quel incident a déclenché ce dossier, et à quel moment. 3-5 phrases, français,
+ton neutre et professionnel.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur l'activité fournie et les passages pour tout fait.
+- N'invente JAMAIS de détail absent (nom, date, montant, garantie).
+- Si une information manque, dis-le explicitement plutôt que de l'inventer.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"content": "..."}`,
+  },
+  {
+    key: "muninn.rca_doc.section.cause_racine",
+    label: "Muninn — section Cause racine",
+    taskClass: "draft",
+    module: "muninn",
+    variables: [],
+    body: `Tu rédiges la section "Cause racine" d'un document d'analyse (RCA)
+pour un cabinet de courtage en assurances B2B français. On te donne l'activité
+concernée (résumé, corps, sentiment) et des extraits de la base de
+connaissances du cabinet (passages).
+
+Identifie la cause la plus probable du problème rencontré, en t'appuyant sur
+les passages pour toute règle, procédure ou garantie citée. 2-4 phrases,
+français, ton neutre.
+
+Règles STRICTES :
+- N'invente JAMAIS de cause non étayée par l'activité ou les passages.
+- Si la cause ne peut pas être établie avec certitude à partir des éléments
+  fournis, dis-le explicitement et propose les pistes les plus plausibles
+  plutôt que d'affirmer une cause inventée.
+- Ne mets jamais en cause une personne nommément sans fait rapporté.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"content": "..."}`,
+  },
+  {
+    key: "muninn.rca_doc.section.impact",
+    label: "Muninn — section Impact",
+    taskClass: "draft",
+    module: "muninn",
+    variables: [],
+    body: `Tu rédiges la section "Impact" d'un document d'analyse (RCA) pour un
+cabinet de courtage en assurances B2B français. On te donne l'activité
+concernée (résumé, corps, sentiment) et des extraits de la base de
+connaissances du cabinet (passages).
+
+Décris l'impact du problème pour le client et pour le cabinet (délai,
+insatisfaction, risque de contrat, charge de traitement). 2-4 phrases,
+français, ton neutre.
+
+Règles STRICTES :
+- N'invente JAMAIS de montant, de délai précis ou de conséquence contractuelle
+  absents de l'activité ou des passages.
+- Si l'impact réel n'est pas mesurable à partir des éléments fournis, reste
+  qualitatif plutôt que d'inventer un chiffre.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"content": "..."}`,
+  },
+  {
+    key: "muninn.rca_doc.section.resolution",
+    label: "Muninn — section Résolution",
+    taskClass: "draft",
+    module: "muninn",
+    variables: [],
+    body: `Tu rédiges la section "Résolution" d'un document d'analyse (RCA)
+pour un cabinet de courtage en assurances B2B français. On te donne l'activité
+concernée (résumé, corps, sentiment) et des extraits de la base de
+connaissances du cabinet (passages).
+
+Décris l'action de résolution déjà entreprise, ou à défaut celle recommandée,
+en t'appuyant sur les passages pour toute procédure ou garantie citée. 2-4
+phrases, français, ton neutre.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur les passages pour toute procédure, garantie ou
+  délai cité.
+- N'engage JAMAIS le cabinet sur une indemnisation, une prise en charge ou un
+  montant précis.
+- Si aucune résolution n'est encore établie, recommande la prochaine étape
+  (ex. reprise de contact par un conseiller) plutôt que d'inventer un
+  dénouement.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"content": "..."}`,
+  },
+  {
+    key: "muninn.rca_doc.section.prevention",
+    label: "Muninn — section Prévention",
+    taskClass: "draft",
+    module: "muninn",
+    variables: [],
+    body: `Tu rédiges la section "Prévention" d'un document d'analyse (RCA)
+pour un cabinet de courtage en assurances B2B français. On te donne l'activité
+concernée (résumé, corps, sentiment), la cause racine déjà identifiée et des
+extraits de la base de connaissances du cabinet (passages).
+
+Propose 1-3 mesures concrètes pour éviter qu'un problème similaire ne se
+reproduise (procédure interne, vérification, communication). Français, ton
+neutre, format liste à puces courte dans le texte.
+
+Règles STRICTES :
+- Les mesures doivent découler logiquement du contexte et de la cause racine
+  fournis — n'invente pas de dispositif inexistant dans les passages si la
+  mesure prétend s'appuyer sur une procédure existante.
+- Reste général et actionnable plutôt que vague.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"content": "..."}`,
+  },
+  {
     key: "huginn.support_reply.draft",
     label: "Huginn — brouillon de réponse support",
     taskClass: "draft",
@@ -253,6 +376,35 @@ Règles STRICTES :
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
 {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne (\\n).`,
+  },
+];
+
+interface RcaTemplateSectionSeed {
+  key: string;
+  label: string;
+  promptKey: string;
+}
+
+interface RcaTemplateSeed {
+  key: string;
+  label: string;
+  sections: RcaTemplateSectionSeed[];
+}
+
+// Muninn's document structure (S16) — which sections an RCA doc has, and which
+// PromptTemplate key drafts each one. The prose generation itself still goes
+// through PromptTemplate/renderPrompt; this only declares the skeleton.
+export const DEFAULT_RCA_TEMPLATES: RcaTemplateSeed[] = [
+  {
+    key: "muninn.rca_doc.default",
+    label: "Document d'analyse — standard",
+    sections: [
+      { key: "contexte", label: "Contexte", promptKey: "muninn.rca_doc.section.contexte" },
+      { key: "cause_racine", label: "Cause racine", promptKey: "muninn.rca_doc.section.cause_racine" },
+      { key: "impact", label: "Impact", promptKey: "muninn.rca_doc.section.impact" },
+      { key: "resolution", label: "Résolution", promptKey: "muninn.rca_doc.section.resolution" },
+      { key: "prevention", label: "Prévention", promptKey: "muninn.rca_doc.section.prevention" },
+    ],
   },
 ];
 
@@ -322,6 +474,17 @@ async function upsertPromptTemplates(prisma: PrismaClient): Promise<void> {
   }
 }
 
+async function upsertRcaTemplates(prisma: PrismaClient): Promise<void> {
+  for (const t of DEFAULT_RCA_TEMPLATES) {
+    const data = { label: t.label, sections: t.sections as never, active: true };
+    await prisma.rcaTemplate.upsert({
+      where: { key_version: { key: t.key, version: 1 } },
+      update: data,
+      create: { key: t.key, version: 1, ...data },
+    });
+  }
+}
+
 // Default monthly AI spend cap (S5) — inside the memo's €15-40/tenant
 // variable-cost range. Never clobber a live limit once a tenant has edited it.
 const DEFAULT_AI_MONTHLY_LIMIT_USD = 20;
@@ -360,6 +523,7 @@ export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
 
   await upsertAutonomyConfig(prisma);
   await upsertPromptTemplates(prisma);
+  await upsertRcaTemplates(prisma);
   await upsertAiBudget(prisma);
 
   for (const seq of DEFAULT_SEQUENCES) {

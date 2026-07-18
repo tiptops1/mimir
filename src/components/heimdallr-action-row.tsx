@@ -12,8 +12,11 @@ import {
 type Source = { docId?: string; chunkId?: string; quote?: string; score?: number };
 type Trigger = { kind?: string; [key: string]: unknown };
 type DraftPayload = { to?: string; subject?: string; body?: string; inReplyTo?: string };
+type RcaSection = { key: string; label: string; content: string | null };
+type RcaPayload = { templateKey?: string; templateVersion?: number; sections?: RcaSection[] };
 
 const DRAFT_TYPE = "email.draft_reply";
+const RCA_TYPE = "doc.rca_draft";
 
 export function HeimdallrActionRow({
   id,
@@ -34,9 +37,16 @@ export function HeimdallrActionRow({
   const isDraft = type === DRAFT_TYPE && payload !== null && typeof payload === "object";
   const draft = isDraft ? (payload as DraftPayload) : null;
 
+  const isRca = type === RCA_TYPE && payload !== null && typeof payload === "object";
+  const rca = isRca ? (payload as RcaPayload) : null;
+  const rcaSections = rca?.sections ?? [];
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
+  const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
+    Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -55,13 +65,21 @@ export function HeimdallrActionRow({
       setError(null);
       const parsed = draft
         ? { ...draft, subject: editedSubject, body: editedBody }
-        : (() => {
-            try {
-              return JSON.parse(editedPayload);
-            } catch {
-              return undefined;
+        : rca
+          ? {
+              ...rca,
+              sections: rcaSections.map((s) => ({
+                ...s,
+                content: editedSections[s.key] ?? s.content,
+              })),
             }
-          })();
+          : (() => {
+              try {
+                return JSON.parse(editedPayload);
+              } catch {
+                return undefined;
+              }
+            })();
       if (parsed === undefined) {
         setError("JSON invalide.");
         return;
@@ -101,6 +119,17 @@ export function HeimdallrActionRow({
                   {draft.body ?? "—"}
                 </pre>
               </div>
+            </div>
+          ) : rca ? (
+            <div className="space-y-2">
+              {rcaSections.map((s) => (
+                <div key={s.key} className="rounded-md bg-card p-2 text-[11px] text-muted">
+                  <span className="font-medium text-foreground">{s.label}</span>
+                  <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                    {s.content ?? "(échec de génération pour cette section)"}
+                  </pre>
+                </div>
+              ))}
             </div>
           ) : (
             <pre className="max-h-48 overflow-auto rounded-md bg-card p-2 text-[11px] text-muted">
@@ -149,6 +178,22 @@ export function HeimdallrActionRow({
                 disabled={pending}
                 rows={6}
               />
+            </>
+          ) : rca ? (
+            <>
+              {rcaSections.map((s) => (
+                <div key={s.key} className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-muted">{s.label}</label>
+                  <Textarea
+                    value={editedSections[s.key] ?? ""}
+                    onChange={(e) =>
+                      setEditedSections((prev) => ({ ...prev, [s.key]: e.target.value }))
+                    }
+                    disabled={pending}
+                    rows={3}
+                  />
+                </div>
+              ))}
             </>
           ) : (
             <Textarea

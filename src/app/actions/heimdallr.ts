@@ -5,13 +5,15 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
 import { approveAction, rejectAction, undoAction } from "@/lib/heimdallr/ledger";
 import { InvalidTransitionError } from "@/lib/heimdallr/state-machine";
+import { executeRcaDocument, isRcaDraftAction, revertRcaDocument } from "@/lib/muninn/executor";
 
 /** Approve a proposal unchanged. Returns an error string on failure, else null. */
 export async function approveActionSA(id: string): Promise<string | null> {
   const session = await verifySession();
   const prisma = await getTenantDb();
   try {
-    await approveAction(prisma, id, { decidedBy: session.userId });
+    const action = await approveAction(prisma, id, { decidedBy: session.userId });
+    if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -28,7 +30,8 @@ export async function approveEditedActionSA(
   const session = await verifySession();
   const prisma = await getTenantDb();
   try {
-    await approveAction(prisma, id, { decidedBy: session.userId, editedPayload });
+    const action = await approveAction(prisma, id, { decidedBy: session.userId, editedPayload });
+    if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -66,7 +69,8 @@ export async function undoActionSA(id: string): Promise<string | null> {
   });
   const undoWindowMinutes = config?.undoWindowMinutes ?? 60;
   try {
-    await undoAction(prisma, id, undoWindowMinutes);
+    const undone = await undoAction(prisma, id, undoWindowMinutes);
+    if (isRcaDraftAction(undone)) await revertRcaDocument(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

@@ -413,20 +413,39 @@ into the next phase on autopilot either.
   sweep and the progress card both correctly went silent post-graduation. All scratch data
   reverted (including the fixture row's original PROPOSED state) after; lint/build clean.
 
-- [ ] **Checkpoint — Phase 3 wrap** · reflection, no code · XS
-  Huginn is the first module that writes real proposals against a real inbound channel (email) —
-  the first live test of the whole Heimdallr loop under real-world noise. Demo drafts actually
-  generated from real-shaped support email, check graduation stats are accumulating sensibly from
-  first draft, and look for anything Huginn needed that Phase 1/2 didn't provide (a retrieval gap,
-  an autonomy-category gap, a UX gap in the inbox). Good moment to ask whether Muninn/Nornir/Bragi
-  in Phase 4 still make sense in the planned order, or whether what shipped here reprioritizes them.
-  **Additions proposed at this checkpoint (2026-07-18):** new **Freyja paid-marketing realm** (S25 —
-  ad connectors + autonomous campaign agent) and a **pixel-art "Le Bureau" easter egg** (C5). Confirm
-  scope and log both in `decisions.md` before building.
+- [x] **Checkpoint — Phase 3 wrap** · reflection, no code · XS · **skipped 2026-07-18 (explicit call)**
+  Nicolas chose to skip straight to Phase 4 rather than run the reflection pass. Freyja (S25) and
+  Le Bureau (C5) stay logged as proposed-but-unconfirmed in `decisions.md` — scope still needs
+  confirming before either is built, since that confirmation was this checkpoint's job.
 
 ### Phase 4 — Remaining realms (order per memo)
 
-- [ ] **S16 — Muninn: RCA templates (config) + doc generation + versioning** · Sonnet · M
+- [x] **S16 — Muninn: RCA templates (config) + doc generation + versioning** · Sonnet · M · ✅ 2026-07-18
+  New `RcaTemplate` (document structure — ordered sections, each pointing at a `PromptTemplate`
+  key) + `RcaDocument` (the versioned artifact: approving a regeneration inserts a new version
+  and flips the prior ACTIVE row to SUPERSEDED — same immutable-history shape as `PromptTemplate`,
+  applied to the generated document). Seeded one `muninn.rca_doc.default` template (contexte /
+  cause_racine / impact / resolution / prevention) + 5 section `PromptTemplate` rows; the
+  already-reserved `muninn.rca_doc` `AutonomyConfig` category needed no change. Pipeline
+  (`src/lib/muninn/draft.ts`, `src/lib/jobs/muninn-draft.ts`) mirrors Huginn's shape exactly: HDS
+  gate (S11, fail closed) → per-section retrieve (S12) + draft (Sonnet) → `proposeAction`. Unlike
+  Huginn's inbox sweep, Muninn is manually triggered per `Activity` (no ticket/incident model
+  exists in the CRM baseline to scan) via `POST /api/muninn/generate` — no UI trigger button this
+  session, verified via script instead, matching how Huginn shipped before its own UI existed.
+  **Closed the Phase 1 checkpoint's gap #1** (`decisions.md` 2026-07-17: "nothing calls
+  `executeAction` yet") — `src/lib/muninn/executor.ts` is the first real executor: approval writes
+  the versioned `RcaDocument` and calls `executeAction` with `undoData`; undo reverts it (restores
+  the previously-ACTIVE version). This is a Muninn-specific executor/reverter, not the generic
+  dispatcher other modules will eventually need — gap #2 stays open, by design, for a future
+  session. `heimdallr-action-row.tsx` gained a `doc.rca_draft` type branch (section blocks +
+  per-section edit-then-approve textareas, same pattern as S15's `email.draft_reply`). *Exit met:*
+  `npm run test` green (191 total, 10 new); verified end-to-end against `crm_demo` — a scratch
+  incident Activity produced a well-grounded 5-section draft (correctly cited the knowledge base's
+  actual SLA/réclamation procedures, hedged where facts were missing, invented nothing), approved
+  to `RcaDocument` v1 ACTIVE, regenerated + approved to v2 ACTIVE with v1 SUPERSEDED, undid v2 and
+  confirmed v1 restored ACTIVE; inbox UI confirmed rendering the section branch and the
+  edit-then-approve textareas correctly (both via browser). All scratch data reverted (including
+  resetting `muninn.rca_doc`'s autonomy level back to 0) after; lint/build clean.
 - [ ] **S17 — Nornir: dashboards as config** (SavedView/widget pattern over events emitted since S7) · Sonnet · M
       **Hero surface (rescoped 2026-07-17): the business pilot dashboard** — the whole company
       at a glance — plus agent-activity feed and the **token-usage UI** over the S5

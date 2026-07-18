@@ -735,6 +735,47 @@ model PromptTemplate {
   @@index([key, active])
 }
 
+// --- Muninn (S16) — RCA/support doc generation ------------------------------
+// Template = document structure (which sections, which PromptTemplate drafts
+// each). Mirrors PromptTemplate's own versioning: edit = insert version n+1,
+// flip active. Generated prose still goes through PromptTemplate/renderPrompt —
+// no second templating engine.
+model RcaTemplate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   // dotted, e.g. muninn.rca_doc.default
+  version   Int      @default(1)
+  label     String   // French label
+  sections  Json     // [{ key, label, promptKey }] ordered — promptKey -> PromptTemplate.key
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, version])
+  @@index([key, active])
+}
+
+// The versioned artifact a template run produces. Approving a regeneration
+// inserts a new version and flips the prior ACTIVE row to SUPERSEDED — same
+// immutable-history shape as PromptTemplate, applied to the generated document
+// instead of the prompt. `entity`/`entityId` follow the AgentEvent convention
+// (ACTIVITY today — the CRM baseline has no ticket/incident model to attach to).
+model RcaDocument {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  templateKey     String
+  templateVersion Int
+  entity          String    // ACTIVITY
+  entityId        String    @db.ObjectId
+  version         Int
+  status          String    @default("ACTIVE") // ACTIVE | SUPERSEDED | UNDONE
+  sections        Json      // [{ key, label, content }]
+  sourceActionId  String?   @db.ObjectId // loose ref -> AgentAction that produced this version
+  createdAt       DateTime  @default(now())
+  supersededAt    DateTime?
+
+  @@unique([entity, entityId, version])
+  @@index([entity, entityId, status])
+}
+
 // --- Mimisbrunnr (S11) — knowledge base ingestion ---------------------------
 // Generic ontology (events.md Path C rule 2): knowledge document / chunk /
 // quarantine — vertical vocabulary lives in config, never in model names.
