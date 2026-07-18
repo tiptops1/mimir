@@ -30,6 +30,17 @@ Avant toute ingestion (emails, documents, exports CRM), le client répond à l'i
 - Quels champs de l'export CRM sont du texte libre ? (notes, commentaires — ce sont eux qui
   passent par le classifieur à l'import)
 
+> **Réponse de référence (gate G2 tranché le 2026-07-18, sans client réel).** Vertical retenu :
+> cabinet de courtage multi-branches (cœur pro/entreprise + ligne santé collective/prévoyance
+> secondaire). Sur un mois type modélisé (42 emails, `scripts/huginn/sample-inbox.ts`), **14 %**
+> du courrier porte des données de santé, concentrées sur la ligne prévoyance/santé et les
+> sinistres corporels. Le classifieur S11 les capte à **100 % de rappel** (0 faux négatif) ; la
+> posture d'exclusion D3 est donc conservée et **suffisante** — pas de certification HDS pour ce
+> vertical, hébergement Atlas + Vercel maintenu. Un cabinet **exclusivement** santé/prévoyance
+> relève d'un environnement HDS certifié distinct, hors de ce cluster. Détail : `decisions.md`
+> 2026-07-18. Ce questionnaire reste générique : à re-remplir avec les volumes réels au premier
+> onboarding.
+
 ## 3. Exports à fournir
 
 - Format : **CSV encodé UTF-8**, 4 Mo max par fichier (découper si besoin), avec ligne

@@ -83,8 +83,13 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 **Human/business track (runs in parallel, not Claude Code work):**
 - [ ] **G1** — start Google OAuth Production + CASA process now. Longest external lead time.
       *Note: the Mimir environment needs its own OAuth client too — G1 work should account for it.*
-- [ ] **G2** — ask the baseline's business contact what a typical month of client email contains →
-      close the HDS decision **before Huginn ingests anything**.
+- [x] **G2** — ~~ask the baseline's business contact what a typical month of client email contains →
+      close the HDS decision~~ **before Huginn ingests anything**. **Closed 2026-07-18 by a modeled
+      corpus** (no real client yet): assumed vertical = multi-line FR brokerage; 42-email labeled
+      inbox (`scripts/huginn/sample-inbox.ts`) measured against the S11 classifier
+      (`scripts/huginn/g2-evidence.ts --live`) → 14% health, classifier recall 100% / precision 86%.
+      Decision: keep D3 exclusion, stay on Atlas+Vercel (no HDS), pure-santé tenants need a separate
+      certified env. See `decisions.md` 2026-07-18. Re-run the inventory at the first real onboarding.
 - [x] ~~Record the prod Vercel URL~~ — done.
 - [x] ~~Verify all four cron routes are scheduled on cron-job.org~~ — **verified 2026-07-15, all
       four successful.**
@@ -350,7 +355,7 @@ into the next phase on autopilot either.
   counter is tracking correctly. Is G2 (HDS scope) resolved yet? Phase 3 is gated on it — if not,
   decide whether to reorder Phase 4 work ahead of Huginn rather than idling.
 
-### Phase 3 — Huginn, module 2 · ⚠ blocked on G2
+### Phase 3 — Huginn, module 2 · ✅ G2 closed 2026-07-18 · ⚠ S14 still needs G1 (OAuth prod) for live Gmail
 
 - [ ] **S14 — Draft pipeline** · plan on Opus · M
   Reuse the inherited Gmail ingestion path; classify support-shaped email (Haiku) → retrieve (S12) →

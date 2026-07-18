@@ -398,3 +398,55 @@ mapping synonym table and coercers will need a revision pass at the first real o
 **Operational note:** `tenant:provision` gained `--no-vector-index` — the M0 cap being 3/3 (see
 S12 entry) would otherwise hard-block provisioning any new tenant; demo/import tenants without a
 knowledge base skip the slot instead. `import_demo` was provisioned this way.
+
+## 2026-07-18 — G2 closed by a modeled corpus + measured classifier (vertical assumption)
+
+**Gate G2 (health-data / HDS scope) is closed.** It could not close the intended way — asking a
+real client what a typical month of email contains — because there is no real client yet. Closed
+instead by **assuming the platform's first vertical, modeling its inbox, and measuring the S11
+health classifier against it.** Rationale for closing on an assumption rather than idling Phase 3
+indefinitely: G2's real requirement is "prove no health text survives ingestion *before* ingesting
+any," and that is a property of the exclusion *architecture*, testable against synthetic email —
+the real client's exact numbers change the health *fraction*, not whether the D3 posture holds.
+
+**Assumed vertical (the "best business" for the platform):** a **French multi-line insurance
+brokerage** (*cabinet de courtage*) — professional/commercial core (RC pro, multirisque, flotte
+auto, cyber) with a **secondary** collective health & protection line (*santé collective /
+prévoyance*). Chosen because it is the *modal* FR cabinet (most are multi-line, not pure santé),
+which makes health data a **structural minority** of inbound email — the case where the D3
+exclusion architecture is load-bearing and *sufficient*, rather than unnecessary (pure P&C) or
+insufficient (pure santé, which genuinely needs HDS certification).
+
+**Evidence** (`scripts/huginn/sample-inbox.ts` — 42-email labeled corpus;
+`scripts/huginn/g2-evidence.ts --live` — measured against the `crm_demo` classifier prompt, S11):
+- **14 %** of the modeled month (6 / 42) carries personal health data — concentrated in the
+  prévoyance/santé line (questionnaires médicaux, arrêt de travail motivé, ALD) plus corporal
+  claims (sinistres corporels). Confirms "structural minority," not "core."
+- Classifier **recall 100 % (0 false negatives)** — every health email would be quarantined
+  (hash + verdict) *before* storage/embedding. This is the load-bearing number: "we never stored
+  it" is provable, not aspirational.
+- **Precision 86 % (1 false positive: M-09, an homme-clé quote with no medical detail).**
+  Over-flagging is the **correct failure direction** under D3/fail-closed — the cost is a harmless
+  non-health email quarantined, never health data leaking.
+
+**Decision:**
+1. **Keep the D3 exclusion posture** (S11) — the measurement confirms it is necessary *and*
+   effective for this vertical; it is not downgraded to policy-only.
+2. **Stay on plain Atlas + Vercel — no HDS certification for this vertical.** Justified because
+   health text is provably never persisted (recall 100 %, hash-only quarantine), so no *hébergement
+   de données de santé* occurs in this environment.
+3. **A pure-santé/prévoyance tenant is out of scope for this cluster.** Onboarding one requires a
+   separate HDS-certified environment — never ingest their health-heavy email into `mimir-dev`.
+   `checkAndReserveIndexSlot`-style hard-blocks, not silent skips, are the pattern if this is ever
+   enforced in code.
+
+**Unblocks Phase 3 (Huginn, S14/S15)** — the health-scope gate no longer stands in the way. G1
+(OAuth production/CASA) is still a separate prerequisite for S14's live Gmail ingestion; G2 and G1
+were always distinct gates. The corpus doubles as S14 fixtures (support-shaped inbound email to
+classify → retrieve → draft).
+
+**Caveat recorded consciously:** the health *fraction* (14 %) is a property of the assumed vertical
+and this synthetic corpus, not a real client's traffic. At the first real onboarding, re-run the
+G2 inventory (`docs/mimir/onboarding.md` §2) against real volumes and re-confirm the fraction; the
+*decision* (exclusion posture, no HDS for multi-line, certified env for pure-santé) stands
+regardless.
