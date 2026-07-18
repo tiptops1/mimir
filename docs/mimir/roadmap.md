@@ -381,11 +381,16 @@ into the next phase on autopilot either.
   wiring, 9-doc courtier knowledge pack ingested into crm_demo, dev scripts under `scripts/huginn/`.
   Verified on 30 fixture/demo emails: 10 DRAFTED (PROPOSED AgentActions, 8 sources each, prompt
   pinned, expires +7d), 6/6 health emails QUARANTINED (hash+verdict only), 14 skipped, re-scan
-  idempotent. **Caveat:** OAuth click-through still blocked by `redirect_uri_mismatch` — the app
-  sends `http://localhost:3001/api/integrations/google/callback` (client `159113815528-…`); fix the
-  Authorized redirect URI / client id in the Google console, then complete consent + `GET /api/cron`
-  to close the real-Gmail loop. `sweepExpired` still has no cron; Gmail `threadId` not persisted
-  (S15 send path resolves via `rfc822msgid:`).
+  idempotent. **OAuth click-through (S14a completion): done 2026-07-18.** The initial
+  `redirect_uri_mismatch` was a stale Google client in `.env`; once the correct Mimir-project OAuth
+  client was wired in and its Authorized redirect URI confirmed, consent completed cleanly —
+  control-plane `Integration` row is `ACTIVE` for `nt.nicolas.toppo@gmail.com` with all expected
+  scopes (gmail.readonly, gmail.send, calendar.readonly/events). **Parked, not blocking:** a full
+  `GET /api/cron` run against the real inbox timed out in this session (likely the Inngest dev
+  server wasn't running, or a large first-sync backfill on a real Gmail account) — worth a quick
+  re-check with Inngest dev up before relying on the live cron path, but doesn't affect S14b's
+  fixture-driven verification above. Also still open: `sweepExpired` has no cron; Gmail `threadId`
+  not persisted (S15 send path resolves via `rfc822msgid:`).
 - [ ] **S15 — Draft surface + graduation stats** · Sonnet · M
   Drafts render in the Heimdallr inbox; approve/edit/reject events feed graduation stats **from the
   first draft ever shown**. Graduation math + never-graduates list (money, legal, health-flagged) as
