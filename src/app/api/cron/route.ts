@@ -6,6 +6,7 @@ import { decrypt } from "@/lib/crypto";
 import { authedClientForTenant } from "@/lib/google-oauth";
 import { getFirefliesKey, touchGoogleLastSynced } from "@/lib/integrations";
 import { runGmailSync } from "@/lib/gmail-sync";
+import { inngest, jobsEnabled } from "@/lib/jobs/client";
 import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
 import { syncFireflies } from "@/lib/fireflies";
 import type { SourceOutcome } from "@/lib/tenant-cron";
@@ -37,6 +38,19 @@ async function handle(req: NextRequest) {
           runGoogleCalendarSync(prisma, google.client, google.accountEmail, {}),
         ),
       );
+      // S14b — hand freshly synced inbound email to the Huginn draft pipeline.
+      // Safe by default: the scan itself no-ops while huginn.support_reply is
+      // at level 0 / paused.
+      if (jobsEnabled()) {
+        sources.push(
+          await settle("huginn-scan", () =>
+            inngest.send({
+              name: "huginn/inbox.scan.requested",
+              data: { tenantId: tenant.id },
+            }),
+          ),
+        );
+      }
     } else {
       sources.push(
         { source: "email", ok: false, error: "Google non connecté" },

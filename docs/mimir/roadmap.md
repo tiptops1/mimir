@@ -368,13 +368,24 @@ into the next phase on autopilot either.
   Vision RM's 3000) — confirmed also registered as an Authorized redirect URI on the Google Cloud
   client itself. Actual OAuth-flow completion (clicking through consent) deferred to S14b as its
   first functional check, since that's real code exercise rather than config verification.
-- [ ] **S14b — Draft pipeline** · plan on Opus · M
+- [x] **S14b — Draft pipeline** · plan on Opus · M · ✅ 2026-07-18
   Reuse the inherited Gmail ingestion path; classify support-shaped email (Haiku) → retrieve (S12) →
   draft (Sonnet) → write ledger proposal. Support-prompt pack is per-tenant config. HDS quarantine
   applies upstream (S11). Assumes S14a's Testing-mode OAuth client + env vars already in place — no
   CASA needed, works immediately, refresh tokens just expire ~7d (reconnect from dashboard). G1's
   CASA/verification track only becomes a hard blocker at real-tenant go-live, since Testing mode caps
   at 100 explicitly-added test users. See G1 note in §1.
+  **Shipped:** Inngest `huginn-inbox-scan` + `huginn-draft-email` (`src/lib/jobs/huginn-draft.ts`,
+  domain logic `src/lib/huginn/draft.ts`), `Activity.huginnStatus` marker (isSet:false scan),
+  prompt pack `huginn.support_reply.{classify,draft}` seeded, `/api/huginn/scan` trigger + cron
+  wiring, 9-doc courtier knowledge pack ingested into crm_demo, dev scripts under `scripts/huginn/`.
+  Verified on 30 fixture/demo emails: 10 DRAFTED (PROPOSED AgentActions, 8 sources each, prompt
+  pinned, expires +7d), 6/6 health emails QUARANTINED (hash+verdict only), 14 skipped, re-scan
+  idempotent. **Caveat:** OAuth click-through still blocked by `redirect_uri_mismatch` — the app
+  sends `http://localhost:3001/api/integrations/google/callback` (client `159113815528-…`); fix the
+  Authorized redirect URI / client id in the Google console, then complete consent + `GET /api/cron`
+  to close the real-Gmail loop. `sweepExpired` still has no cron; Gmail `threadId` not persisted
+  (S15 send path resolves via `rfc822msgid:`).
 - [ ] **S15 — Draft surface + graduation stats** · Sonnet · M
   Drafts render in the Heimdallr inbox; approve/edit/reject events feed graduation stats **from the
   first draft ever shown**. Graduation math + never-graduates list (money, legal, health-flagged) as

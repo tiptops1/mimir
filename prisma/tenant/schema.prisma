@@ -389,11 +389,16 @@ model Activity {
   contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   // Author of the activity. Loose id into the CONTROL-plane User (no cross-DB relation).
   userId    String?  @db.ObjectId
+  // Huginn draft pipeline (S14b) — set once the pipeline has handled this
+  // inbound email. Unset = not yet scanned (query with { isSet: false }).
+  huginnStatus      String? // DRAFTED | SKIPPED_NOT_SUPPORT | QUARANTINED_HEALTH | FAILED
+  huginnProcessedAt DateTime?
   createdAt DateTime @default(now())
 
   @@index([companyId])
   @@index([date])
   @@index([messageId])
+  @@index([huginnStatus])
 }
 
 // Follow-up / to-do attached to a company. The "system of action" layer:

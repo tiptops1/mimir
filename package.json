@@ -33,6 +33,9 @@
     "leadone:contact": "tsx scripts/leadone/enrich-contact.ts",
     "leadone:validate": "tsx scripts/leadone/validate.ts",
     "leadone:promote": "tsx scripts/leadone/promote.ts",
+    "huginn:knowledge": "tsx scripts/huginn/seed-knowledge.ts",
+    "huginn:fixtures": "tsx scripts/huginn/inject-fixtures.ts",
+    "huginn:report": "tsx scripts/huginn/report-drafts.ts",
     "enrich:dirigeants": "tsx scripts/enrich-dirigeants.ts",
     "cleanup:unnamed": "tsx scripts/delete-unnamed.ts"
   },
