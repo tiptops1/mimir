@@ -446,10 +446,35 @@ into the next phase on autopilot either.
   confirmed v1 restored ACTIVE; inbox UI confirmed rendering the section branch and the
   edit-then-approve textareas correctly (both via browser). All scratch data reverted (including
   resetting `muninn.rca_doc`'s autonomy level back to 0) after; lint/build clean.
-- [ ] **S17 — Nornir: dashboards as config** (SavedView/widget pattern over events emitted since S7) · Sonnet · M
-      **Hero surface (rescoped 2026-07-17): the business pilot dashboard** — the whole company
-      at a glance — plus agent-activity feed and the **token-usage UI** over the S5
-      `AiUsage`/`AiBudget` data (today CLI-only in `scripts/ai/usage-report.ts`).
+- [x] **S17 — Nornir: business pilot dashboard + agent-activity feed + token-usage UI** · Sonnet · M · ✅ 2026-07-18
+  Built as a fixed-section page, not the originally-scoped generic widget/config engine — the
+  2026-07-17 rescope named three concrete surfaces and nothing else in the platform needs a
+  layout-config abstraction yet (confirmed with Nicolas at plan time). `src/lib/nornir/queries.ts`
+  (read-side, tenant `PrismaClient` first arg, mirrors `heimdallr/queries.ts`): `getPilotStats`
+  (company/contact counts, stage breakdown, `openPipeline`/`netThisMonth` via
+  `computeFinanceCockpit` reuse, pending-approvals via `countPendingActions` reuse — no
+  recomputation of existing cockpit/ledger math), `listRecentAgentEvents` (raw `AgentEvent` feed
+  on the `at` index), `getTokenUsageSnapshot` (wraps `checkBudget`/`usageSnapshot` from
+  `lib/ai/meter.ts`, rolls this month's rows into by-taskClass/by-day summaries — the CLI
+  reporting script's aggregation, now also servable to a page). New route
+  `src/app/(app)/nornir/page.tsx` joins the existing `mimir` realm (`src/lib/realms.ts` routes
+  array, `sidebar.tsx` NAV) alongside Heimdallr/Mímisbrunnr — Huginn/Muninn stay routeless by
+  design (their drafts surface through the Heimdallr inbox, not a standalone page). Purely
+  read-only: no server action, no ledger write, same posture as S13's Mímisbrunnr demo page.
+  `dashboard/page.tsx`'s Observatory `mimir` orb flipped from `status: "planned"` (no stats) to
+  `"live"` with real stats (`pendingApprovals`, month-to-date AI spend) and `href: "/nornir"` —
+  the literal integration point the C2.5 session had already left waiting. Token-usage UI scoped
+  to the current tenant only (confirmed with Nicolas) — cross-tenant rollup stays CLI-only
+  (`scripts/ai/usage-report.ts`); no admin realm exists to host that view. *Exit met:* lint clean;
+  build clean (`/nornir` compiles as a dynamic route); verified end-to-end against `crm_demo` —
+  pilot KPIs matched live counts (45 sociétés, 57 contacts, 1 453 900 € pipeline, 10 en attente),
+  the activity feed rendered real S14b/S16 `AgentEvent` rows (Huginn draft/quarantine events,
+  system queue events), token usage showed real S5-metered spend ($0.4692 / $20 this month across
+  draft/classify/embed task classes); dashboard's Mimir orb confirmed "en production" with the
+  same live stats and a working `/nornir` link; sidebar shows Nornir grouped under the Mimir
+  realm heading; both themes confirmed (dark background token verified via computed style — the
+  in-browser theme toggle click didn't register through the automation layer, confirmed instead
+  by setting `data-theme` directly and reading computed styles), no horizontal overflow at 375px.
 - [ ] **S18 — Bragi (part 1): brand-voice pack + content calendar config + generate-to-ledger** · Sonnet · M
       Publishing connector is a separate decision spike — don't bundle it.
 - [ ] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.

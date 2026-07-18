@@ -16,6 +16,8 @@ import { getStageDefs } from "@/lib/stage-config";
 import { getGoogleConnection } from "@/lib/integrations";
 import { computeFinanceCockpit } from "@/lib/finance-cockpit";
 import { getNumberSetting, SETTINGS } from "@/lib/settings";
+import { countPendingActions } from "@/lib/heimdallr/queries";
+import { checkBudget } from "@/lib/ai/meter";
 
 const eur = (n: number) =>
   new Intl.NumberFormat("fr-FR", {
@@ -110,12 +112,15 @@ export default async function DashboardPage({
       prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
     ]);
 
-  const [financeCockpit, financeCash, outreachConfig] = await Promise.all([
-    computeFinanceCockpit(prisma),
-    getNumberSetting(prisma, SETTINGS.cashOnHand),
-    // findFirst, not the creating getter: the banner must not seed config rows.
-    prisma.outreachConfig.findFirst(),
-  ]);
+  const [financeCockpit, financeCash, outreachConfig, pendingApprovals, aiBudget] =
+    await Promise.all([
+      computeFinanceCockpit(prisma),
+      getNumberSetting(prisma, SETTINGS.cashOnHand),
+      // findFirst, not the creating getter: the banner must not seed config rows.
+      prisma.outreachConfig.findFirst(),
+      countPendingActions(prisma),
+      checkBudget(prisma),
+    ]);
 
   const todayTasks: TaskRow[] = todayTasksRaw.map((t) => ({
     id: t.id,
@@ -173,9 +178,13 @@ export default async function DashboardPage({
     {
       slug: "mimir",
       label: "Mimir",
-      role: "Agents autonomes — pas encore construit",
-      status: "planned",
-      stats: [],
+      role: "Agents autonomes — approbations, connaissance, activité",
+      status: "live",
+      stats: [
+        { value: String(pendingApprovals), label: "à approuver" },
+        { value: `$${aiBudget.used.toFixed(2)}`, label: "IA ce mois" },
+      ],
+      href: "/nornir",
     },
   ];
 
