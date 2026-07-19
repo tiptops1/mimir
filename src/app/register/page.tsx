@@ -18,13 +18,13 @@ export default function RegisterPage() {
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
             Créer un compte
           </h1>
-          <p className="mt-1 text-sm text-muted">Rejoignez Vision RM</p>
+          <p className="mt-1 text-sm text-muted">Rejoignez Mimir</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-md">
           <AuthForm mode="register" />
         </div>
         <p className="mt-6 text-center text-xs text-faint">
-          © {new Date().getFullYear()} Vision RM
+          © {new Date().getFullYear()} Mimir
         </p>
       </div>
     </main>

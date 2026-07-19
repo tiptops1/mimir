@@ -32,7 +32,7 @@ function csvResponse(rows: Cell[][], name: string): NextResponse {
   return new NextResponse(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="vision-rm-${name}-${today}.csv"`,
+      "Content-Disposition": `attachment; filename="mimir-${name}-${today}.csv"`,
     },
   });
 }

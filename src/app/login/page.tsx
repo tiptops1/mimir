@@ -20,14 +20,14 @@ export default function LoginPage() {
             Bon retour
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Connectez-vous à Vision RM
+            Connectez-vous à Mimir
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-md">
           <AuthForm mode="login" />
         </div>
         <p className="mt-6 text-center text-xs text-faint">
-          © {new Date().getFullYear()} Vision RM
+          © {new Date().getFullYear()} Mimir
         </p>
       </div>
     </main>

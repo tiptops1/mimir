@@ -203,7 +203,7 @@ export default async function DashboardPage({
         <Observatory
           realms={observatoryRealms}
           hub={{
-            label: "Vision RM",
+            label: "Mimir",
             caption: firstName ? `Bonjour, ${firstName}` : "Bonjour",
             stat: `${total} sociétés · ${observatoryRealms.filter((r) => r.status === "live").length} royaumes actifs`,
           }}

@@ -147,7 +147,11 @@ export default async function CompanyDetailPage({
 
   return (
     <div>
-      <PageHeader title={companyName(company)} subtitle={company.siret}>
+      <PageHeader
+        title={companyName(company)}
+        subtitle={company.siret}
+        titleTransitionName={`company-${company.id}`}
+      >
         <EnumCell
           id={company.id}
           field="stage"

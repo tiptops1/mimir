@@ -64,14 +64,14 @@ export async function sendDailyDigest(
     "",
     `Agir maintenant : ${APP_URL}/todo`,
     "",
-    "— Vision RM",
+    "— Mimir",
   ].join("\n");
 
   await sendGmail(google.client, {
-    fromName: "Vision RM",
+    fromName: "Mimir",
     fromEmail: google.accountEmail,
     to: google.accountEmail,
-    subject: `Vision RM — ${summary.taskCount} tâche(s), ${summary.staleCount} relance(s)`,
+    subject: `Mimir — ${summary.taskCount} tâche(s), ${summary.staleCount} relance(s)`,
     body,
   });
 

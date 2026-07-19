@@ -37,7 +37,7 @@ async function fetchPlainText(url: string): Promise<string | null> {
   try {
     const base = url.startsWith("http") ? url : `https://${url}`;
     const res = await fetch(base, {
-      headers: { "user-agent": "Mozilla/5.0 (Vision RM research)" },
+      headers: { "user-agent": "Mozilla/5.0 (Mimir research)" },
       signal: AbortSignal.timeout(7000),
     });
     if (!res.ok) return null;

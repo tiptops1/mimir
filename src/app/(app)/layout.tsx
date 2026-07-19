@@ -71,8 +71,18 @@ export default async function AppLayout({
             </div>
           </header>
           <ViewTransition
-            enter={{ "realm-shift": "realm-shift", default: "none" }}
-            exit={{ "realm-shift": "realm-shift", default: "none" }}
+            enter={{
+              "realm-shift": "realm-shift",
+              "nav-forward": "nav-forward",
+              "nav-back": "nav-back",
+              default: "none",
+            }}
+            exit={{
+              "realm-shift": "realm-shift",
+              "nav-forward": "nav-forward",
+              "nav-back": "nav-back",
+              default: "none",
+            }}
             default="none"
           >
             {children}

@@ -6,7 +6,7 @@ import { extractPhone } from "../enrich";
 // robots.txt Disallow for "*". Never stores raw HTML — only the extracted
 // email / phone / speciality flags leave this module.
 
-const UA = "VisionRM-LeadOne/1.0 (prospection B2B assurance; robot poli)";
+const UA = "Mimir-LeadOne/1.0 (prospection B2B assurance; robot poli)";
 const PAGE_TIMEOUT_MS = 8000;
 const DELAY_MS = 2000;
 const PATHS = [

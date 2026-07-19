@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Vision RM — design tokens (Linear-refined, light).
+ * Mimir — design tokens (Linear-refined, light).
  * Everything is a semantic CSS variable so a dark theme is a token swap:
  * add `[data-theme="dark"] { ... }` overriding the same names and nothing
  * downstream needs to change. Component code references these via the
@@ -220,6 +220,63 @@
 @keyframes cosmos-rise {
   from {
     transform: translateY(8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/*
+ * C3 — directional nav (list → detail, horizontal) + Suspense reveal
+ * (data handoff, vertical). Verbatim from the Next view-transitions guide
+ * (node_modules/next/dist/docs/01-app/02-guides/view-transitions.md).
+ */
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation:
+    150ms ease-in both cosmos-fade reverse,
+    400ms ease-in-out both cosmos-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation:
+    210ms ease-out 150ms both cosmos-fade,
+    400ms ease-in-out both cosmos-slide;
+}
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation:
+    150ms ease-in both cosmos-fade reverse,
+    400ms ease-in-out both cosmos-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation:
+    210ms ease-out 150ms both cosmos-fade,
+    400ms ease-in-out both cosmos-slide;
+}
+@keyframes cosmos-slide {
+  from {
+    translate: var(--slide-offset);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+::view-transition-old(.slide-down) {
+  animation:
+    150ms ease-out both cosmos-fade reverse,
+    150ms ease-out both cosmos-slide-y reverse;
+}
+::view-transition-new(.slide-up) {
+  animation:
+    210ms ease-in 150ms both cosmos-fade,
+    400ms ease-in both cosmos-slide-y;
+}
+@keyframes cosmos-slide-y {
+  from {
+    transform: translateY(10px);
   }
   to {
     transform: translateY(0);

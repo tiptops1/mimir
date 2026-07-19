@@ -1,69 +1,16 @@
+import { Suspense, ViewTransition } from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { buildCompanyWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
-import { LinkButton, Card, EmptyState } from "@/components/ui";
+import { LinkButton } from "@/components/ui";
 import { CompaniesFilters } from "@/components/companies-filters";
-import { companyName, contactName } from "@/lib/display";
-import {
-  PRIORITE_OPTIONS,
-  POTENTIEL_OPTIONS,
-  SPECIALTY_FIELDS,
-} from "@/lib/constants";
 import { getStageDefs } from "@/lib/stage-config";
-import { SpecialtiesCell } from "@/components/specialties-cell";
-import { NotesCell } from "@/components/notes-cell";
-import { EnumCell } from "@/components/enum-cell";
-import {
-  BulkProvider,
-  BulkHeaderCheckbox,
-  BulkRowCheckbox,
-} from "@/components/bulk-select";
 import { SavedViews } from "@/components/saved-views";
-
-const PRIORITE_CELL_OPTIONS = PRIORITE_OPTIONS.map((p) => ({
-  value: p.value,
-  label: p.label,
-  short: p.value,
-  badge: p.badge,
-}));
-const POTENTIEL_CELL_OPTIONS = POTENTIEL_OPTIONS.map((p) => ({
-  value: p.value,
-  label: p.label,
-}));
-
-type DmContact = {
-  nom: string | null;
-  prenom: string | null;
-  isDecisionMaker: boolean | null;
-};
-
-/** Pick the flagged decision-maker, else the first contact. */
-function decisionMaker(contacts: DmContact[]) {
-  if (contacts.length === 0) return null;
-  return contacts.find((c) => c.isDecisionMaker) ?? contacts[0];
-}
-
-/** Days-since-last-touch label — only when there's a clear touchpoint. */
-function touchLabel(date: Date | null | undefined): {
-  text: string;
-  cls: string;
-} {
-  if (!date) return { text: "—", cls: "text-faint" };
-  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000);
-  const text =
-    days <= 0 ? "Aujourd'hui" : days === 1 ? "Hier" : `Il y a ${days} j`;
-  // Warm color as the touch goes stale.
-  const cls =
-    days <= 7
-      ? "text-emerald-600"
-      : days <= 30
-        ? "text-amber-600"
-        : "text-rose-600";
-  return { text, cls };
-}
+import { CompaniesTable } from "@/components/companies-table";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 const PAGE_SIZE = 20;
 
@@ -75,12 +22,6 @@ export default async function CompaniesPage({
   const session = await verifySession();
   const prisma = await getTenantDb();
   const stageDefs = await getStageDefs();
-  const stageOptions = stageDefs.map((s) => ({
-    value: s.value,
-    label: s.label,
-    badge: s.badge,
-    dot: s.dot,
-  }));
   const sp = await searchParams;
   const societe = typeof sp.societe === "string" ? sp.societe : "";
   const nom = typeof sp.nom === "string" ? sp.nom : "";
@@ -98,29 +39,7 @@ export default async function CompaniesPage({
   // Shared with /api/export so the CSV always matches the on-screen list.
   const { where, and } = buildCompanyWhere(sp);
 
-  const [companies, total, totalAll, savedViews, activeSequences] = await Promise.all([
-    prisma.company.findMany({
-      where,
-      orderBy: [{ updatedAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: {
-        _count: { select: { contacts: true } },
-        contacts: {
-          select: {
-            nom: true,
-            prenom: true,
-            isDecisionMaker: true,
-          },
-          orderBy: { createdAt: "asc" },
-        },
-        activities: {
-          select: { date: true },
-          orderBy: { date: "desc" },
-          take: 1,
-        },
-      },
-    }),
+  const [total, totalAll, savedViews, activeSequences] = await Promise.all([
     prisma.company.count({ where }),
     // Same filters, no engagement gate — lets us show how many are hidden.
     prisma.company.count({ where: { ...where, AND: and } }),
@@ -206,110 +125,17 @@ export default async function CompaniesPage({
           </div>
         ) : null}
 
-        {companies.length === 0 ? (
-          <EmptyState
-            title="Aucune société trouvée"
-            hint="Ajustez vos filtres ou ajoutez une nouvelle société."
-          />
-        ) : (
-          <BulkProvider
-            pageIds={companies.map((c) => c.id)}
-            stages={stageDefs.map((s) => ({ value: s.value, label: s.label }))}
-            sequences={bulkSequences}
-          >
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2/60 text-left text-[11px] uppercase tracking-wider text-faint">
-                    <th className="w-10 px-4 py-2.5">
-                      <BulkHeaderCheckbox />
-                    </th>
-                    <th className="px-4 py-2.5 font-semibold">Contact</th>
-                    <th className="px-4 py-2.5 font-semibold">Spécialités</th>
-                    <th className="px-4 py-2.5 font-semibold">Notes / prochaines étapes</th>
-                    <th className="px-4 py-2.5 font-semibold">Étape</th>
-                    <th className="px-4 py-2.5 font-semibold">Priorité</th>
-                    <th className="px-4 py-2.5 font-semibold">Potentiel</th>
-                    <th className="px-4 py-2.5 font-semibold">Dernier contact</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companies.map((c) => {
-                    const dm = decisionMaker(c.contacts);
-                    const hasContact = Boolean(dm && (dm.prenom || dm.nom));
-                    const activeSpec = SPECIALTY_FIELDS.filter(
-                      (f) => c[f.key as keyof typeof c],
-                    ).map((f) => f.key);
-                    const lastTouch =
-                      c.dernierContact ?? c.activities[0]?.date ?? null;
-                    const touch = touchLabel(lastTouch);
-                    return (
-                      <tr
-                        key={c.id}
-                        className="border-b border-border last:border-0 align-top transition-colors hover:bg-surface-2/70"
-                      >
-                        <td className="px-4 py-3">
-                          <BulkRowCheckbox id={c.id} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <Link href={`/companies/${c.id}`} className="block">
-                            <span className="font-medium text-foreground hover:text-brand">
-                              {hasContact ? contactName(dm!) : companyName(c)}
-                            </span>
-                            <span
-                              className={`mt-0.5 block text-xs ${
-                                hasContact ? "text-muted" : "text-faint tnum"
-                              }`}
-                            >
-                              {hasContact ? companyName(c) : c.siret}
-                            </span>
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3">
-                          <SpecialtiesCell id={c.id} active={activeSpec} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <NotesCell id={c.id} value={c.notes} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <EnumCell
-                            id={c.id}
-                            field="stage"
-                            value={c.stage}
-                            options={stageOptions}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <EnumCell
-                            id={c.id}
-                            field="priorite"
-                            value={c.priorite}
-                            options={PRIORITE_CELL_OPTIONS}
-                            nullable
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <EnumCell
-                            id={c.id}
-                            field="potentiel"
-                            value={c.potentiel}
-                            options={POTENTIEL_CELL_OPTIONS}
-                            nullable
-                          />
-                        </td>
-                        <td className={`px-4 py-3 text-xs font-medium ${touch.cls}`}>
-                          {touch.text}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-          </BulkProvider>
-        )}
+        <Suspense
+          fallback={
+            <ViewTransition exit="slide-down" default="none">
+              <TableSkeleton columns={8} />
+            </ViewTransition>
+          }
+        >
+          <ViewTransition enter="slide-up" default="none">
+            <CompaniesTable where={where} page={page} bulkSequences={bulkSequences} />
+          </ViewTransition>
+        </Suspense>
 
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between text-sm">

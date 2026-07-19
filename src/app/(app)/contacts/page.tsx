@@ -1,26 +1,16 @@
+import { Suspense, ViewTransition } from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { buildContactWhere } from "@/lib/list-filters";
 import { PageHeader } from "@/components/page-header";
-import { Card, EmptyState } from "@/components/ui";
 import { ContactsFilters } from "@/components/contacts-filters";
 import { SavedViews } from "@/components/saved-views";
-import { RgpdCell } from "@/components/rgpd-cell";
-import {
-  companyName,
-  contactName,
-  personLinkedInSearch,
-} from "@/lib/display";
+import { ContactsTable } from "@/components/contacts-table";
+import { TableSkeleton } from "@/components/table-skeleton";
 
 const PAGE_SIZE = 25;
-
-const euro = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
 
 export default async function ContactsPage({
   searchParams,
@@ -41,26 +31,7 @@ export default async function ContactsPage({
   // Shared with /api/export so the CSV always matches the on-screen list.
   const where = buildContactWhere(sp);
 
-  const [contacts, total, savedViews] = await Promise.all([
-    prisma.contact.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: {
-        company: {
-          select: {
-            id: true,
-            nomSociete: true,
-            enseigne: true,
-            siret: true,
-            ville: true,
-            siteWeb: true,
-            chiffreAffaires: true,
-          },
-        },
-      },
-    }),
+  const [total, savedViews] = await Promise.all([
     prisma.contact.count({ where }),
     prisma.savedView.findMany({
       where: { userId: session.userId, page: "contacts" },
@@ -103,106 +74,17 @@ export default async function ContactsPage({
         <SavedViews page="contacts" views={savedViews} />
         <ContactsFilters />
 
-        {contacts.length === 0 ? (
-          <EmptyState
-            title="Aucun contact"
-            hint={
-              hasFilters
-                ? "Aucun contact ne correspond à ces filtres. Réinitialisez pour tout voir."
-                : "Les contacts (dirigeants) s'ajoutent depuis la fiche d'une société."
-            }
-          />
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3 font-medium">Société</th>
-                    <th className="px-4 py-3 font-medium">Chiffre d&apos;affaires</th>
-                    <th className="px-4 py-3 font-medium">Site web</th>
-                    <th className="px-4 py-3 font-medium">Décideur</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">LinkedIn</th>
-                    <th className="px-4 py-3 font-medium">Téléphone</th>
-                    <th className="px-4 py-3 font-medium">RGPD</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contacts.map((c) => {
-                    const site = c.company.siteWeb;
-                    const siteHref = site
-                      ? site.startsWith("http")
-                        ? site
-                        : `https://${site}`
-                      : null;
-                    return (
-                      <tr
-                        key={c.id}
-                        className="border-b border-border last:border-0 hover:bg-surface-2/60"
-                      >
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/companies/${c.company.id}`}
-                            className="font-medium text-brand hover:underline"
-                          >
-                            {companyName(c.company)}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-muted">
-                          {c.company.chiffreAffaires != null
-                            ? euro.format(c.company.chiffreAffaires)
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-muted">
-                          {siteHref ? (
-                            <a
-                              href={siteHref}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-brand hover:underline"
-                            >
-                              {site!.replace(/^https?:\/\//, "").replace(/^www\./, "")}
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-3 font-medium">{contactName(c)}</td>
-                        <td className="px-4 py-3 text-muted">
-                          {c.email ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <a
-                            href={
-                              c.linkedinUrl ||
-                              personLinkedInSearch(c, c.company)
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-brand hover:underline"
-                          >
-                            {c.linkedinUrl ? "Profil" : "Rechercher ↗"}
-                          </a>
-                        </td>
-                        <td className="px-4 py-3 text-muted">
-                          {c.telephone ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <RgpdCell
-                            contactId={c.id}
-                            consent={c.consent}
-                            isAdmin={session.role === "ADMIN"}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+        <Suspense
+          fallback={
+            <ViewTransition exit="slide-down" default="none">
+              <TableSkeleton columns={8} />
+            </ViewTransition>
+          }
+        >
+          <ViewTransition enter="slide-up" default="none">
+            <ContactsTable where={where} page={page} hasFilters={hasFilters} />
+          </ViewTransition>
+        </Suspense>
 
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between text-sm">

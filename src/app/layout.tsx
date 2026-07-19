@@ -21,9 +21,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Vision RM",
+  title: "Mimir",
   description:
-    "Vision RM — CRM de prospection pour le courtage en assurance.",
+    "Mimir — CRM de prospection pour le courtage en assurance.",
 };
 
 export default function RootLayout({

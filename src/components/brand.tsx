@@ -27,7 +27,7 @@ export function BrandMark({
       {showText ? (
         <div className="leading-none">
           <p className="text-[15px] font-semibold tracking-tight text-foreground">
-            Vision<span className="text-brand"> RM</span>
+            Mi<span className="text-brand">mir</span>
           </p>
         </div>
       ) : null}

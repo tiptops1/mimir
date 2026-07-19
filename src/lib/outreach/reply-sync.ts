@@ -240,7 +240,7 @@ export async function runOutreachReplySync(
       try {
         const doSend = opts.send ?? sendGmail;
         await doSend(main.client, {
-          fromName: "Vision RM",
+          fromName: "Mimir",
           fromEmail: main.accountEmail,
           to: main.accountEmail,
           subject: `Réponse cold email — ${companyLabel}`,

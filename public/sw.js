@@ -1,9 +1,9 @@
-// Vision RM service worker — the minimal PWA shell:
+// Mimir service worker — the minimal PWA shell:
 // - navigations: network-first, offline.html when the network is gone
 // - hashed build assets (/_next/static/): cache-first (immutable by design)
 // Data stays server-rendered and is never cached here (CRM data must be fresh).
 
-const VERSION = "vision-rm-v1";
+const VERSION = "mimir-v1";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 

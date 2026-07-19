@@ -83,7 +83,7 @@ export function MappingEditor({
               <tr className="border-b border-border bg-surface-2/60 text-left text-[11px] uppercase tracking-wider text-faint">
                 <th className="px-4 py-2.5 font-semibold">Colonne source</th>
                 <th className="px-4 py-2.5 font-semibold">Exemples</th>
-                <th className="px-4 py-2.5 font-semibold">Champ Vision RM</th>
+                <th className="px-4 py-2.5 font-semibold">Champ Mimir</th>
               </tr>
             </thead>
             <tbody>
