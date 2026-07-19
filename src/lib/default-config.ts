@@ -109,6 +109,10 @@ export const DEFAULT_AUTONOMY_CATEGORIES: AutonomySeed[] = [
   { category: "crm.task_create", label: "Création de tâches", maxLevel: 3 },
   { category: "finance.commitment", label: "Engagements financiers", maxLevel: 1 },
   { category: "legal.communication", label: "Communications juridiques", maxLevel: 1 },
+  // Forseti (S23) — contract review / terms drafting. Same never-graduates
+  // floor as legal.communication, distinct category: drafting a document is a
+  // different action shape than a legal message.
+  { category: "legal.document_draft", label: "Documents juridiques (Forseti)", maxLevel: 1 },
   // Odin (S20/S21) — objective-setting only, no execution rights of its own;
   // downstream money/legal actions stay independently gated (odin.md §4).
   { category: "odin.directive", label: "Directives Odin", maxLevel: 3 },
@@ -562,6 +566,60 @@ Règles STRICTES :
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
 {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de
 ligne (\\n).`,
+  },
+  {
+    key: "forseti.legal.draft.contract_review",
+    label: "Forseti — revue de contrat",
+    taskClass: "draft",
+    module: "forseti",
+    variables: ["companyName"],
+    body: `Tu es le conseiller juridique interne d'un cabinet de courtage en
+assurances B2B français ({{companyName}} est le client/partenaire concerné par
+ce contrat). On te donne le texte d'un contrat à examiner. Ta mission : une
+revue de risques, pas un avis juridique définitif — un(e) juriste humain(e)
+valide toujours avant envoi.
+
+Identifie : clauses défavorables ou déséquilibrées, protections manquantes
+(responsabilité, résiliation, confidentialité, propriété intellectuelle),
+termes ambigus, échéances/pénalités à surveiller. Structure la réponse par
+thème, avec pour chaque point le passage concerné (paraphrase courte) et le
+risque identifié.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur le texte fourni. N'invente AUCUNE clause absente
+  du contrat.
+- Ne donne jamais de conclusion du type "ce contrat est sûr" — signale les
+  points d'attention, ne valide jamais l'absence de risque.
+- Précise en fin de synthèse que cette revue est automatisée et doit être
+  validée par un(e) juriste avant toute décision.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"title": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne
+(\\n).`,
+  },
+  {
+    key: "forseti.legal.draft.terms_draft",
+    label: "Forseti — rédaction de conditions",
+    taskClass: "draft",
+    module: "forseti",
+    variables: ["companyName"],
+    body: `Tu es le conseiller juridique interne d'un cabinet de courtage en
+assurances B2B français, rédigeant un projet de conditions/clauses pour
+{{companyName}}. On te donne un brief décrivant ce que les conditions doivent
+couvrir. Rédige un projet de texte clair et professionnel — un point de
+départ pour un(e) juriste humain(e), jamais un document final.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur le brief fourni. N'invente AUCUN engagement,
+  montant, délai ou garantie absent du brief.
+- Reste générique et prudent si le brief est incomplet, plutôt que d'inventer
+  des détails.
+- Précise en fin de projet que ce texte est un brouillon automatisé à valider
+  par un(e) juriste avant toute signature ou envoi.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"title": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne
+(\\n).`,
   },
 ];
 

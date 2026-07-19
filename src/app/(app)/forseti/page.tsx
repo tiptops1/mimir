@@ -69,6 +69,12 @@ export default async function ForsetiPage() {
     <div>
       <PageHeader title="Forseti" subtitle="Conformité — ORIAS, RC Pro, KYC" />
       <div className="space-y-6 p-6">
+        <div className="flex justify-end">
+          <Link href="/forseti/legal" className="text-xs font-medium text-brand hover:underline">
+            Juridique — revue de contrat / rédaction de conditions →
+          </Link>
+        </div>
+
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardBody>

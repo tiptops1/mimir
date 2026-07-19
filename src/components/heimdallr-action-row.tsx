@@ -39,12 +39,21 @@ type RenewalPayload = {
   subject?: string;
   body?: string;
 };
+type LegalPayload = {
+  docType?: string;
+  companyId?: string;
+  companyName?: string;
+  title?: string;
+  body?: string;
+  inputText?: string;
+};
 
 const DRAFT_TYPE = "email.draft_reply";
 const RCA_TYPE = "doc.rca_draft";
 const CONTENT_TYPE = "content.draft";
 const DIRECTIVE_TYPE = "directive.set";
 const RENEWAL_TYPE = "renewal.outreach_draft";
+const LEGAL_TYPE = "forseti.legal_document_draft";
 
 export function HeimdallrActionRow({
   id,
@@ -78,6 +87,9 @@ export function HeimdallrActionRow({
   const isRenewal = type === RENEWAL_TYPE && payload !== null && typeof payload === "object";
   const renewal = isRenewal ? (payload as RenewalPayload) : null;
 
+  const isLegal = type === LEGAL_TYPE && payload !== null && typeof payload === "object";
+  const legal = isLegal ? (payload as LegalPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
@@ -86,6 +98,8 @@ export function HeimdallrActionRow({
   const [editedObjective, setEditedObjective] = useState(directive?.objective ?? "");
   const [editedRenewalSubject, setEditedRenewalSubject] = useState(renewal?.subject ?? "");
   const [editedRenewalBody, setEditedRenewalBody] = useState(renewal?.body ?? "");
+  const [editedLegalTitle, setEditedLegalTitle] = useState(legal?.title ?? "");
+  const [editedLegalBody, setEditedLegalBody] = useState(legal?.body ?? "");
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
   );
@@ -113,6 +127,8 @@ export function HeimdallrActionRow({
           ? { ...directive, objective: editedObjective }
         : renewal
           ? { ...renewal, subject: editedRenewalSubject, body: editedRenewalBody }
+        : legal
+          ? { ...legal, title: editedLegalTitle, body: editedLegalBody }
         : rca
           ? {
               ...rca,
@@ -250,6 +266,31 @@ export function HeimdallrActionRow({
                 </pre>
               </div>
             </div>
+          ) : legal ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Société : </span>
+                {legal.companyName ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Type : </span>
+                {legal.docType === "contract_review"
+                  ? "Revue de contrat"
+                  : legal.docType === "terms_draft"
+                    ? "Rédaction de conditions"
+                    : (legal.docType ?? "—")}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Titre : </span>
+                {legal.title ?? "—"}
+              </p>
+              <div>
+                <span className="font-medium text-foreground">Corps : </span>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {legal.body ?? "—"}
+                </pre>
+              </div>
+            </div>
           ) : rca ? (
             <div className="space-y-2">
               {rcaSections.map((s) => (
@@ -345,6 +386,21 @@ export function HeimdallrActionRow({
                 onChange={(e) => setEditedRenewalBody(e.target.value)}
                 disabled={pending}
                 rows={6}
+              />
+            </>
+          ) : legal ? (
+            <>
+              <Input
+                value={editedLegalTitle}
+                onChange={(e) => setEditedLegalTitle(e.target.value)}
+                disabled={pending}
+                placeholder="Titre"
+              />
+              <Textarea
+                value={editedLegalBody}
+                onChange={(e) => setEditedLegalBody(e.target.value)}
+                disabled={pending}
+                rows={8}
               />
             </>
           ) : rca ? (

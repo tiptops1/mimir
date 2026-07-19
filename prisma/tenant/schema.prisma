@@ -870,6 +870,32 @@ model ComplianceSnapshot {
   @@index([takenAt])
 }
 
+// --- Forseti (S23) — legal drafting (contract review / terms draft) --------
+// RcaDocument shape: versioned per (entity, entityId), no period dimension —
+// a broker re-submits the same contract and gets a new version, not a new
+// period. Distinct AutonomyConfig category (legal.document_draft, maxLevel 1)
+// from the compliance-task flow above (crm.task_create) — drafting legal text
+// is a different risk shape than creating a follow-up Task. inputText is kept
+// for audit (what was actually reviewed), same posture as keeping sources on
+// AgentAction.
+model LegalDocument {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  docType        String    // contract_review | terms_draft
+  entity         String    // COMPANY
+  entityId       String    @db.ObjectId
+  version        Int
+  status         String    @default("ACTIVE") // ACTIVE | SUPERSEDED | UNDONE
+  title          String
+  body           String
+  inputText      String
+  sourceActionId String?   @db.ObjectId // loose ref -> AgentAction that produced this version
+  createdAt      DateTime  @default(now())
+  supersededAt   DateTime?
+
+  @@unique([entity, entityId, version])
+  @@index([entity, entityId, status])
+}
+
 // --- Thor (S22a) — account-health scoring / churn signals ------------------
 // Deterministic, snapshot-shaped like ComplianceSnapshot. NOT the same thing
 // as the S11 HDS health classifier (medical-content quarantine) — this is

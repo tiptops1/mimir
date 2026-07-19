@@ -672,10 +672,39 @@ not guesses.
       the full propose→edit-approve→execute→undo round-trip was independently verified via the
       demo script driving the exact same library calls. All scratch data reverted after
       (AgentAction/AgentEvent rows deleted, pending count back to 109); lint/build clean.
-- [ ] **S23 — Legal: grow Forseti** · Sonnet · M
+- [x] **S23 — Legal: grow Forseti** · Sonnet · M · ✅ 2026-07-19
       From compliance-tracking UI into a draft-and-approve legal agent (contract review, terms
-      drafting). **Never graduates past `draft_approve` — permanent, code-enforced** (same
-      defense-in-depth as the health floor).
+      drafting), additive next to the existing compliance sweep. Reuses the Bragi/Muninn
+      "LLM draft → ledger propose → human approve/edit → versioned document" shape verbatim:
+      `LegalDocument` model (`prisma/tenant/schema.prisma`, RcaDocument shape — per-`(entity,
+      entityId)` versioning, ACTIVE/SUPERSEDED/UNDONE), `src/lib/forseti/legal-draft.ts`
+      (`draftLegalDocument` — HDS health-classifier gate first via
+      `classifyBatch`/`getClassifierPrompt`/`partitionByVerdict` from `src/lib/rag/classify.ts`,
+      same posture as Bragi's brief gate, since a broker pastes free contract text; flagged input
+      is quarantined, nothing drafted; otherwise `callByTaskClass(..., "draft", ...)` against a new
+      per-docType `PromptTemplate` — `forseti.legal.draft.contract_review` /
+      `forseti.legal.draft.terms_draft`) + `src/lib/forseti/legal-executor.ts` (mirrors
+      `bragi/executor.ts` exactly: `computeNextLegalDocVersion`/`executeLegalDocument`/
+      `revertLegalDocument`/`isLegalDocumentAction`). **Never graduates past `draft_approve` —
+      permanent, code-enforced**: new `legal.document_draft` AutonomyConfig row at `maxLevel: 1`
+      (kept distinct from the existing `legal.communication` row — a document draft is a different
+      action shape than a legal message), same `isGraduationEligible` floor as
+      `finance.commitment`/`legal.communication`. On-demand, not swept: new `/forseti/legal` page
+      (paste-text entry point — company picker, docType select, textarea) +
+      `submitLegalDraftSA` (`src/app/actions/forseti-legal.ts`) propose directly, no cron/Inngest.
+      `heimdallr-action-row.tsx` gained the `forseti.legal_document_draft` type branch (société/
+      type/titre/corps read view, title+body edit-then-approve) and `app/actions/heimdallr.ts`
+      wired `isLegalDocumentAction`/`executeLegalDocument`/`revertLegalDocument` into all three
+      server actions. *Exit met:* `npm run test` green (254, 14 new `legal-draft.test.ts`/
+      `legal-executor.test.ts` cases); lint/build clean (`/forseti/legal` compiles). Verified
+      end-to-end against `crm_demo` in-browser: submitted a real contract clause for a seeded
+      company, HDS gate passed clean, Sonnet produced a structured risk review (title
+      "Revue de risques — Article 4…"), PROPOSED action rendered correctly in the Heimdallr inbox,
+      approve → `LegalDocument` v1 ACTIVE created, undo → flipped `UNDONE` and disappeared from
+      the `/forseti/legal` active list. One tuning fix mid-session: `maxTokens` raised from 1500 to
+      3000 for the draft call — 1500 truncated real contract-review output mid-JSON (same failure
+      class Bragi hit pre-S18, `parseLegalOutput` correctly failed closed on the truncated JSON,
+      the cap itself was just too tight for multi-point risk findings).
 - [ ] **S24 — HR realm** · plan on Opus · M
       Hiring pipeline, onboarding docs, policy Q&A over Mímisbrunnr. Last on purpose: least
       defined, least urgent for the broker vertical. Scope it fresh at the time.
