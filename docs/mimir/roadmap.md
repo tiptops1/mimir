@@ -633,17 +633,45 @@ not guesses.
       `crm_demo`'s full 45-company set (not just the 20-row fixture) — 28 saines / 14 à risque / 3
       critiques, score-sorted table with correct French signal chips, both themes confirmed, no
       375px overflow, no console errors.
-- [ ] **S22b — Thor: renewal agent + ledger wiring** · Sonnet · S/M
-      LLM renewal agent on top of S22a's health data: new `thor.renewal` autonomy category
-      (seeded, `default-config.ts`), `PromptTemplate` (config, not code), Bragi-shaped Inngest
-      draft pipeline (`src/lib/jobs/thor-*.ts`) that turns at-risk/critical companies into
-      proposed retention outreach, `src/lib/thor/executor.ts` (draft → Task or draft-email on
-      execute, undo reverts — Forseti's `executor.ts` shape), `heimdallr-action-row.tsx` type
-      branch for the new action type, wire into `src/app/actions/heimdallr.ts`'s three-way
-      dispatch. Consider whether the sweep should call `proposeAction` directly from
-      `runHealthSnapshotForTenant` (Forseti's shape) or need Inngest fan-out (Bragi's shape) —
-      decide once the draft content requirements are clearer (a retention email is closer to
-      Huginn/Bragi's LLM-authored-content shape than Forseti's templated Task title).
+- [x] **S22b — Thor: renewal agent + ledger wiring** · Sonnet · S/M · ✅ 2026-07-19
+      LLM renewal agent on top of S22a's health data. New `thor.renewal` autonomy category
+      (maxLevel 3, `default-config.ts`) + seeded `thor.renewal.draft` `PromptTemplate` (French
+      retention-email prompt: company/score/band/signals + optional passages → `{subject,
+      body}`). Resolved the two open questions from the checkpoint's punch list: Bragi-shaped
+      Inngest fan-out (closer to Huginn/Bragi's LLM-authored-content shape than a templated
+      title), and "draft → Task on execute" — no email-send capability exists anywhere in the
+      repo yet (Huginn's `email.draft_reply` still has no executor either), so `RELANCE`-type
+      `Task` (Forseti's `executor.ts` shape) carries the drafted subject/body for a human to act
+      on. `src/lib/thor/renewal.ts` (pure: `parseRenewalOutput` fail-closed,
+      `buildRenewalRetrievalQuery`, `draftRenewalOutreach` via the metered router) +
+      `src/lib/jobs/thor-renewal.ts` (`thorRenewalScan` re-evaluates health live per company —
+      not a stale snapshot read — filters at_risk/critical, category gate, PROPOSED-dedupe guard,
+      fans out `thorRenewalDraft`; no HDS gate, unlike Bragi's tenant-authored briefs the input is
+      deterministic CRM data, not free text a user could paste client content into) +
+      `src/lib/thor/executor.ts` (`executeRenewalOutreach`/`revertRenewalOutreach`, Task
+      create/delete, mirrors `forseti/executor.ts` exactly). New trigger route
+      `src/app/api/thor/scan/route.ts` (bragi/scan twin, own cadence, not chained off the daily
+      `/api/cron/thor` snapshot). `Task.source` gained `THOR` (schema doc-comment only, no
+      migration). `heimdallr-action-row.tsx` gained the `renewal.outreach_draft` type branch
+      (société/score/bande/signaux/objet/corps read view, Objet+Corps edit-then-approve) and
+      `app/actions/heimdallr.ts` wired `isRenewalOutreachAction` into all three dispatch points.
+      *Exit met:* `npm run test` green (240, 9 new `renewal.test.ts` cases); lint/build clean
+      (`/api/thor/scan` compiles). Verified end-to-end against `crm_demo` via
+      `scripts/thor/generate-demo-renewal.ts` (kept, mirrors `bragi/generate-demo-content.ts`):
+      picked a real at-risk company (Cabinet Durand Assurances, score 55, signals "Aucun contact
+      récent"/"Renouvellement proche"), retrieved 4 real passages, drafted a grounded email,
+      proposed → edit-then-approve (`wasEdited: true`) → executed (real `Task` created,
+      `type: RELANCE`, `source: THOR`) → undo (`Task` deleted). In-browser: seeded one real
+      PROPOSED proposal (`scripts/thor/seed-demo-renewal-proposal.ts`, kept — `heimdallr/
+      seed-demo-proposal.ts` twin), confirmed the inbox category filter shows "Relances de
+      fidélisation" and isolates the row correctly, "Détails" renders société/score/signaux/objet/
+      corps/sources/déclencheur correctly, table scroll-container pattern at 375px matches every
+      other module (not a regression). **Note:** the Approuver button click didn't register
+      through the browser automation layer this session (same class of friction logged at
+      S17/S18/S21 — confirmed not app-related, no console errors, dev server mid-HMR-rebuild) —
+      the full propose→edit-approve→execute→undo round-trip was independently verified via the
+      demo script driving the exact same library calls. All scratch data reverted after
+      (AgentAction/AgentEvent rows deleted, pending count back to 109); lint/build clean.
 - [ ] **S23 — Legal: grow Forseti** · Sonnet · M
       From compliance-tracking UI into a draft-and-approve legal agent (contract review, terms
       drafting). **Never graduates past `draft_approve` — permanent, code-enforced** (same

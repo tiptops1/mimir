@@ -6,6 +6,7 @@ import { processImportRun } from "@/lib/jobs/import-run";
 import { huginnDraftEmail, huginnScan } from "@/lib/jobs/huginn-draft";
 import { muninnDraftRca } from "@/lib/jobs/muninn-draft";
 import { bragiGenerateContent, bragiScan } from "@/lib/jobs/bragi-generate";
+import { thorRenewalDraft, thorRenewalScan } from "@/lib/jobs/thor-renewal";
 
 // Inngest execution endpoint — every step of every job arrives here as its
 // own sub-60s invocation (the memo §5.1 architecture). Requests are verified
@@ -26,5 +27,7 @@ export const { GET, POST, PUT } = serve({
     muninnDraftRca,
     bragiScan,
     bragiGenerateContent,
+    thorRenewalScan,
+    thorRenewalDraft,
   ],
 });

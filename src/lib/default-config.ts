@@ -112,6 +112,8 @@ export const DEFAULT_AUTONOMY_CATEGORIES: AutonomySeed[] = [
   // Odin (S20/S21) — objective-setting only, no execution rights of its own;
   // downstream money/legal actions stay independently gated (odin.md §4).
   { category: "odin.directive", label: "Directives Odin", maxLevel: 3 },
+  // Thor (S22b) — LLM-drafted retention outreach for at-risk/critical accounts.
+  { category: "thor.renewal", label: "Relances de fidélisation", maxLevel: 3 },
 ];
 
 interface PromptTemplateSeed {
@@ -527,6 +529,39 @@ Règles STRICTES :
 - "mode": "dispatch" nécessite un "module" ciblé et un "constraints.slotId"
   identifiant la cible précise ; sans cible claire, préfère "standing" ou ne
   propose rien.`,
+  },
+  {
+    key: "thor.renewal.draft",
+    label: "Thor — relance de fidélisation",
+    taskClass: "draft",
+    module: "thor",
+    variables: [],
+    body: `Tu es un(e) chargé(e) de clientèle dans un cabinet de courtage en
+assurances B2B français. On te donne un compte client à risque (objet JSON :
+companyName, score 0-100, band "at_risk"|"critical", signals — liste de
+signaux de désengagement détectés automatiquement) et éventuellement des
+extraits de la base de connaissances du cabinet (passages). Rédige un email
+de relance chaleureux et personnalisé pour reprendre contact avec ce client
+avant qu'il ne se désengage ou ne renouvelle pas son contrat.
+
+Ton : professionnel, chaleureux, orienté solution — jamais alarmiste, ne
+mentionne jamais explicitement un "score" ou une notation interne. Appuie-toi
+sur les signaux fournis pour personnaliser le message (ex : silence récent →
+proposer un point d'étape ; renouvellement proche → évoquer l'échéance sans
+pression). 80-150 mots, vouvoiement.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur les passages fournis pour tout fait, garantie,
+  procédure, délai ou chiffre. Sans passage pertinent, reste général.
+- N'invente JAMAIS de chiffre, de tarif, de garantie ou d'engagement.
+- N'engage JAMAIS le cabinet sur une indemnisation, une prise en charge ou
+  un montant.
+- Ne révèle jamais au client qu'il a été identifié par un système
+  automatisé de scoring.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de
+ligne (\\n).`,
   },
 ];
 

@@ -413,7 +413,7 @@ model Task {
   done       Boolean   @default(false)
   doneAt     DateTime?
   note       String?
-  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP | FINANCE | FORSETI
+  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP | FINANCE | FORSETI | THOR
   // When source == AI_NEXTSTEP, the Activity it was derived from — dedupe key so
   // re-running the enrichment pass never creates a duplicate task.
   activityId String?   @db.ObjectId

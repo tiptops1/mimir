@@ -17,6 +17,11 @@ import {
   revertComplianceTask,
 } from "@/lib/forseti/executor";
 import { executeDirective, isDirectiveSetAction, revertDirective } from "@/lib/odin/executor";
+import {
+  executeRenewalOutreach,
+  isRenewalOutreachAction,
+  revertRenewalOutreach,
+} from "@/lib/thor/executor";
 
 /** Approve a proposal unchanged. Returns an error string on failure, else null. */
 export async function approveActionSA(id: string): Promise<string | null> {
@@ -28,6 +33,7 @@ export async function approveActionSA(id: string): Promise<string | null> {
     if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
     if (isComplianceTaskAction(action)) await executeComplianceTask(prisma, action);
     if (isDirectiveSetAction(action)) await executeDirective(prisma, session.tenantId, action);
+    if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -49,6 +55,7 @@ export async function approveEditedActionSA(
     if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
     if (isComplianceTaskAction(action)) await executeComplianceTask(prisma, action);
     if (isDirectiveSetAction(action)) await executeDirective(prisma, session.tenantId, action);
+    if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -91,6 +98,7 @@ export async function undoActionSA(id: string): Promise<string | null> {
     if (isContentDraftAction(undone)) await revertContentPiece(prisma, undone);
     if (isComplianceTaskAction(undone)) await revertComplianceTask(prisma, undone);
     if (isDirectiveSetAction(undone)) await revertDirective(prisma, undone);
+    if (isRenewalOutreachAction(undone)) await revertRenewalOutreach(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

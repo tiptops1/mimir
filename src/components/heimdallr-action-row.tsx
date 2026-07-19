@@ -30,11 +30,21 @@ type DirectivePayload = {
   constraints?: Record<string, unknown> | null;
   mode?: string;
 };
+type RenewalSignal = { key: string; label: string; detail: string };
+type RenewalPayload = {
+  companyName?: string;
+  band?: string;
+  score?: number;
+  signals?: RenewalSignal[];
+  subject?: string;
+  body?: string;
+};
 
 const DRAFT_TYPE = "email.draft_reply";
 const RCA_TYPE = "doc.rca_draft";
 const CONTENT_TYPE = "content.draft";
 const DIRECTIVE_TYPE = "directive.set";
+const RENEWAL_TYPE = "renewal.outreach_draft";
 
 export function HeimdallrActionRow({
   id,
@@ -65,12 +75,17 @@ export function HeimdallrActionRow({
   const isDirective = type === DIRECTIVE_TYPE && payload !== null && typeof payload === "object";
   const directive = isDirective ? (payload as DirectivePayload) : null;
 
+  const isRenewal = type === RENEWAL_TYPE && payload !== null && typeof payload === "object";
+  const renewal = isRenewal ? (payload as RenewalPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
   const [editedTitle, setEditedTitle] = useState(content?.title ?? "");
   const [editedContentBody, setEditedContentBody] = useState(content?.body ?? "");
   const [editedObjective, setEditedObjective] = useState(directive?.objective ?? "");
+  const [editedRenewalSubject, setEditedRenewalSubject] = useState(renewal?.subject ?? "");
+  const [editedRenewalBody, setEditedRenewalBody] = useState(renewal?.body ?? "");
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
   );
@@ -96,6 +111,8 @@ export function HeimdallrActionRow({
           ? { ...content, title: editedTitle, body: editedContentBody }
         : directive
           ? { ...directive, objective: editedObjective }
+        : renewal
+          ? { ...renewal, subject: editedRenewalSubject, body: editedRenewalBody }
         : rca
           ? {
               ...rca,
@@ -201,6 +218,38 @@ export function HeimdallrActionRow({
                 </div>
               )}
             </div>
+          ) : renewal ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Société : </span>
+                {renewal.companyName ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Score : </span>
+                {typeof renewal.score === "number" ? renewal.score : "—"}
+                {renewal.band ? ` · ${renewal.band}` : ""}
+              </p>
+              {renewal.signals && renewal.signals.length > 0 && (
+                <div>
+                  <span className="font-medium text-foreground">Signaux : </span>
+                  <ul className="mt-1 list-disc pl-4">
+                    {renewal.signals.map((s) => (
+                      <li key={s.key}>{s.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p>
+                <span className="font-medium text-foreground">Objet : </span>
+                {renewal.subject ?? "—"}
+              </p>
+              <div>
+                <span className="font-medium text-foreground">Corps : </span>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {renewal.body ?? "—"}
+                </pre>
+              </div>
+            </div>
           ) : rca ? (
             <div className="space-y-2">
               {rcaSections.map((s) => (
@@ -283,6 +332,21 @@ export function HeimdallrActionRow({
               rows={4}
               placeholder="Objectif"
             />
+          ) : renewal ? (
+            <>
+              <Input
+                value={editedRenewalSubject}
+                onChange={(e) => setEditedRenewalSubject(e.target.value)}
+                disabled={pending}
+                placeholder="Objet"
+              />
+              <Textarea
+                value={editedRenewalBody}
+                onChange={(e) => setEditedRenewalBody(e.target.value)}
+                disabled={pending}
+                rows={6}
+              />
+            </>
           ) : rca ? (
             <>
               {rcaSections.map((s) => (
