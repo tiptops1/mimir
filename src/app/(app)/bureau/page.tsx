@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { BureauFrame } from "@/components/bureau/bureau-frame";
+import { BureauCosmos } from "@/components/bureau/bureau-cosmos";
 
 export const metadata: Metadata = { title: "Le Bureau — Mimir" };
 
 /**
  * C5 easter egg — hidden route (not in REALMS/NAV; reached via the sidebar
- * glyph egg). The vendored pixel-agents office renders the Mimir agents at
- * work. The scene is always dark, like the observatory hero.
+ * glyph egg). The Mimir agents orbit as planets around the sun, lit up by
+ * live ledger activity. The scene is always dark, like the observatory hero.
  */
 export default function BureauPage() {
   return (
@@ -28,7 +28,7 @@ export default function BureauPage() {
           </p>
         </div>
         <div className="min-h-[480px] flex-1">
-          <BureauFrame />
+          <BureauCosmos />
         </div>
       </div>
     </div>
