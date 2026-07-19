@@ -559,7 +559,51 @@ not guesses.
   first (richest config-driven surface), Huginn second, Muninn/Forseti explicitly
   deferred. Decisions logged in `decisions.md` 2026-07-19. No code this session —
   docs only, per S2's precedent.
-- [ ] **S21 — Odin implementation** · Sonnet · M (split if S20 says so)
+- [x] **S21 — Odin implementation** · Sonnet · M · ✅ 2026-07-19
+  Implemented odin.md verbatim. `OdinDirective` added to `prisma/tenant/schema.prisma`
+  (additive, `db:push`'d against `mimir-dev`/`crm_demo`). Seeded `odin.directive`
+  autonomy category (maxLevel 3, level 0) and the `odin.review.propose_directive`
+  `PromptTemplate`. `src/lib/odin/draft.ts` (pure: `buildReviewInput` assembles a
+  JSON snapshot from `getPilotStats`/`getTokenUsageSnapshot`/`listAutonomyConfigs`/
+  `listRecentAgentEvents`/`listActiveDirectives` — no new query beyond
+  `listActiveDirectives`, added to `nornir/queries.ts` per the doc; `reviewSnapshot`
+  calls Sonnet via the metered router; `parseReviewOutput` fail-closed) +
+  `src/lib/odin/executor.ts` (mirrors `bragi/executor.ts`: version-supersede write,
+  optional one-shot dispatch for `mode:"dispatch"` via a small `DISPATCH_TARGETS`
+  map — only `bragi` wired per the S21 punch list, sending
+  `bragi/content.generate.requested` with a topic/brief override — then
+  `executeAction`/undo; `executeDirective` takes `tenantId` explicitly since
+  dispatch payloads carry IDs only, S4's standing rule) + `src/lib/odin/review.ts`
+  (`reviewAndProposeDirective`, zero-or-one `proposeAction` call per run).
+  `/api/cron/odin/route.ts` — plain function call, no Inngest, `?tenant=` slug
+  lookup (default `crm_demo`) same as the manual bragi/muninn trigger routes;
+  loop-all-ACTIVE-tenants (Forseti's shape) is the natural extension once a second
+  tenant exists. `heimdallr-action-row.tsx` gained the `directive.set` type branch
+  (key/scope/objective/constraints read view, objective-only edit-then-approve).
+  `app/actions/heimdallr.ts` wired `isDirectiveSetAction`/`executeDirective`/
+  `revertDirective` into all three server actions. Nornir gained the "Objectifs
+  actifs" read-only card (`listActiveDirectives`, no mutation). Bragi's job
+  (`src/lib/jobs/bragi-generate.ts`) reads an ACTIVE `mode:"standing"` directive
+  keyed `bragi.content` at slot-load time, folding `constraints.topic`/`brief`
+  into the generation (explicit dispatch override > standing directive >
+  slot's own default) — Huginn stays the next follow-up, per the doc's exit
+  criteria. *Exit met:* `npm run test` green (216, unchanged — no new unit
+  tests scoped, the executor/draft logic is straight-line and covered by the
+  E2E below); lint/build clean. Verified end-to-end against `crm_demo`: seeded
+  a `directive.set` PROPOSED action, drove `approveAction` → `executeDirective`
+  → `undoAction` → `revertDirective` directly (propose→approve→execute→undo
+  all correct: `OdinDirective` v1 created ACTIVE with the right undoData,
+  flipped to RETIRED on undo, `AgentEvent` stream `proposed/approved/executed/
+  undone`); confirmed in-browser the inbox renders the new "Directives Odin"
+  category filter/badge and the row (category/type/date) correctly, and the
+  Nornir "Objectifs actifs" card renders its empty state correctly post-cleanup
+  (108 pending, matching pre-session count). **Note:** the action row's
+  Détails/Approuver button clicks didn't register through the browser
+  automation layer this session (same class of friction logged at S17/S18,
+  confirmed not app-related — no console errors, HMR was mid-rebuild from this
+  session's own edits) — the ledger/executor round-trip was verified by driving
+  the exact same code path (`approveAction`/`executeDirective`/`undoAction`/
+  `revertDirective`) directly instead. All scratch data reverted after.
 
 - [ ] **Checkpoint — Phase 5 wrap** · reflection, no code · XS
 

@@ -46,6 +46,11 @@ export const bragiGeneratePayload = z.object({
   // Set by the scan (deterministic even if the job runs after midnight);
   // absent on a manual trigger — the job computes it from the slot's cadence.
   periodKey: z.string().min(1).optional(),
+  // S21 — set by an Odin mode:"dispatch" directive's executor
+  // (src/lib/odin/executor.ts DISPATCH_TARGETS.bragi): overrides the slot's
+  // own topic/brief for this one generation, same idempotence/HDS-gate path.
+  topicOverride: z.string().min(1).optional(),
+  briefOverride: z.string().min(1).optional(),
 });
 
 /** Default max slots enqueued per scan run (spend guard). */
@@ -151,8 +156,13 @@ export const bragiGenerateContent = inngest.createFunction(
     },
   },
   async ({ event, step, runId }) => {
-    const { tenantId, slotId, periodKey: eventPeriodKey } =
-      bragiGeneratePayload.parse(event.data);
+    const {
+      tenantId,
+      slotId,
+      periodKey: eventPeriodKey,
+      topicOverride,
+      briefOverride,
+    } = bragiGeneratePayload.parse(event.data);
 
     // 1. Load the slot + guard against a duplicate concurrent generation.
     const slot = await step.run("load-slot", async (): Promise<
@@ -175,6 +185,21 @@ export const bragiGenerateContent = inngest.createFunction(
       if (!row.active) {
         throw new NonRetriableError(`Content slot ${slotId} is inactive`);
       }
+
+      // S21 (odin.md §8) — a standing directive scoped to bragi.content folds
+      // into the slot's own topic/brief, same fields a manual edit would set.
+      // An explicit dispatch override (event payload) always wins over a
+      // standing directive, which wins over the slot's seeded default.
+      const directive = await prisma.odinDirective.findFirst({
+        where: { key: BRAGI_CATEGORY, status: "ACTIVE", mode: "standing" },
+        select: { constraints: true },
+      });
+      const directiveConstraints = (directive?.constraints ?? null) as {
+        topic?: string;
+        brief?: string;
+      } | null;
+      const topic = topicOverride ?? directiveConstraints?.topic ?? row.topic;
+      const brief = briefOverride ?? directiveConstraints?.brief ?? row.brief;
 
       const pending = await prisma.agentAction.findFirst({
         where: {
@@ -210,7 +235,7 @@ export const bragiGenerateContent = inngest.createFunction(
       // Scan-triggered runs re-check the period marker (a manual trigger
       // deliberately bypasses it — that's how you force a regeneration).
       const alreadyDone = !manual && row.lastGeneratedPeriod === periodKey;
-      if (alreadyDone || row.topic.trim().length === 0) {
+      if (alreadyDone || topic.trim().length === 0) {
         const reason = alreadyDone ? "period_already_generated" : "empty_topic";
         await prisma.agentEvent.create({
           data: {
@@ -239,8 +264,8 @@ export const bragiGenerateContent = inngest.createFunction(
 
       return {
         channel: row.channel,
-        topic: row.topic,
-        brief: row.brief,
+        topic,
+        brief,
         periodKey,
         manual,
         brandVoiceKey: row.brandVoiceKey,

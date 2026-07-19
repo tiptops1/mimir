@@ -982,3 +982,29 @@ model QuarantineItem {
   @@index([docId])
   @@index([at])
 }
+
+// --- Odin (S20/S21) — orchestration layer -----------------------------------
+// A directive is a versioned objective the top-level agent sets for itself
+// (scope: tenant) or a module/category (docs/mimir/odin.md §2). Same
+// versioned-artifact shape as RcaDocument/ContentPiece: approving a new
+// version supersedes the prior ACTIVE row for the same key. Directive-setting
+// is itself ledger-gated (odin.directive category) — no exception for Odin.
+model OdinDirective {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  key            String    // stable scope key: "tenant" | a module name | an AutonomyConfig category
+  version        Int       @default(1)
+  scope          String    // "tenant" | "module" | "category"
+  module         String?   // set when scope != "tenant"
+  category       String?   // set when scope == "category"
+  objective      String    // human/LLM-readable objective statement (French, tenant data)
+  constraints    Json?     // structured guardrails module code can read (topic focus, priorities, limits)
+  mode           String    // "standing" (module reads it every run) | "dispatch" (one-shot job trigger)
+  status         String    @default("ACTIVE") // ACTIVE | SUPERSEDED | RETIRED
+  sourceActionId String?   @db.ObjectId // loose ref -> the AgentAction that approved it
+  dispatchedAt   DateTime? // set once a "dispatch"-mode directive has fired its job
+  createdAt      DateTime  @default(now())
+
+  @@unique([key, version])
+  @@index([key, status])
+  @@index([module, status])
+}

@@ -12,6 +12,7 @@ import {
   getPilotStats,
   listRecentAgentEvents,
   getTokenUsageSnapshot,
+  listActiveDirectives,
 } from "@/lib/nornir/queries";
 
 // Nornir (S17) — the pilot dashboard: "the whole company at a glance" +
@@ -44,11 +45,12 @@ export default async function NornirPage() {
   await verifySession();
   const prisma = await getTenantDb();
 
-  const [pilot, events, usage, stageDefs] = await Promise.all([
+  const [pilot, events, usage, stageDefs, directives] = await Promise.all([
     getPilotStats(prisma),
     listRecentAgentEvents(prisma, { limit: 20 }),
     getTokenUsageSnapshot(prisma),
     getStageDefs(),
+    listActiveDirectives(prisma),
   ]);
 
   const stageCount = (stage: string) =>
@@ -234,6 +236,32 @@ export default async function NornirPage() {
             </CardBody>
           </Card>
         </div>
+
+        {/* Odin — objectifs actifs (S21). Read-only: no mutation, approval stays in the inbox. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Objectifs actifs (Odin)</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            {directives.length === 0 ? (
+              <EmptyState
+                title="Aucune directive active"
+                hint="Odin propose une directive dans la boîte de validation Heimdallr dès qu'un signal concret le justifie."
+              />
+            ) : (
+              directives.map((d) => (
+                <div key={d.id} className="rounded-md bg-surface-2 p-2 text-sm">
+                  <p className="flex items-center gap-2">
+                    <span className="font-medium">{d.key}</span>
+                    <Badge tone="info">{d.mode}</Badge>
+                    <span className="text-xs text-muted">v{d.version}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted">{d.objective}</p>
+                </div>
+              ))
+            )}
+          </CardBody>
+        </Card>
       </div>
     </div>
   );

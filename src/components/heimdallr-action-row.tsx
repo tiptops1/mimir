@@ -21,10 +21,20 @@ type ContentPayload = {
   title?: string;
   body?: string;
 };
+type DirectivePayload = {
+  key?: string;
+  scope?: string;
+  module?: string | null;
+  category?: string | null;
+  objective?: string;
+  constraints?: Record<string, unknown> | null;
+  mode?: string;
+};
 
 const DRAFT_TYPE = "email.draft_reply";
 const RCA_TYPE = "doc.rca_draft";
 const CONTENT_TYPE = "content.draft";
+const DIRECTIVE_TYPE = "directive.set";
 
 export function HeimdallrActionRow({
   id,
@@ -52,11 +62,15 @@ export function HeimdallrActionRow({
   const isContent = type === CONTENT_TYPE && payload !== null && typeof payload === "object";
   const content = isContent ? (payload as ContentPayload) : null;
 
+  const isDirective = type === DIRECTIVE_TYPE && payload !== null && typeof payload === "object";
+  const directive = isDirective ? (payload as DirectivePayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
   const [editedTitle, setEditedTitle] = useState(content?.title ?? "");
   const [editedContentBody, setEditedContentBody] = useState(content?.body ?? "");
+  const [editedObjective, setEditedObjective] = useState(directive?.objective ?? "");
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
   );
@@ -80,6 +94,8 @@ export function HeimdallrActionRow({
         ? { ...draft, subject: editedSubject, body: editedBody }
         : content
           ? { ...content, title: editedTitle, body: editedContentBody }
+        : directive
+          ? { ...directive, objective: editedObjective }
         : rca
           ? {
               ...rca,
@@ -157,6 +173,34 @@ export function HeimdallrActionRow({
                 </pre>
               </div>
             </div>
+          ) : directive ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Clé : </span>
+                {directive.key ?? "—"}
+                {directive.mode ? ` · ${directive.mode}` : null}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Portée : </span>
+                {directive.scope ?? "—"}
+                {directive.module ? ` (${directive.module})` : ""}
+                {directive.category ? ` (${directive.category})` : ""}
+              </p>
+              <div>
+                <span className="font-medium text-foreground">Objectif : </span>
+                <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {directive.objective ?? "—"}
+                </pre>
+              </div>
+              {directive.constraints && (
+                <div>
+                  <span className="font-medium text-foreground">Contraintes : </span>
+                  <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                    {JSON.stringify(directive.constraints, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
           ) : rca ? (
             <div className="space-y-2">
               {rcaSections.map((s) => (
@@ -231,6 +275,14 @@ export function HeimdallrActionRow({
                 rows={8}
               />
             </>
+          ) : directive ? (
+            <Textarea
+              value={editedObjective}
+              onChange={(e) => setEditedObjective(e.target.value)}
+              disabled={pending}
+              rows={4}
+              placeholder="Objectif"
+            />
           ) : rca ? (
             <>
               {rcaSections.map((s) => (

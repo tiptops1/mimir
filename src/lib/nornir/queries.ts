@@ -1,4 +1,4 @@
-import type { AgentEvent, PrismaClient } from "@prisma/client";
+import type { AgentEvent, OdinDirective, PrismaClient } from "@prisma/client";
 import { countPendingActions } from "@/lib/heimdallr/queries";
 import { computeFinanceCockpit } from "@/lib/finance-cockpit";
 import { checkBudget, usageSnapshot } from "@/lib/ai/meter";
@@ -38,6 +38,14 @@ export async function getPilotStats(prisma: PrismaClient): Promise<PilotStats> {
     netThisMonth: cockpit.net,
     pendingApprovals,
   };
+}
+
+/** Every currently-ACTIVE Odin directive (S21), for the "Objectifs actifs" card and the review snapshot. */
+export async function listActiveDirectives(prisma: PrismaClient): Promise<OdinDirective[]> {
+  return prisma.odinDirective.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { key: "asc" },
+  });
 }
 
 /** Recent agent activity, newest first — uses the `at` / `[module,category,at]` indexes. */
