@@ -537,13 +537,28 @@ decision at every level still flows through the Heimdallr ledger**, and per-cate
 bypasses D2. Deliberately sequenced after Phase 4 so it's designed against real module agents,
 not guesses.
 
-- [ ] **S20 — Odin design (no code)** · Opus, plan mode · M
-      Directive schema, objective decomposition, agent-to-agent delegation shape, how directives
-      map onto autonomy categories, what the ledger records at each hierarchy level. Same
-      "worth over-thinking" tier as S2 — this is the second schema that can't be backfilled.
-      **Pre-read, don't re-litigate:** MetaGPT + AutoGen were evaluated as candidate infra for this
-      session and rejected — see `decisions.md` 2026-07-19. Build native TS on Inngest + Heimdallr;
-      skim MetaGPT's role-cascade and AutoGen's Magentic-One task-decomposition as prior art only.
+- [x] **S20 — Odin design (no code)** · Opus, plan mode · M · ✅ 2026-07-19
+  Design doc: `docs/mimir/odin.md` (S2/`events.md`-tier, S21 implements verbatim).
+  Hierarchy ships **2-tier** (Odin → module agents), not the checkpoint's literal
+  CEO→Directors→Managers→Employees framing — `OdinDirective.scope` stays an open
+  string key so an intermediate tier is additive later, not a schema change. New
+  tenant model `OdinDirective`, versioned exactly like `RcaDocument`/`ContentPiece`
+  (ACTIVE/SUPERSEDED, `mode: "standing"` read-every-run vs. `mode: "dispatch"`
+  one-shot Inngest fire). **No exception to D5**: Odin proposes directives through
+  the existing `proposeAction` like every other module (no new ledger API needed);
+  a human approves in the Heimdallr inbox; a new `src/lib/odin/executor.ts`
+  (mirrors `bragi/executor.ts`) does the version-supersede + optional dispatch +
+  `executeAction`/undo. New autonomy category `odin.directive` (maxLevel 3) — not
+  a reuse, unlike Forseti's `crm.task_create` — with no new never-graduates floor
+  needed (a directive carries no execution rights; money/legal stay independently
+  gated). Odin's own review is **Forseti-shaped** (daily `/api/cron/odin`, plain
+  function, no Inngest job) — a single Sonnet-tier synthesis over stats that
+  already exist (Nornir/meter/ledger reads), not a multi-step pipeline. Surfacing
+  reuses the Heimdallr inbox (new type branch) + a read-only card on the existing
+  Nornir page — no new route, no new dashboard engine. S21 punch list: Bragi wired
+  first (richest config-driven surface), Huginn second, Muninn/Forseti explicitly
+  deferred. Decisions logged in `decisions.md` 2026-07-19. No code this session —
+  docs only, per S2's precedent.
 - [ ] **S21 — Odin implementation** · Sonnet · M (split if S20 says so)
 
 - [ ] **Checkpoint — Phase 5 wrap** · reflection, no code · XS

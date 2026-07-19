@@ -487,3 +487,46 @@ Both rejected on the same two grounds:
 **Where they're still useful:** reading material only. MetaGPT's role-decomposition
 (PM→Architect→Engineer SOP cascade) and AutoGen's Magentic-One task-decomposition patterns are
 reasonable prior art to skim before S20 designs Odin's directive schema — but skim, don't vendor.
+
+## 2026-07-19 — S20: Odin design closed (no code)
+
+Design doc: `docs/mimir/odin.md` — the reviewed artifact S21 implements verbatim, same
+S2/S3 relationship as `events.md`. Decisions closed there, recorded here so they don't
+get re-litigated at implementation time:
+
+- **Hierarchy ships 2-tier (Odin → module agents), not the Phase 0 checkpoint's literal
+  CEO→Directors→Managers→Employees framing.** With seven realms and no real customer
+  yet, four hardcoded org levels would be speculative structure with nothing to direct.
+  `OdinDirective.scope` is an open string key (module or category), not an enum of org
+  levels — additive if an intermediate tier is ever genuinely needed.
+- **`OdinDirective` is a new tenant model**, versioned exactly like `RcaDocument` (S16)
+  / `ContentPiece` (S18): approving a new version supersedes the prior ACTIVE row for
+  the same `key` in one transaction; undo restores the prior version. `mode: "standing"`
+  (a module reads it every run) vs. `mode: "dispatch"` (one-shot, fires the target
+  module's Inngest event once) are both supported.
+- **No exception to D5 for the hierarchy itself.** Odin never writes `OdinDirective`
+  rows directly — it calls the existing `proposeAction` (`src/lib/heimdallr/ledger.ts`,
+  no new ledger API needed) like every other module, a human approves in the Heimdallr
+  inbox, and a new `src/lib/odin/executor.ts` (mirroring `bragi/executor.ts`) does the
+  version-supersede + optional dispatch + `executeAction`/undo. This is the literal
+  meaning of "every decision at every level flows through the ledger."
+- **New autonomy category `odin.directive`** (maxLevel 3, seeded at level 0) — unlike
+  Forseti (S19), which correctly reuses `crm.task_create`, setting an objective is a
+  genuinely new action type. **No new never-graduates floor is needed**: a directive
+  carries no execution rights of its own — `finance.commitment`/`legal.communication`
+  stay independently gated at `maxLevel: 1` no matter what any directive says.
+  Objectives vs. execution rights is the separation that keeps D2 intact underneath
+  Odin.
+- **Odin's own review loop is Forseti-shaped, not Huginn/Bragi-shaped**: a daily
+  `/api/cron/odin` route calling a plain function directly, no Inngest job — a single
+  Sonnet-tier (`taskClass: "draft"`) synthesis over stats that already exist (Nornir
+  pilot stats, AI spend, pending-approval counts, `AutonomyConfig`/breaker state), not
+  a multi-step pipeline needing Inngest's resumability.
+- **Surfacing reuses existing surfaces**: approval through the Heimdallr inbox (new
+  `odin.directive_set` type branch), a read-only "Objectifs actifs" card added to the
+  existing Nornir page — explicitly not a new route or a new dashboard engine.
+- **Directive consumption order for S21: Bragi first** (richest config-driven surface
+  — `ContentSlot.topic`/`brief` overrides fold in naturally), **Huginn second**,
+  **Muninn and Forseti explicitly deferred** (RCA is reactive-per-incident; compliance
+  detection is factual, not objective-driven — revisit only if a real tenant need
+  surfaces).
