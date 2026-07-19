@@ -44,3 +44,8 @@ next-env.d.ts
 
 # generated Prisma clients (control plane lives here; tenant client → node_modules/@prisma/client)
 /src/generated/
+
+# vendored pixel-agents (C5 Le Bureau): source is committed, installs/builds are not
+/vendor/pixel-agents/node_modules/
+/vendor/pixel-agents/**/node_modules/
+/vendor/pixel-agents/dist/

@@ -22,6 +22,7 @@ import {
   HeartPulse,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
+import { BrandEgg } from "@/components/brand-egg";
 import { logout } from "@/app/actions/auth";
 import { REALMS, realmForPath, type RealmSlug } from "@/lib/realms";
 import { cn, initialsFromName } from "@/lib/utils";
@@ -141,7 +142,9 @@ export function Sidebar({
       )}
     >
       <div className="px-5 py-4">
-        <BrandMark />
+        <BrandEgg>
+          <BrandMark />
+        </BrandEgg>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pt-1">

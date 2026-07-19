@@ -24,6 +24,10 @@ const eslintConfig = defineConfig([
     // generated/build output — the src/generated/** ignore above only
     // matches the root path, not nested worktree copies.
     ".claude/worktrees/**",
+    // Vendored pixel-agents monorepo (C5 Le Bureau) — has its own lint setup.
+    "vendor/**",
+    // Built webview bundle assembled by scripts/bureau-build.ts.
+    "public/bureau/**",
   ]),
 ]);
 

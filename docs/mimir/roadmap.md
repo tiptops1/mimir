@@ -753,11 +753,43 @@ the full design system.
   both themes while below-fold content follows the toggle, mobile 2-col grid fallback, no
   hydration/console errors, `npm run lint`/`build` clean.
 
-- [ ] **C3 — Shared-element morphs + Suspense reveals** · **Sonnet** · M
-  Implement shared-element morphs (row name → detail header) on companies, contacts, deals. Add
-  Suspense skeleton reveals. Reference `references/mechanics.md` for implementation recipes; don't
-  re-derive.
-  *Exit:* "deeper into a realm" transitions morph the row smoothly into the detail view.
+- [x] **C3 — Shared-element morphs + Suspense reveals** · **Sonnet** · M · ✅ 2026-07-19
+  **Scope finding:** of companies/contacts/deals named in the original item, only companies has a
+  real list↔detail pair (`/companies` ↔ `/companies/[id]`) — contacts have no detail route (the
+  contact-name cell isn't even linked, only the company name links out) and deals have no
+  list/detail route at all (embedded card on the company page; `/pipeline` is a company-keyed
+  kanban, not deal-keyed). Morph shipped for companies only; Suspense reveal shipped for both
+  companies and contacts lists (the mechanic that actually applies to their pagination/filter
+  navigations). **Not fixed here, flagged as a gap:** contacts/deals detail pages don't exist, so
+  they have no morph target — inventing one was out of scope for a motion session.
+  CSS: `.nav-forward`/`.nav-back` (60px horizontal) + `.slide-down`/`.slide-up` (vertical reveal)
+  keyframes added to `globals.css`, verbatim from the Next view-transitions guide; covered by the
+  existing wildcard `prefers-reduced-motion` rule, no new one needed. `(app)/layout.tsx`'s
+  existing `<ViewTransition>` wrapper (C2) extended to also map `nav-forward`/`nav-back` (one
+  wrapper, not a second). `PageHeader` gained an optional `titleTransitionName` prop (only wraps
+  `<h1>` in `<ViewTransition>` when passed — every other caller unaffected); companies list wraps
+  the company-name text (both the has-contact and no-contact row layouts) in
+  `<ViewTransition name={`company-${id}`}>` + `transitionTypes={["nav-forward"]}` on the row
+  link, companies detail passes the matching `titleTransitionName`. Suspense reveal: new
+  `src/components/table-skeleton.tsx` (shape-matching shimmer) + `companies-table.tsx`/
+  `contacts-table.tsx` (the heavy `findMany`+table JSX extracted out of the page components,
+  wrapped in `<Suspense fallback={<ViewTransition exit="slide-down">…}><ViewTransition
+  enter="slide-up">…</Suspense>`); pages keep only their cheap count/savedViews queries + header/
+  filters synchronous. *Exit met:* lint/build clean; verified against `crm_demo` — companies list
+  → detail renders correctly (title matches morph source), pagination/filter empty-state and
+  populated states both correct post-split, dark mode legible (computed-style check: bone-on-abyss
+  h1), no literal colors in the diff, 375px no overflow, no console errors. **Note:** the Browser
+  pane's screenshot/zoom capture hung mid-session across two tabs while the dev server kept
+  serving clean 200s and `read_page`/console/computed-style checks stayed correct throughout —
+  same class of automation-layer friction logged at S17/S18/S21/S22b, not app-related; verified via
+  `read_page`/`get_page_text`/computed styles instead where screenshots wouldn't return.
+  **Folded into this session:** a full "Vision RM" → "Mimir" rebrand across every user-facing
+  string (page titles, PWA manifest, login/register copy, the sidebar/login/register `BrandMark`
+  — which had `Vision RM` split across two JSX nodes and didn't show up in a naive grep, the
+  Observatory hub label, digest/reply-sync outbound email sender names, CSV export filename,
+  offline-page copy, service-worker cache version) — the baseline duplication at S0 had left the
+  client product's name on every screen. `docs/mimir/*.md` and `.claude/skills/*` deliberately
+  left alone (dev-facing history, not what a user sees in the app).
 
 - [ ] **C4 — Atmosphere + final polish** · **Sonnet** · S
   Add header auras (realm-subtle gradient in `PageHeader`), realm-tinted chart primary series,
@@ -766,8 +798,23 @@ the full design system.
   density.
   *Exit:* visual polish complete; design review green at both themes.
 
-- [ ] **C5 — 🥚 Easter egg: "Le Bureau" — pixel-art agents' house at work** · plan on Opus, implement on Sonnet · M
-  *(new — proposed at the Phase 3 checkpoint 2026-07-18)* A hidden tab in the cosmos that renders
+- [x] **C5 — 🥚 Easter egg: "Le Bureau" — pixel-art agents' house at work** · plan on Opus, implement on Sonnet · M · ✅ 2026-07-19
+  **Shipped:** vendored `pixel-agents` @ `cd0343b` into `vendor/pixel-agents/` (plain copy, MIT);
+  mechanic = static iframe (`public/bureau/`, built+committed via `npm run bureau:build`) + an
+  `acquireVsCodeApi` postMessage shim + frozen `boot.json` handshake — their Fastify/WebSocket
+  server is never run (full rationale in `decisions.md` 2026-07-19). Egg: 5 clicks on the sidebar
+  glyph in 3 s → `/bureau` (unlisted, auth-gated). Live wiring: `/api/bureau/state` (recent
+  `AgentEvent`s + PROPOSED counts per module) polled 4 s, translated in
+  `src/components/bureau/translate.ts` — pending proposal ⇒ persistent amber "needs approval"
+  bubble, ledger event ⇒ typing/reading animation. *Exit verified in-browser:* 8 named agents
+  render/animate; Forseti + Huginn showed live "Needs approval" from real crm_demo PROPOSED
+  actions; both themes + 375px sane; lint/build clean. **Two vendor quirks worked around:** the
+  webview only materializes `existingAgents` inside its `layoutLoaded` handler (boot order must
+  announce agents *before* layout, unlike the live server), and the SPA can send `webviewReady`
+  before Next hydration (shim queues outbound + host posts `bureau:drain` to redeliver).
+  Norse sprite art is still stock — hand-drop into `vendor/.../webview-ui/public/assets/` +
+  rebuild (see VENDOR.md); Freyja joins after S25.
+  *(original scope — proposed at the Phase 3 checkpoint 2026-07-18)* A hidden tab in the cosmos that renders
   the Mimir agents as **pixel-art characters working in an office** — Heimdallr, Huginn, Muninn,
   Nornir, Bragi, Forseti, Odin (and Freyja once S25 lands) each a little Norse pixel character that
   walks around, sits at its desk, and animates what it's doing (typing = drafting, reading =

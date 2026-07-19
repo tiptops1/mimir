@@ -548,3 +548,31 @@ Two decisions closed at S22 plan time (both user calls, not derived):
    `proposeAction` call yet, purely detection + dashboard. S22b picks up the
    renewal agent once real usage of the S22a signals suggests what a retention
    action should actually contain.
+
+## 2026-07-19 — C5: "Le Bureau" vendor mechanic (pixel-agents)
+
+Vendored **pixel-agents** (`github.com/pixel-agents-hq/pixel-agents`, MIT, pinned
+`cd0343b`, v1.3.0) into `vendor/pixel-agents/` as a plain copy — no submodule, no fork;
+files are used byte-for-byte and all glue lives in the main tree.
+
+- **Mechanic: static iframe + postMessage shim, NOT their Fastify server.** The webview
+  SPA picks its transport by probing `acquireVsCodeApi`; `scripts/bureau-build.ts` builds
+  the SPA (`vite`, relative base) into `public/bureau/` and injects an inline shim that
+  defines `acquireVsCodeApi` before the bundle loads, forcing `PostMessageTransport`.
+  The host page plays the server role. Their WebSocket/Fastify runtime is never run —
+  it can't exist on Vercel, and the ledger already provides the event stream.
+- **Frozen handshake**: the standalone server's `webviewReady` bootstrap (capabilities →
+  sprite/tile/furniture payloads → layout → settings → agents) is fully self-contained
+  data, so it is replayed at build time via the vendored `buildAssetCache` and frozen to
+  `public/bureau/boot.json` (committed, ~1 MB). Vercel never builds the vendor tree.
+- **Live wiring**: `/api/bureau/state` returns recent `AgentEvent`s + `PROPOSED` counts
+  per module; `src/components/bureau/translate.ts` (pure) maps them onto the vendor
+  protocol — pending proposal ⇒ `agentToolPermission` (persistent amber bubble), ledger
+  event ⇒ `agentToolStart/Done` (typing vs. reading by verb). 8 characters: Heimdallr,
+  Huginn, Muninn, Nornir, Bragi, Forseti, Odin, Thor.
+- **Egg**: 5 clicks on the sidebar brand glyph within 3 s → `/bureau` (unlisted route,
+  auth-gated by the existing proxy + layout).
+- **Custom art goes in** `vendor/pixel-agents/webview-ui/public/assets/` (per-folder
+  PNG + `manifest.json`; format in the vendor tree's `docs/external-assets.md`), then
+  `npm run bureau:build` re-freezes. This is the sanctioned exception to "do not edit
+  the vendor tree": asset folders are content, not code.
