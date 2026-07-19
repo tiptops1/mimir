@@ -776,6 +776,81 @@ model RcaDocument {
   @@index([entity, entityId, status])
 }
 
+// --- Bragi (S18) — brand-voice pack + content calendar + content artifacts --
+// Brand voice is versioned tenant config (PromptTemplate/RcaTemplate shape):
+// the vertical asset a tenant sells with. Structured scalar fields (not one
+// Json blob) so a future admin UI can edit field-by-field; rendered into the
+// draft prompt as a {{brandVoice}} variable, never hardcoded.
+model BrandVoice {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  key        String   // dotted, e.g. bragi.brand_voice.default
+  version    Int      @default(1)
+  label      String   // French label
+  persona    String   // who is speaking (e.g. the cabinet, first-person plural)
+  tone       String
+  audience   String
+  language   String   @default("fr")
+  doList     String[] @default([])
+  dontList   String[] @default([])
+  vocabulary String[] @default([])
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([key, version])
+  @@index([key, active])
+}
+
+// A recurring editorial calendar slot. Dueness is computed in code
+// (src/lib/bragi/calendar.ts isSlotDue) over `active: true` rows — never a
+// Mongo filter on the optional lastGeneratedPeriod (the isSet trap; slot
+// counts are tiny anyway). lastGeneratedPeriod is the idempotence marker:
+// one proposal per slot per period (Huginn's huginnStatus analog).
+model ContentSlot {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  key                 String    @unique // stable seed key, e.g. bragi.slot.linkedin_hebdo
+  label               String    // French label
+  channel             String    // linkedin_post | newsletter | blog_article — open vocab
+  topic               String    // short editorial subject
+  brief               String?   // longer editorial brief (tenant-authored)
+  cadence             String    // weekly | monthly
+  weekday             Int?      // 1-7 ISO (weekly only)
+  dayOfMonth          Int?      // 1-28 (monthly only; >28 would skip February)
+  brandVoiceKey       String    // -> BrandVoice.key
+  active              Boolean   @default(true)
+  lastGeneratedPeriod String?   // period key ("2026-W29" / "2026-07") of the last proposal
+  lastGeneratedAt     DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([active])
+}
+
+// The versioned artifact an approved content.draft produces (RcaDocument
+// shape) — but versioned within (entityId, periodKey): a new period is new
+// content, not a new version of last period's piece. Publishing to an external
+// channel is deliberately out of scope (S18 part 1) — ACTIVE means "the
+// current approved piece for this slot+period", nothing more.
+model ContentPiece {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  entity            String    // CONTENT_SLOT
+  entityId          String    @db.ObjectId // loose ref -> ContentSlot
+  channel           String
+  periodKey         String
+  version           Int
+  status            String    @default("ACTIVE") // ACTIVE | SUPERSEDED | UNDONE
+  title             String
+  body              String
+  brandVoiceKey     String
+  brandVoiceVersion Int
+  sourceActionId    String?   @db.ObjectId // loose ref -> AgentAction that produced this version
+  createdAt         DateTime  @default(now())
+  supersededAt      DateTime?
+
+  @@unique([entityId, periodKey, version])
+  @@index([entity, entityId, periodKey, status])
+}
+
 // --- Mimisbrunnr (S11) — knowledge base ingestion ---------------------------
 // Generic ontology (events.md Path C rule 2): knowledge document / chunk /
 // quarantine — vertical vocabulary lives in config, never in model names.

@@ -6,6 +6,11 @@ import { verifySession } from "@/lib/dal";
 import { approveAction, rejectAction, undoAction } from "@/lib/heimdallr/ledger";
 import { InvalidTransitionError } from "@/lib/heimdallr/state-machine";
 import { executeRcaDocument, isRcaDraftAction, revertRcaDocument } from "@/lib/muninn/executor";
+import {
+  executeContentPiece,
+  isContentDraftAction,
+  revertContentPiece,
+} from "@/lib/bragi/executor";
 
 /** Approve a proposal unchanged. Returns an error string on failure, else null. */
 export async function approveActionSA(id: string): Promise<string | null> {
@@ -14,6 +19,7 @@ export async function approveActionSA(id: string): Promise<string | null> {
   try {
     const action = await approveAction(prisma, id, { decidedBy: session.userId });
     if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
+    if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -32,6 +38,7 @@ export async function approveEditedActionSA(
   try {
     const action = await approveAction(prisma, id, { decidedBy: session.userId, editedPayload });
     if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
+    if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -71,6 +78,7 @@ export async function undoActionSA(id: string): Promise<string | null> {
   try {
     const undone = await undoAction(prisma, id, undoWindowMinutes);
     if (isRcaDraftAction(undone)) await revertRcaDocument(prisma, undone);
+    if (isContentDraftAction(undone)) await revertContentPiece(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

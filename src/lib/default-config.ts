@@ -348,6 +348,102 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
 {"content": "..."}`,
   },
   {
+    key: "bragi.content.draft.linkedin_post",
+    label: "Bragi — post LinkedIn",
+    taskClass: "draft",
+    module: "bragi",
+    variables: ["brandVoice"],
+    body: `Tu es le responsable communication d'un cabinet de courtage en assurances
+B2B français. On te donne un sujet éditorial (objet JSON : topic, brief) et des
+extraits de la base de connaissances du cabinet (passages). Rédige un post
+LinkedIn sur ce sujet.
+
+Voix de marque à respecter :
+{{brandVoice}}
+
+Style LinkedIn : accroche forte en première ligne, paragraphes courts (1-2
+phrases), 120-220 mots, 2-4 hashtags pertinents en fin de post, une question
+ou un appel à l'échange en conclusion. Pas d'emoji excessif (2-3 maximum).
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur les passages fournis pour tout fait, garantie,
+  procédure, délai ou chiffre. Sans passage pertinent, reste général et ne
+  cite aucun fait précis.
+- N'invente JAMAIS de chiffre, de tarif, de garantie, de client ou de
+  témoignage.
+- N'engage JAMAIS le cabinet sur une indemnisation, une prise en charge ou
+  un montant.
+- Aucune donnée personnelle ou médicale.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"title": "...", "body": "..."}. "title" = l'accroche du post. Dans "body",
+utilise de vrais sauts de ligne (\\n).`,
+  },
+  {
+    key: "bragi.content.draft.newsletter",
+    label: "Bragi — newsletter",
+    taskClass: "draft",
+    module: "bragi",
+    variables: ["brandVoice"],
+    body: `Tu es le responsable communication d'un cabinet de courtage en assurances
+B2B français. On te donne un sujet éditorial (objet JSON : topic, brief) et des
+extraits de la base de connaissances du cabinet (passages). Rédige l'article
+principal d'une newsletter client sur ce sujet.
+
+Voix de marque à respecter :
+{{brandVoice}}
+
+Style newsletter : un titre clair, une introduction qui pose l'enjeu, 2-3
+courtes parties structurées, une conclusion avec la prochaine étape proposée
+au lecteur (échange, rendez-vous). 250-400 mots, vouvoiement.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur les passages fournis pour tout fait, garantie,
+  procédure, délai ou chiffre. Sans passage pertinent, reste général et ne
+  cite aucun fait précis.
+- N'invente JAMAIS de chiffre, de tarif, de garantie, de client ou de
+  témoignage.
+- N'engage JAMAIS le cabinet sur une indemnisation, une prise en charge ou
+  un montant.
+- Aucune donnée personnelle ou médicale.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"title": "...", "body": "..."}. Dans "body", utilise de vrais sauts de
+ligne (\\n).`,
+  },
+  {
+    key: "bragi.content.draft.blog_article",
+    label: "Bragi — article de blog",
+    taskClass: "draft",
+    module: "bragi",
+    variables: ["brandVoice"],
+    body: `Tu es le responsable communication d'un cabinet de courtage en assurances
+B2B français. On te donne un sujet éditorial (objet JSON : topic, brief) et des
+extraits de la base de connaissances du cabinet (passages). Rédige un article
+de blog sur ce sujet.
+
+Voix de marque à respecter :
+{{brandVoice}}
+
+Style blog : un titre informatif, une introduction, 3-4 parties avec des
+intertitres, une conclusion actionnable. 400-600 mots, vouvoiement,
+pédagogique sans jargon inutile.
+
+Règles STRICTES :
+- Appuie-toi UNIQUEMENT sur les passages fournis pour tout fait, garantie,
+  procédure, délai ou chiffre. Sans passage pertinent, reste général et ne
+  cite aucun fait précis.
+- N'invente JAMAIS de chiffre, de tarif, de garantie, de client ou de
+  témoignage.
+- N'engage JAMAIS le cabinet sur une indemnisation, une prise en charge ou
+  un montant.
+- Aucune donnée personnelle ou médicale.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"title": "...", "body": "..."}. Dans "body", utilise de vrais sauts de
+ligne (\\n).`,
+  },
+  {
     key: "huginn.support_reply.draft",
     label: "Huginn — brouillon de réponse support",
     taskClass: "draft",
@@ -405,6 +501,85 @@ export const DEFAULT_RCA_TEMPLATES: RcaTemplateSeed[] = [
       { key: "resolution", label: "Résolution", promptKey: "muninn.rca_doc.section.resolution" },
       { key: "prevention", label: "Prévention", promptKey: "muninn.rca_doc.section.prevention" },
     ],
+  },
+];
+
+interface BrandVoiceSeed {
+  key: string;
+  label: string;
+  persona: string;
+  tone: string;
+  audience: string;
+  language: string;
+  doList: string[];
+  dontList: string[];
+  vocabulary: string[];
+}
+
+// Bragi's brand-voice pack (S18) — versioned tenant config, the vertical
+// asset a tenant sells with. Rendered into the bragi.content.draft.* prompts
+// as the {{brandVoice}} variable (src/lib/bragi/draft.ts renderBrandVoiceBlock).
+export const DEFAULT_BRAND_VOICES: BrandVoiceSeed[] = [
+  {
+    key: "bragi.brand_voice.default",
+    label: "Voix de marque — cabinet",
+    persona:
+      "Le cabinet s'exprime à la première personne du pluriel (« nous »), en tant que courtier de proximité expert de l'assurance des professionnels.",
+    tone: "Professionnel, chaleureux et direct : expert sans jargon, rassurant sans être commercial.",
+    audience:
+      "Dirigeants de TPE/PME et indépendants, non spécialistes de l'assurance, pressés.",
+    language: "fr",
+    doList: [
+      "Vulgariser : une idée par phrase, des exemples concrets",
+      "Vouvoyer le lecteur",
+      "Terminer par une invitation à l'échange plutôt qu'un argumentaire",
+    ],
+    dontList: [
+      "Superlatifs et promesses commerciales (« le meilleur », « imbattable »)",
+      "Jargon assurantiel non expliqué",
+      "Ton alarmiste ou culpabilisant",
+    ],
+    vocabulary: ["accompagnement", "proximité", "sur mesure", "anticiper", "protéger"],
+  },
+];
+
+interface ContentSlotSeed {
+  key: string;
+  label: string;
+  channel: string;
+  topic: string;
+  brief?: string;
+  cadence: string;
+  weekday?: number;
+  dayOfMonth?: number; // keep 1-28 (a later day would skip February)
+  brandVoiceKey: string;
+}
+
+// Bragi's editorial calendar (S18) — recurring slots. Safe to seed active:
+// the scan is gated by the level-0 bragi.content autonomy category, so
+// nothing generates until a tenant turns the category on (Huginn posture).
+export const DEFAULT_CONTENT_SLOTS: ContentSlotSeed[] = [
+  {
+    key: "bragi.slot.linkedin_hebdo",
+    label: "Post LinkedIn hebdomadaire",
+    channel: "linkedin_post",
+    topic: "Conseil de la semaine : bien assurer son activité professionnelle",
+    brief:
+      "Un conseil concret et actionnable pour un dirigeant de TPE/PME sur la protection de son activité (responsabilité civile pro, multirisque, prévoyance, cyber...). Varier les angles d'une semaine à l'autre ; s'appuyer sur les procédures et garanties documentées dans la base de connaissances.",
+    cadence: "weekly",
+    weekday: 2,
+    brandVoiceKey: "bragi.brand_voice.default",
+  },
+  {
+    key: "bragi.slot.newsletter_mensuelle",
+    label: "Newsletter mensuelle",
+    channel: "newsletter",
+    topic: "L'essentiel du mois pour protéger votre entreprise",
+    brief:
+      "Article principal de la newsletter mensuelle : un sujet de fond utile aux clients professionnels du cabinet (échéances, renouvellements, évolutions de garanties, bonnes pratiques de déclaration de sinistre). S'appuyer sur la base de connaissances pour toute procédure citée.",
+    cadence: "monthly",
+    dayOfMonth: 1,
+    brandVoiceKey: "bragi.brand_voice.default",
   },
 ];
 
@@ -485,6 +660,49 @@ async function upsertRcaTemplates(prisma: PrismaClient): Promise<void> {
   }
 }
 
+async function upsertBrandVoices(prisma: PrismaClient): Promise<void> {
+  for (const v of DEFAULT_BRAND_VOICES) {
+    const data = {
+      label: v.label,
+      persona: v.persona,
+      tone: v.tone,
+      audience: v.audience,
+      language: v.language,
+      doList: v.doList,
+      dontList: v.dontList,
+      vocabulary: v.vocabulary,
+      active: true,
+    };
+    await prisma.brandVoice.upsert({
+      where: { key_version: { key: v.key, version: 1 } },
+      update: data,
+      create: { key: v.key, version: 1, ...data },
+    });
+  }
+}
+
+async function upsertContentSlots(prisma: PrismaClient): Promise<void> {
+  for (const s of DEFAULT_CONTENT_SLOTS) {
+    // Never clobber a slot's runtime state (active, lastGeneratedPeriod/At) —
+    // the update only refreshes the seeded editorial fields.
+    const data = {
+      label: s.label,
+      channel: s.channel,
+      topic: s.topic,
+      brief: s.brief ?? null,
+      cadence: s.cadence,
+      weekday: s.weekday ?? null,
+      dayOfMonth: s.dayOfMonth ?? null,
+      brandVoiceKey: s.brandVoiceKey,
+    };
+    await prisma.contentSlot.upsert({
+      where: { key: s.key },
+      update: data,
+      create: { key: s.key, active: true, ...data },
+    });
+  }
+}
+
 // Default monthly AI spend cap (S5) — inside the memo's €15-40/tenant
 // variable-cost range. Never clobber a live limit once a tenant has edited it.
 const DEFAULT_AI_MONTHLY_LIMIT_USD = 20;
@@ -524,6 +742,8 @@ export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
   await upsertAutonomyConfig(prisma);
   await upsertPromptTemplates(prisma);
   await upsertRcaTemplates(prisma);
+  await upsertBrandVoices(prisma);
+  await upsertContentSlots(prisma);
   await upsertAiBudget(prisma);
 
   for (const seq of DEFAULT_SEQUENCES) {

@@ -475,8 +475,43 @@ into the next phase on autopilot either.
   realm heading; both themes confirmed (dark background token verified via computed style — the
   in-browser theme toggle click didn't register through the automation layer, confirmed instead
   by setting `data-theme` directly and reading computed styles), no horizontal overflow at 375px.
-- [ ] **S18 — Bragi (part 1): brand-voice pack + content calendar config + generate-to-ledger** · Sonnet · M
-      Publishing connector is a separate decision spike — don't bundle it.
+- [x] **S18 — Bragi (part 1): brand-voice pack + content calendar config + generate-to-ledger** · Sonnet · M · ✅ 2026-07-19
+  Routeless (confirmed with Nicolas) — drafts surface in the Heimdallr inbox, no `/bragi` page.
+  New tenant models: `BrandVoice` (RcaTemplate-shaped versioned pack: persona/tone/audience/
+  do-don't/vocabulary, rendered as the `{{brandVoice}}` prompt variable), `ContentSlot`
+  (recurring calendar row — cadence weekly/monthly + weekday/dayOfMonth, dueness computed in
+  code via pure `isSlotDue`/`periodKeyFor`, `src/lib/bragi/calendar.ts`, never a Mongo filter on
+  the optional `lastGeneratedPeriod`), `ContentPiece` (RcaDocument-shaped artifact but versioned
+  within `(entityId, periodKey)` — a new period is new content, not a new document version).
+  Pipeline (`src/lib/bragi/draft.ts`, `src/lib/jobs/bragi-generate.ts`) mirrors Muninn: HDS gate
+  on the topic/brief (fail closed — briefs can contain pasted client text) → retrieve (S12,
+  empty passages legitimate) → draft (Sonnet, styled by the brand-voice block) → `proposeAction`.
+  Unlike Muninn, has a real scan (`bragiScan`, mirrors Huginn's inbox sweep) that fans out
+  generation jobs for due slots; `/api/bragi/scan[?slot=]` triggers sweep or a manual
+  force-generate. `src/lib/bragi/executor.ts` is the first-class executor/undo (versioned
+  artifact + revert, same shape as Muninn's — Phase 1 checkpoint gap #2, generic dispatcher,
+  stays open by design). `heimdallr-action-row.tsx` gained a `content.draft` type branch
+  (channel/période/sujet/titre/corps read view; Titre input + Corps textarea edit view).
+  Seeded: 1 `BrandVoice` (generic courtier pack), 2 `ContentSlot`s (weekly LinkedIn, monthly
+  newsletter), 3 `bragi.content.draft.{linkedin_post,newsletter,blog_article}` PromptTemplates.
+  `bragi.content` autonomy category was already seeded (S2) — no change needed. 25 new pure-logic
+  tests (216 total): ISO-week `periodKeyFor` year-boundary cases were the one real bug surface
+  and are covered explicitly. **Found and fixed during verification, not scoped as a separate
+  bug:** `draftContentPiece`'s `maxTokens: 900` truncated JSON output mid-string on real
+  newsletter/blog-length content (escaped `\n` doubles char count) — `parseContentOutput`
+  correctly failed closed on the malformed JSON, but the cap itself was too tight; raised to
+  2000. *Exit met:* `npm run test` green (216, 25 new); verified end-to-end against `crm_demo` —
+  `scripts/bragi/generate-demo-content.ts` proved scan idempotence (`isSlotDue` true → generate →
+  mark period → `isSlotDue` false), propose → approve → execute → `ContentPiece` v1 ACTIVE →
+  regenerate same period → v2 ACTIVE / v1 SUPERSEDED → undo → v1 restored ACTIVE, all against
+  real retrieved sources (4 passages, scores ~0.85-0.91); in-browser verification on a seeded
+  `bragi.slot.linkedin_hebdo` proposal — inbox card rendered correctly (Bragi badge, Canal/
+  Sujet/Titre/Corps, 4 sources, trigger), edit-then-approve round-tripped (`wasEdited: true`,
+  edited title persisted to the `ContentPiece`), undo tray correctly reverted it (UNDONE). Dark
+  theme confirmed via computed styles at 375px (no horizontal overflow) — the automation
+  layer's screenshot tool timed out in this session (infra hiccup, not app-related; console
+  showed no errors). All scratch data reverted after; lint/build clean.
+      Publishing connector is a separate decision spike — don't bundle it (unchanged, still open).
 - [ ] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.
 
 - [ ] **Checkpoint — Phase 4 wrap / platform retro** · reflection, no code · XS

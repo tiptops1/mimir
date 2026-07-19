@@ -14,9 +14,17 @@ type Trigger = { kind?: string; [key: string]: unknown };
 type DraftPayload = { to?: string; subject?: string; body?: string; inReplyTo?: string };
 type RcaSection = { key: string; label: string; content: string | null };
 type RcaPayload = { templateKey?: string; templateVersion?: number; sections?: RcaSection[] };
+type ContentPayload = {
+  channel?: string;
+  periodKey?: string;
+  topic?: string;
+  title?: string;
+  body?: string;
+};
 
 const DRAFT_TYPE = "email.draft_reply";
 const RCA_TYPE = "doc.rca_draft";
+const CONTENT_TYPE = "content.draft";
 
 export function HeimdallrActionRow({
   id,
@@ -41,9 +49,14 @@ export function HeimdallrActionRow({
   const rca = isRca ? (payload as RcaPayload) : null;
   const rcaSections = rca?.sections ?? [];
 
+  const isContent = type === CONTENT_TYPE && payload !== null && typeof payload === "object";
+  const content = isContent ? (payload as ContentPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
+  const [editedTitle, setEditedTitle] = useState(content?.title ?? "");
+  const [editedContentBody, setEditedContentBody] = useState(content?.body ?? "");
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
   );
@@ -65,6 +78,8 @@ export function HeimdallrActionRow({
       setError(null);
       const parsed = draft
         ? { ...draft, subject: editedSubject, body: editedBody }
+        : content
+          ? { ...content, title: editedTitle, body: editedContentBody }
         : rca
           ? {
               ...rca,
@@ -117,6 +132,28 @@ export function HeimdallrActionRow({
                 <span className="font-medium text-foreground">Corps : </span>
                 <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
                   {draft.body ?? "—"}
+                </pre>
+              </div>
+            </div>
+          ) : content ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Canal : </span>
+                {content.channel ?? "—"}
+                {content.periodKey ? ` · ${content.periodKey}` : null}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Sujet : </span>
+                {content.topic ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Titre : </span>
+                {content.title ?? "—"}
+              </p>
+              <div>
+                <span className="font-medium text-foreground">Corps : </span>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {content.body ?? "—"}
                 </pre>
               </div>
             </div>
@@ -177,6 +214,21 @@ export function HeimdallrActionRow({
                 onChange={(e) => setEditedBody(e.target.value)}
                 disabled={pending}
                 rows={6}
+              />
+            </>
+          ) : content ? (
+            <>
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                disabled={pending}
+                placeholder="Titre"
+              />
+              <Textarea
+                value={editedContentBody}
+                onChange={(e) => setEditedContentBody(e.target.value)}
+                disabled={pending}
+                rows={8}
               />
             </>
           ) : rca ? (
