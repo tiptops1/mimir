@@ -541,6 +541,9 @@ not guesses.
       Directive schema, objective decomposition, agent-to-agent delegation shape, how directives
       map onto autonomy categories, what the ledger records at each hierarchy level. Same
       "worth over-thinking" tier as S2 — this is the second schema that can't be backfilled.
+      **Pre-read, don't re-litigate:** MetaGPT + AutoGen were evaluated as candidate infra for this
+      session and rejected — see `decisions.md` 2026-07-19. Build native TS on Inngest + Heimdallr;
+      skim MetaGPT's role-cascade and AutoGen's Magentic-One task-decomposition as prior art only.
 - [ ] **S21 — Odin implementation** · Sonnet · M (split if S20 says so)
 
 - [ ] **Checkpoint — Phase 5 wrap** · reflection, no code · XS

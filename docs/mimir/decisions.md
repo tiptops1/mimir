@@ -450,3 +450,40 @@ and this synthetic corpus, not a real client's traffic. At the first real onboar
 G2 inventory (`docs/mimir/onboarding.md` §2) against real volumes and re-confirm the fraction; the
 *decision* (exclusion posture, no HDS for multi-line, certified env for pure-santé) stands
 regardless.
+
+## 2026-07-19 — Evaluated MetaGPT + AutoGen for Odin: rejected as infrastructure, kept as prior art only
+
+**Decision: build Odin (S20/S21) natively in TypeScript on Inngest + the Heimdallr ledger — do not
+adopt either framework as a dependency or a second runtime.**
+
+Evaluated on request against the S20 orchestration-layer need (hierarchical directive cascade).
+Both rejected on the same two grounds:
+
+- **Language/runtime mismatch.** Mimir is Next.js/TypeScript on Vercel + Inngest, chosen at S4
+  specifically so agent steps are resumable sub-60s invocations against the DB router. Both
+  frameworks are Python-first (MetaGPT: one-shot CLI/library, `Node`+`pnpm` build tooling but
+  Python 3.9–3.11 runtime; AutoGen: Python/.NET Core API, notebook/script-oriented). Adopting
+  either means standing up a second deployment target — the exact objection S4 used to reject
+  Trigger.dev ("task code executes on their managed infra, so the DB router, encrypted connection
+  strings and env would live in a second deployment target") — plus a new sub-processor on the
+  compliance list (memo §5.4) for no architectural gain.
+- **No ledger/autonomy primitive.** Mimir's actual differentiator is D5 (one ledger, every
+  side-effectful action) + D2 (per-category graduated autonomy, circuit breaker). Neither framework
+  has an approval-gate, undo, or autonomy-level concept — MetaGPT's roles execute straight to a
+  repo with no human gate; AutoGen's Core API is in-memory conversational orchestration with no
+  durable ledger. Wiring either in for Odin would mean fighting the framework to route every
+  directive-cascade decision back through Heimdallr, or running two disjoint notions of agent
+  state that can drift.
+
+**Framework-specific notes:**
+- **MetaGPT** (FoundationAgents/MetaGPT, MIT, 69k★, active) — SOP-driven, one-shot software
+  generation (PM → Architect → Engineer roles turn a prompt into a repo via `metagpt "spec"`).
+  Purpose-built for code-gen, not for embedding long-lived tenant agents in a service.
+- **AutoGen** (microsoft/autogen, MIT/CC-BY-4.0) — **now in maintenance mode**; Microsoft is
+  steering new work to "Agent Framework" instead, so adopting it now means adopting a project with
+  no forward roadmap. Layered Core/AgentChat/Studio design; Studio is explicitly documented as
+  "not production-ready."
+
+**Where they're still useful:** reading material only. MetaGPT's role-decomposition
+(PM→Architect→Engineer SOP cascade) and AutoGen's Magentic-One task-decomposition patterns are
+reasonable prior art to skim before S20 designs Odin's directive schema — but skim, don't vendor.
