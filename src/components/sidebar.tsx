@@ -16,6 +16,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  ShieldAlert,
   BookOpen,
   Gauge,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const NAV = [
   { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck },
   { href: "/mimisbrunnr", label: "Mímisbrunnr", icon: BookOpen },
   { href: "/nornir", label: "Nornir", icon: Gauge },
+  { href: "/forseti", label: "Forseti", icon: ShieldAlert },
 ];
 
 // Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms

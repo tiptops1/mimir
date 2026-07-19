@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { PrismaClient as ControlClient } from "../src/generated/control";
-import { PrismaClient as TenantClient } from "@prisma/client";
+import { PrismaClient as TenantClient, Prisma } from "@prisma/client";
 import { decrypt } from "../src/lib/crypto";
 import { seedTenantConfig } from "../src/lib/default-config";
+import { runComplianceSnapshotForTenant } from "../src/lib/forseti/snapshot";
 
 // S6: give a tenant (default crm_demo) realistic French insurance-broker
 // (courtier) prospect data, so it stops being the empty shell tenant:provision
@@ -88,6 +89,57 @@ function daysAgo(days: number): Date {
   return d;
 }
 
+const isoDate = (days: number) => daysAgo(days).toISOString().slice(0, 10);
+
+// Forseti (S19) — deterministic compliance mix so the dashboard is populated
+// from the first seed run, not just after the first cron sweep. Cycles
+// through all severities (compliant / expiring / expired / missing / mixed)
+// across the 20 demo companies. Stored as CUSTOM Company fields
+// (src/lib/default-config.ts DEFAULT_CUSTOM_COMPANY_FIELDS) — plain strings,
+// per coerceFieldValue's "date" handling (no Date object in customFields).
+function complianceCustomFields(i: number): Record<string, unknown> {
+  switch (i % 5) {
+    case 0: // fully compliant
+      return {
+        oriasNumero: `ORIAS-${20000 + i}`,
+        oriasDateExpiration: isoDate(-200),
+        rcProAssureur: "Generali",
+        rcProDateExpiration: isoDate(-200),
+        kycStatut: "A_JOUR",
+      };
+    case 1: // ORIAS expiring soon
+      return {
+        oriasNumero: `ORIAS-${20000 + i}`,
+        oriasDateExpiration: isoDate(-15),
+        rcProAssureur: "AXA",
+        rcProDateExpiration: isoDate(-200),
+        kycStatut: "A_JOUR",
+      };
+    case 2: // ORIAS already expired
+      return {
+        oriasNumero: `ORIAS-${20000 + i}`,
+        oriasDateExpiration: isoDate(10),
+        rcProAssureur: "Allianz",
+        rcProDateExpiration: isoDate(-200),
+        kycStatut: "A_JOUR",
+      };
+    case 3: // ORIAS missing entirely, KYC missing
+      return {
+        rcProAssureur: "MMA",
+        rcProDateExpiration: isoDate(-200),
+        kycStatut: "MANQUANT",
+      };
+    default: // mixed: RC Pro expired, KYC to chase
+      return {
+        oriasNumero: `ORIAS-${20000 + i}`,
+        oriasDateExpiration: isoDate(-200),
+        rcProAssureur: "Groupama",
+        rcProDateExpiration: isoDate(5),
+        kycStatut: "A_RELANCER",
+      };
+  }
+}
+
 async function main() {
   const slug = process.argv[2] ?? "crm_demo";
   const control = new ControlClient();
@@ -139,6 +191,7 @@ async function main() {
         demoRealisee: ["DEMO_REALISEE", "PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         propositionEnvoyee: ["PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         ...fixture.specialties,
+        customFields: complianceCustomFields(i) as Prisma.InputJsonValue,
       },
       create: {
         siret: fixture.siret,
@@ -169,6 +222,7 @@ async function main() {
         demoRealisee: ["DEMO_REALISEE", "PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         propositionEnvoyee: ["PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         ...fixture.specialties,
+        customFields: complianceCustomFields(i) as Prisma.InputJsonValue,
       },
     });
 
@@ -382,10 +436,14 @@ async function main() {
     });
   }
 
+  const forseti = await runComplianceSnapshotForTenant(prisma);
+
   console.log(
     `✓ Demo data seeded — ${COMPANIES.length} companies, ${contactCount} contacts, ` +
       `${dealCount} deals, ${activityCount} activities, ${taskCount} tasks, ` +
-      `${stageChangeCount} stage changes, ${financeLabels.length} finance entries.`,
+      `${stageChangeCount} stage changes, ${financeLabels.length} finance entries, ` +
+      `1 compliance snapshot (${forseti.expiredCount} expirés, ${forseti.expiringCount} à renouveler, ` +
+      `${forseti.missingCount} manquants, ${forseti.proposed} propositions).`,
   );
 
   await prisma.$disconnect();

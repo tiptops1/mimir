@@ -44,6 +44,12 @@ export const DEFAULT_CUSTOM_COMPANY_FIELDS: FieldSeed[] = [
   { key: "nombreContrats", label: "Nombre de contrats", type: "number", order: 2 },
   { key: "origineLead", label: "Origine du lead", type: "select", options: ["Recommandation", "Salon", "LinkedIn", "Site web", "Appel entrant", "Autre"], order: 3 },
   { key: "multiAgences", label: "Multi-agences", type: "bool", order: 4 },
+  // Forseti (S19) — compliance tracking fields, read by src/lib/forseti/compliance.ts.
+  { key: "oriasNumero", label: "N° ORIAS", type: "text", order: 5, section: "Conformité" },
+  { key: "oriasDateExpiration", label: "Expiration ORIAS", type: "date", order: 6, section: "Conformité" },
+  { key: "rcProAssureur", label: "Assureur RC Pro", type: "text", order: 7, section: "Conformité" },
+  { key: "rcProDateExpiration", label: "Expiration RC Pro", type: "date", order: 8, section: "Conformité" },
+  { key: "kycStatut", label: "Statut KYC", type: "select", options: ["A_JOUR", "A_RELANCER", "MANQUANT"], order: 9, section: "Conformité" },
 ];
 
 // NATIVE field metadata — `key` is the real Prisma scalar column. Fields with

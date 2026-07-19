@@ -512,7 +512,14 @@ into the next phase on autopilot either.
   layer's screenshot tool timed out in this session (infra hiccup, not app-related; console
   showed no errors). All scratch data reverted after; lint/build clean.
       Publishing connector is a separate decision spike — don't bundle it (unchanged, still open).
-- [ ] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.
+- [x] **S19 — Forseti: compliance UI + scheduled snapshot** · Sonnet · S — cheapest module, substrate exists.
+      Shipped: 5 CUSTOM Company fields (ORIAS/RC Pro/KYC, `src/lib/default-config.ts`), new
+      `ComplianceSnapshot` model, `src/lib/forseti/{compliance,snapshot,executor}.ts`, daily
+      `/api/cron/forseti` (outreach-style sync sweep, no Inngest needed), `/forseti` dashboard,
+      wired into the existing ledger via `crm.task_create` (its first real consumer) and the
+      Heimdallr executor dispatch in `src/app/actions/heimdallr.ts`. Demo seed carries a
+      deterministic compliant/expiring/expired/missing mix. Verified end-to-end in-browser:
+      dashboard tiles/table, inbox approve → Task created, undo → Task deleted.
 
 - [ ] **Checkpoint — Phase 4 wrap / platform retro** · reflection, no code · XS
   All seven realms exist. Step back further than the per-phase checkpoints: demo the platform

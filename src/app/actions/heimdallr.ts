@@ -11,6 +11,11 @@ import {
   isContentDraftAction,
   revertContentPiece,
 } from "@/lib/bragi/executor";
+import {
+  executeComplianceTask,
+  isComplianceTaskAction,
+  revertComplianceTask,
+} from "@/lib/forseti/executor";
 
 /** Approve a proposal unchanged. Returns an error string on failure, else null. */
 export async function approveActionSA(id: string): Promise<string | null> {
@@ -20,6 +25,7 @@ export async function approveActionSA(id: string): Promise<string | null> {
     const action = await approveAction(prisma, id, { decidedBy: session.userId });
     if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
     if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
+    if (isComplianceTaskAction(action)) await executeComplianceTask(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -39,6 +45,7 @@ export async function approveEditedActionSA(
     const action = await approveAction(prisma, id, { decidedBy: session.userId, editedPayload });
     if (isRcaDraftAction(action)) await executeRcaDocument(prisma, action);
     if (isContentDraftAction(action)) await executeContentPiece(prisma, action);
+    if (isComplianceTaskAction(action)) await executeComplianceTask(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -79,6 +86,7 @@ export async function undoActionSA(id: string): Promise<string | null> {
     const undone = await undoAction(prisma, id, undoWindowMinutes);
     if (isRcaDraftAction(undone)) await revertRcaDocument(prisma, undone);
     if (isContentDraftAction(undone)) await revertContentPiece(prisma, undone);
+    if (isComplianceTaskAction(undone)) await revertComplianceTask(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

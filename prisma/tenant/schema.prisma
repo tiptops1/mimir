@@ -408,12 +408,12 @@ model Activity {
 model Task {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId
   title      String
-  type       String    @default("RELANCE") // RELANCE | APPEL | EMAIL | RDV | AUTRE
+  type       String    @default("RELANCE") // RELANCE | APPEL | EMAIL | RDV | CONFORMITE | AUTRE
   dueDate    DateTime?
   done       Boolean   @default(false)
   doneAt     DateTime?
   note       String?
-  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP | FINANCE
+  source     String    @default("MANUAL") // MANUAL | AI_NEXTSTEP | FINANCE | FORSETI
   // When source == AI_NEXTSTEP, the Activity it was derived from — dedupe key so
   // re-running the enrichment pass never creates a duplicate task.
   activityId String?   @db.ObjectId
@@ -849,6 +849,25 @@ model ContentPiece {
 
   @@unique([entityId, periodKey, version])
   @@index([entity, entityId, periodKey, status])
+}
+
+// --- Forseti (S19) — compliance tracking ------------------------------------
+// One row per scheduled sweep (src/lib/forseti/snapshot.ts, cron/forseti). The
+// per-company detail is pure history — the dashboard recomputes live status
+// from Company.customFields on every page load and only reads this model for
+// "last checked" + a short trend, so a missed cron run never desyncs the UI.
+model ComplianceSnapshot {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  takenAt        DateTime @default(now())
+  companyCount   Int
+  compliantCount Int
+  expiringCount  Int
+  expiredCount   Int
+  missingCount   Int
+  details        Json // [{ companyId, companyName, status, issues: [{key,label,severity,dueDate}] }]
+  createdAt      DateTime @default(now())
+
+  @@index([takenAt])
 }
 
 // --- Mimisbrunnr (S11) — knowledge base ingestion ---------------------------
