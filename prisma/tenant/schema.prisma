@@ -870,6 +870,24 @@ model ComplianceSnapshot {
   @@index([takenAt])
 }
 
+// --- Thor (S22a) — account-health scoring / churn signals ------------------
+// Deterministic, snapshot-shaped like ComplianceSnapshot. NOT the same thing
+// as the S11 HDS health classifier (medical-content quarantine) — this is
+// customer-account health for the Customer Success realm. S22b adds the LLM
+// renewal agent on top of this data.
+model HealthSnapshot {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  takenAt       DateTime @default(now())
+  companyCount  Int
+  healthyCount  Int
+  atRiskCount   Int
+  criticalCount Int
+  details       Json // [{ companyId, companyName, score, band, signals: [{key,label,detail}] }]
+  createdAt     DateTime @default(now())
+
+  @@index([takenAt])
+}
+
 // --- Mimisbrunnr (S11) — knowledge base ingestion ---------------------------
 // Generic ontology (events.md Path C rule 2): knowledge document / chunk /
 // quarantine — vertical vocabulary lives in config, never in model names.

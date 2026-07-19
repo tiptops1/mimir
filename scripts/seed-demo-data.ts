@@ -4,6 +4,7 @@ import { PrismaClient as TenantClient, Prisma } from "@prisma/client";
 import { decrypt } from "../src/lib/crypto";
 import { seedTenantConfig } from "../src/lib/default-config";
 import { runComplianceSnapshotForTenant } from "../src/lib/forseti/snapshot";
+import { runHealthSnapshotForTenant } from "../src/lib/thor/snapshot";
 
 // S6: give a tenant (default crm_demo) realistic French insurance-broker
 // (courtier) prospect data, so it stops being the empty shell tenant:provision
@@ -162,6 +163,17 @@ async function main() {
   const wonCompanyIds: string[] = [];
 
   for (const [i, fixture] of COMPANIES.entries()) {
+    // Thor (S22a) demo nudge — deterministic buckets so the account-health
+    // dashboard shows a real healthy/at-risk/critical mix, not an all-green
+    // seed. staleBucket pushes dernierContact + activity dates beyond
+    // STALE_CONTACT_DAYS; negativeBucket flips the insight sentiment where
+    // one exists (RDV_OBTENU+ stages only — earlier stages carry no insight
+    // activity to flip). The two overlap at i%5===2, producing a company
+    // with both signals (critical band) alongside at-risk-only companies.
+    const staleBucket = i % 5 === 0 || i % 5 === 2;
+    const negativeBucket = i % 5 === 1 || i % 5 === 2;
+    const staleShift = staleBucket ? 40 : 0;
+
     const company = await prisma.company.upsert({
       where: { siret: fixture.siret },
       update: {
@@ -187,7 +199,7 @@ async function main() {
         nbCollaborateursEstime: Math.round(fixture.chiffreAffaires / 90_000),
         niveauDigitalisation: fixture.icpScore > 70 ? "Élevé" : fixture.icpScore > 40 ? "Moyen" : "Faible",
         datePremierContact: daysAgo(60 - i),
-        dernierContact: daysAgo(5 + (i % 10)),
+        dernierContact: daysAgo(5 + (i % 10) + staleShift),
         demoRealisee: ["DEMO_REALISEE", "PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         propositionEnvoyee: ["PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         ...fixture.specialties,
@@ -218,7 +230,7 @@ async function main() {
         nbCollaborateursEstime: Math.round(fixture.chiffreAffaires / 90_000),
         niveauDigitalisation: fixture.icpScore > 70 ? "Élevé" : fixture.icpScore > 40 ? "Moyen" : "Faible",
         datePremierContact: daysAgo(60 - i),
-        dernierContact: daysAgo(5 + (i % 10)),
+        dernierContact: daysAgo(5 + (i % 10) + staleShift),
         demoRealisee: ["DEMO_REALISEE", "PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         propositionEnvoyee: ["PROPOSITION_ENVOYEE", "GAGNE"].includes(fixture.stage),
         ...fixture.specialties,
@@ -279,7 +291,11 @@ async function main() {
           amount: Math.round(fixture.chiffreAffaires * 0.015),
           status: "WON",
           isPrimary: false,
-          closeDate: daysAgo(400 + i),
+          // Thor (S22a) demo nudge: land in the S22a renewal-approaching
+          // window (RENEWAL_WINDOW_DAYS_MIN/MAX = 305-395 days) instead of
+          // 400+ days out, so this "already renewed" subset (i % 4 === 0)
+          // visibly surfaces on the /thor dashboard.
+          closeDate: daysAgo(320 + i),
         },
       });
       dealCount++;
@@ -294,17 +310,17 @@ async function main() {
       sentiment?: string;
       nextStep?: string;
     }> = [
-      { type: "EMAIL", note: "Premier email de prospection envoyé.", daysAgoOffset: 55 - i },
-      { type: "CALL", note: "Appel de découverte — présentation de l'offre.", daysAgoOffset: 40 - i },
+      { type: "EMAIL", note: "Premier email de prospection envoyé.", daysAgoOffset: 55 - i + staleShift },
+      { type: "CALL", note: "Appel de découverte — présentation de l'offre.", daysAgoOffset: 40 - i + staleShift },
     ];
     if (["RDV_OBTENU", "DEMO_REALISEE", "PROPOSITION_ENVOYEE", "GAGNE", "PERDU"].includes(fixture.stage)) {
       activities.push({
         type: "MEETING",
         note: "RDV découverte réalisé.",
         body: `Réunion de découverte avec ${fixture.contact.prenom} ${fixture.contact.nom} (${fixture.contact.fonction}). Le cabinet gère un portefeuille ${product.toLowerCase()} et cherche à digitaliser son suivi commercial. Intérêt confirmé pour le pipeline et le scoring des prospects.`,
-        daysAgoOffset: 20 - (i % 10),
+        daysAgoOffset: 20 - (i % 10) + staleShift,
         withInsight: true,
-        sentiment: isLost ? "NEGATIF" : "POSITIF",
+        sentiment: isLost || negativeBucket ? "NEGATIF" : "POSITIF",
         nextStep: isLost ? "Clôturer le dossier" : "Envoyer une proposition chiffrée",
       });
     }
@@ -312,9 +328,9 @@ async function main() {
       activities.push({
         type: "EMAIL",
         note: "Proposition commerciale envoyée.",
-        daysAgoOffset: 8 - (i % 5 > 4 ? 4 : i % 5),
+        daysAgoOffset: 8 - (i % 5 > 4 ? 4 : i % 5) + staleShift,
         withInsight: true,
-        sentiment: "POSITIF",
+        sentiment: negativeBucket ? "NEGATIF" : "POSITIF",
         nextStep: isWon ? "Signer le contrat" : "Relancer sous 5 jours",
       });
     }
@@ -437,13 +453,16 @@ async function main() {
   }
 
   const forseti = await runComplianceSnapshotForTenant(prisma);
+  const thor = await runHealthSnapshotForTenant(prisma);
 
   console.log(
     `✓ Demo data seeded — ${COMPANIES.length} companies, ${contactCount} contacts, ` +
       `${dealCount} deals, ${activityCount} activities, ${taskCount} tasks, ` +
       `${stageChangeCount} stage changes, ${financeLabels.length} finance entries, ` +
       `1 compliance snapshot (${forseti.expiredCount} expirés, ${forseti.expiringCount} à renouveler, ` +
-      `${forseti.missingCount} manquants, ${forseti.proposed} propositions).`,
+      `${forseti.missingCount} manquants, ${forseti.proposed} propositions), ` +
+      `1 health snapshot (${thor.healthyCount} saines, ${thor.atRiskCount} à risque, ` +
+      `${thor.criticalCount} critiques).`,
   );
 
   await prisma.$disconnect();

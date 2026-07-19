@@ -36,9 +36,9 @@ export const REALMS: Realm[] = [
     slug: "mimir",
     label: "Mimir",
     // Agent modules land here from S7 on (heimdallr first, mimisbrunnr S13,
-    // nornir S17, forseti S19). Huginn/Muninn/Bragi have no standalone
-    // route — their drafts surface through the Heimdallr inbox.
-    routes: ["heimdallr", "mimisbrunnr", "nornir", "forseti"],
+    // nornir S17, forseti S19, thor S22a). Huginn/Muninn/Bragi have no
+    // standalone route — their drafts surface through the Heimdallr inbox.
+    routes: ["heimdallr", "mimisbrunnr", "nornir", "forseti", "thor"],
   },
 ];
 

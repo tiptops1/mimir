@@ -530,3 +530,21 @@ get re-litigated at implementation time:
   **Muninn and Forseti explicitly deferred** (RCA is reactive-per-incident; compliance
   detection is factual, not objective-driven — revisit only if a real tenant need
   surfaces).
+
+## 2026-07-19 — S22: Customer Success realm named Thor, split into S22a/S22b
+
+Two decisions closed at S22 plan time (both user calls, not derived):
+
+1. **Realm name: Thor**, not the originally-drafted Norse-goddess options (Eir/Sjöfn/Vár).
+   Fits the existing pattern (Heimdallr, Bragi, Forseti, Odin, Freyja) — the guardian
+   defending the customer base against churn. Module key `thor`, route `/thor`, future
+   autonomy category `thor.renewal` (S22b).
+2. **Split into S22a (deterministic health scoring + dashboard) / S22b (LLM renewal
+   agent + ledger wiring)** rather than one M session. Same rationale as S25's
+   a/b split guidance in the roadmap: S22a is achievable by reusing Forseti's
+   sweep/snapshot/dashboard shape near-verbatim with zero new architectural
+   surface, so it doesn't need the LLM-pipeline complexity bundled in. S22a
+   shipped 2026-07-19 (see `roadmap.md`) — no ledger, no autonomy category, no
+   `proposeAction` call yet, purely detection + dashboard. S22b picks up the
+   renewal agent once real usage of the S22a signals suggests what a retention
+   action should actually contain.

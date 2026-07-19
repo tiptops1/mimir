@@ -609,10 +609,41 @@ not guesses.
 
 ### Phase 6 — New realms *(committed 2026-07-17, priority order fixed)*
 
-- [ ] **S22 — Customer Success realm** · plan on Opus · M
-      Health scoring, renewal motion, churn signals, CS agent proposing through the ledger.
-      Closest to existing data (renewal deals already seeded in `crm_demo`) — that's why it's
-      first.
+- [x] **S22a — Thor: account-health scoring + churn signals + dashboard** · plan on Opus,
+      implement on Sonnet · S · ✅ 2026-07-19
+      Realm named **Thor** (Customer Success). Split from the originally-planned single S22
+      session — deterministic detection half only; the LLM renewal agent is S22b. New
+      `HealthSnapshot` model (`ComplianceSnapshot`-shaped: band counts + `details` Json, additive,
+      `db:push`'d). Pure logic `src/lib/thor/health.ts` (`evaluateCompanyHealth`/`summarizeHealth`,
+      no Prisma import, 15 unit tests) scores 0-100 from CRM data already on record — no new
+      Company fields, no AI call: stale contact (no `dernierContact`/Activity touch in 45d),
+      negative sentiment (latest Activity `sentiment === NEGATIF`), renewal approaching (a WON
+      deal's `closeDate` 305-395 days ago), stalled deal (primary OPEN deal untouched 60d+ — this
+      last signal can't be demo-seeded since `updatedAt` is Prisma-managed, live-computed only).
+      Explicitly **not** the S11 HDS health classifier — different "health" entirely, called out
+      in the module header to avoid confusion. `src/lib/thor/snapshot.ts`
+      (`runHealthSnapshotForTenant`, mirrors `forseti/snapshot.ts` minus the `proposeAction` half —
+      detection only, no ledger, no autonomy category this session) + daily
+      `/api/cron/thor` (mirrors `/api/cron/forseti` exactly). `/thor` dashboard (mirrors
+      `/forseti`'s live-recompute-on-load pattern) joins the `mimir` realm
+      (`realms.ts`/`sidebar.tsx`, `HeartPulse` icon). `scripts/seed-demo-data.ts` nudged
+      deterministically (stale/negative buckets keyed on `i % 5`, renewal-deal `closeDate` window
+      fixed from 400+d to 320+d) so `crm_demo` shows a real mix, not an all-green seed. *Exit met:*
+      `npm run test` green (231, 15 new); lint/build clean; verified end-to-end in-browser against
+      `crm_demo`'s full 45-company set (not just the 20-row fixture) — 28 saines / 14 à risque / 3
+      critiques, score-sorted table with correct French signal chips, both themes confirmed, no
+      375px overflow, no console errors.
+- [ ] **S22b — Thor: renewal agent + ledger wiring** · Sonnet · S/M
+      LLM renewal agent on top of S22a's health data: new `thor.renewal` autonomy category
+      (seeded, `default-config.ts`), `PromptTemplate` (config, not code), Bragi-shaped Inngest
+      draft pipeline (`src/lib/jobs/thor-*.ts`) that turns at-risk/critical companies into
+      proposed retention outreach, `src/lib/thor/executor.ts` (draft → Task or draft-email on
+      execute, undo reverts — Forseti's `executor.ts` shape), `heimdallr-action-row.tsx` type
+      branch for the new action type, wire into `src/app/actions/heimdallr.ts`'s three-way
+      dispatch. Consider whether the sweep should call `proposeAction` directly from
+      `runHealthSnapshotForTenant` (Forseti's shape) or need Inngest fan-out (Bragi's shape) —
+      decide once the draft content requirements are clearer (a retention email is closer to
+      Huginn/Bragi's LLM-authored-content shape than Forseti's templated Task title).
 - [ ] **S23 — Legal: grow Forseti** · Sonnet · M
       From compliance-tracking UI into a draft-and-approve legal agent (contract review, terms
       drafting). **Never graduates past `draft_approve` — permanent, code-enforced** (same
