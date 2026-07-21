@@ -27,6 +27,11 @@ import {
   isLegalDocumentAction,
   revertLegalDocument,
 } from "@/lib/forseti/legal-executor";
+import {
+  executeCampaignDecision,
+  isCampaignDecisionAction,
+  revertCampaignDecision,
+} from "@/lib/freyja/executor";
 
 /** Approve a proposal unchanged. Returns an error string on failure, else null. */
 export async function approveActionSA(id: string): Promise<string | null> {
@@ -40,6 +45,7 @@ export async function approveActionSA(id: string): Promise<string | null> {
     if (isDirectiveSetAction(action)) await executeDirective(prisma, session.tenantId, action);
     if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
     if (isLegalDocumentAction(action)) await executeLegalDocument(prisma, action);
+    if (isCampaignDecisionAction(action)) await executeCampaignDecision(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -63,6 +69,7 @@ export async function approveEditedActionSA(
     if (isDirectiveSetAction(action)) await executeDirective(prisma, session.tenantId, action);
     if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
     if (isLegalDocumentAction(action)) await executeLegalDocument(prisma, action);
+    if (isCampaignDecisionAction(action)) await executeCampaignDecision(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -107,6 +114,7 @@ export async function undoActionSA(id: string): Promise<string | null> {
     if (isDirectiveSetAction(undone)) await revertDirective(prisma, undone);
     if (isRenewalOutreachAction(undone)) await revertRenewalOutreach(prisma, undone);
     if (isLegalDocumentAction(undone)) await revertLegalDocument(prisma, undone);
+    if (isCampaignDecisionAction(undone)) await revertCampaignDecision(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

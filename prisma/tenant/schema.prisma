@@ -1052,3 +1052,57 @@ model OdinDirective {
   @@index([key, status])
   @@index([module, status])
 }
+
+// --- Freyja (S25) — paid-marketing realm -------------------------------------
+// One row per ad campaign, mirrored from the connected ad platform (or the
+// demo provider while no real connector exists). Open-vocab strings, no enums.
+model Campaign {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  provider     String // "demo" | "google_ads" | "meta_ads" (open vocab)
+  externalId   String // platform-side campaign id (demo: "demo-<slug>")
+  name         String
+  channel      String // "search" | "social" | "display" (open vocab)
+  status       String   @default("ACTIVE") // ACTIVE | PAUSED
+  dailyBudget  Float // EUR
+  bidStrategy  String? // platform vocab, informational
+  bidAdjustPct Float    @default(0) // bid_adjust decisions land here locally
+  config       Json? // demo archetype + provider-specific extras
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  insights CampaignInsight[]
+
+  @@unique([provider, externalId])
+}
+
+// One row per (day, campaign) — AiUsage bucketing pattern. Raw counters only;
+// CPC/CPA/ROAS are derived in code so there is one source of truth.
+model CampaignInsight {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  day             String // "YYYY-MM-DD" (UTC)
+  campaignId      String   @db.ObjectId
+  spendEur        Float    @default(0)
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  conversions     Int      @default(0)
+  conversionValue Float    @default(0) // EUR — ROAS numerator
+  updatedAt       DateTime @updatedAt
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([day, campaignId])
+  @@index([day])
+  @@index([campaignId, day])
+}
+
+// Freyja tenant config — AiBudget singleton pattern. Config-not-code: provider
+// selection, the max-budget-delta guardrail (first magnitude cap in the
+// platform, enforced pre-propose AND at execute), pre-screen thresholds.
+model FreyjaConfig {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  singleton         String   @unique @default("default")
+  provider          String   @default("demo")
+  maxBudgetDeltaPct Int      @default(20) // max |Δ dailyBudget| per decision, in %
+  roasFloor         Float    @default(1.5) // pre-screen: below this = candidate
+  minSpend14dEur    Float    @default(50) // pre-screen: ignore below this 14d spend
+  updatedAt         DateTime @updatedAt
+}

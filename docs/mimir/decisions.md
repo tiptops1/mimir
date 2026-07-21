@@ -576,3 +576,37 @@ files are used byte-for-byte and all glue lives in the main tree.
   PNG + `manifest.json`; format in the vendor tree's `docs/external-assets.md`), then
   `npm run bureau:build` re-freezes. This is the sanctioned exception to "do not edit
   the vendor tree": asset folders are content, not code.
+
+## 2026-07-19 — S25: Freyja shipped, demo connector instead of real ad APIs
+
+**Realm named Freyja (paid-marketing), both halves (connectors/insight + campaign agent) shipped
+in one session.** Categories: `freyja.budget_change` (`maxLevel: 1` — money, never graduates, same
+posture as `finance.commitment`), `freyja.campaign_pause` / `freyja.bid_adjust` (`maxLevel: 3`).
+
+**Real Google Ads / Meta Ads APIs are unreachable in this environment** (dev-token approval, app
+review, no ad accounts) — shipped the real `AdConnector` interface
+(`src/lib/freyja/connectors/types.ts`: `fetchCampaigns`/`fetchDailyMetrics`/optional
+`applyChange`) backed by a deterministic synthetic `demo` provider (mulberry32/fnv1a-seeded, 4
+archetypes). Real adapters register in the same `getConnector` registry with zero schema change.
+**No control-plane `Integration` row for the demo provider** — those rows exist to hold encrypted
+secrets, and the demo provider has none; provider selection lives in the `FreyjaConfig` tenant
+singleton instead. A future `google_ads`/`meta_ads` adapter fetches its credential Fireflies-style
+(encrypted in `Integration.refreshToken`) via the connector's `ctx` — the seam is `ctx`, not a
+fake control-plane row.
+
+**NET-NEW guardrail primitive: `FreyjaConfig.maxBudgetDeltaPct`** (default 20%) — the first
+magnitude/spend cap anywhere in the platform (every prior guardrail is autonomy-level or
+edit-rate based, never a numeric bound on the action itself). Enforced twice: pre-propose (the
+agent won't propose past the cap — skip + `budget_delta_cap` event, no clamping, since a clamped
+proposal isn't what the model reasoned about) and again at execute against the *live* budget
+(catches a human editing the payload past the cap, or the budget having moved since proposal) —
+`failAction` + `guardrail_blocked` event, action lands `FAILED` visibly rather than throwing.
+Verified end-to-end: an edited 150%-over-cap budget_change was correctly refused at execute with
+the campaign budget left untouched. Candidate primitive to generalize if a second module ever
+needs a magnitude cap (e.g. a future Legal/Finance module).
+
+**One action type, `campaign.decision`, with a `kind` discriminator (budget_change/
+campaign_pause/bid_adjust) across all three categories** — not three separate action types. Keeps
+the `heimdallr-action-row.tsx` branch count at one; `type` (UI rendering) and `category`
+(autonomy/ledger semantics) are independent axes on `AgentAction`, same as how Odin's
+`directive.set` type spans multiple potential scopes.

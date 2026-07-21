@@ -20,6 +20,7 @@ import {
   BookOpen,
   Gauge,
   HeartPulse,
+  Megaphone,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
@@ -43,6 +44,7 @@ const NAV = [
   { href: "/nornir", label: "Nornir", icon: Gauge },
   { href: "/forseti", label: "Forseti", icon: ShieldAlert },
   { href: "/thor", label: "Thor", icon: HeartPulse },
+  { href: "/freyja", label: "Freyja", icon: Megaphone },
 ];
 
 // Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms

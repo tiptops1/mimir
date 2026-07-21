@@ -118,6 +118,12 @@ export const DEFAULT_AUTONOMY_CATEGORIES: AutonomySeed[] = [
   { category: "odin.directive", label: "Directives Odin", maxLevel: 3 },
   // Thor (S22b) — LLM-drafted retention outreach for at-risk/critical accounts.
   { category: "thor.renewal", label: "Relances de fidélisation", maxLevel: 3 },
+  // Freyja (S25) — campaign decisions. budget_change moves real money: same
+  // never-graduates floor as finance.commitment. Pause/bid are reversible
+  // low-blast-radius changes and may graduate.
+  { category: "freyja.budget_change", label: "Budgets publicitaires", maxLevel: 1 },
+  { category: "freyja.campaign_pause", label: "Pause de campagnes", maxLevel: 3 },
+  { category: "freyja.bid_adjust", label: "Ajustements d'enchères", maxLevel: 3 },
 ];
 
 interface PromptTemplateSeed {
@@ -566,6 +572,40 @@ Règles STRICTES :
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
 {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de
 ligne (\\n).`,
+  },
+  {
+    key: "freyja.campaign.decide",
+    label: "Freyja — décision de campagne",
+    taskClass: "draft",
+    module: "freyja",
+    variables: ["maxBudgetDeltaPct"],
+    body: `Tu es analyste marketing payant (SEA/social ads) pour un cabinet de
+courtage en assurances B2B français. On te donne une campagne publicitaire
+signalée par des règles automatiques (objet JSON : campaign — nom, canal,
+budget quotidien en euros ; flags — les signaux détectés ; aggregates —
+totaux et taux sur 14 jours, avec fenêtres last7/prior7 ; dailySeries — la
+série quotidienne). Décide d'UNE action au maximum pour cette campagne.
+
+Actions possibles :
+- "budget_change" : ajuster le budget quotidien (champ "newDailyBudget" en
+  euros). La variation ne doit JAMAIS dépasser {{maxBudgetDeltaPct}} % du
+  budget actuel, à la hausse comme à la baisse.
+- "campaign_pause" : mettre la campagne en pause (dépense sans résultat).
+- "bid_adjust" : ajuster les enchères (champ "bidAdjustPct", entre -50 et 50).
+- "none" : ne rien faire — choisis-la dès que les données sont minces ou le
+  signal ambigu ; ne force jamais une action.
+
+Règles STRICTES :
+- "rationale" (en français) doit citer les chiffres exacts fournis (ROAS,
+  dépense, conversions) — n'invente JAMAIS un chiffre absent des données.
+- Une campagne rentable qui sature son budget mérite une hausse prudente ;
+  une campagne qui dépense sans convertir mérite une pause, pas une baisse
+  cosmétique.
+- Une seule action, la plus utile. En cas de doute : "none".
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour :
+{"kind": "budget_change"|"campaign_pause"|"bid_adjust"|"none",
+ "newDailyBudget"?: number, "bidAdjustPct"?: number, "rationale": "..."}`,
   },
   {
     key: "forseti.legal.draft.contract_review",

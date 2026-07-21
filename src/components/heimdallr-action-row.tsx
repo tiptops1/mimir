@@ -47,6 +47,28 @@ type LegalPayload = {
   body?: string;
   inputText?: string;
 };
+type CampaignFlag = { key: string; label: string; detail: string };
+type CampaignPayload = {
+  campaignId?: string;
+  campaignName?: string;
+  kind?: "budget_change" | "campaign_pause" | "bid_adjust";
+  newDailyBudget?: number;
+  bidAdjustPct?: number;
+  rationale?: string;
+  evidence?: {
+    flags?: CampaignFlag[];
+    spend14dEur?: number;
+    roas14d?: number | null;
+    conversions14d?: number;
+    currentDailyBudget?: number;
+  };
+};
+
+const CAMPAIGN_KIND_LABEL: Record<string, string> = {
+  budget_change: "Modification de budget",
+  campaign_pause: "Mise en pause",
+  bid_adjust: "Ajustement d'enchère",
+};
 
 const DRAFT_TYPE = "email.draft_reply";
 const RCA_TYPE = "doc.rca_draft";
@@ -54,6 +76,7 @@ const CONTENT_TYPE = "content.draft";
 const DIRECTIVE_TYPE = "directive.set";
 const RENEWAL_TYPE = "renewal.outreach_draft";
 const LEGAL_TYPE = "forseti.legal_document_draft";
+const CAMPAIGN_TYPE = "campaign.decision";
 
 export function HeimdallrActionRow({
   id,
@@ -90,6 +113,9 @@ export function HeimdallrActionRow({
   const isLegal = type === LEGAL_TYPE && payload !== null && typeof payload === "object";
   const legal = isLegal ? (payload as LegalPayload) : null;
 
+  const isCampaign = type === CAMPAIGN_TYPE && payload !== null && typeof payload === "object";
+  const campaign = isCampaign ? (payload as CampaignPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
@@ -100,6 +126,12 @@ export function HeimdallrActionRow({
   const [editedRenewalBody, setEditedRenewalBody] = useState(renewal?.body ?? "");
   const [editedLegalTitle, setEditedLegalTitle] = useState(legal?.title ?? "");
   const [editedLegalBody, setEditedLegalBody] = useState(legal?.body ?? "");
+  const [editedBudget, setEditedBudget] = useState(
+    campaign?.newDailyBudget !== undefined ? String(campaign.newDailyBudget) : "",
+  );
+  const [editedBidPct, setEditedBidPct] = useState(
+    campaign?.bidAdjustPct !== undefined ? String(campaign.bidAdjustPct) : "",
+  );
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
   );
@@ -129,6 +161,17 @@ export function HeimdallrActionRow({
           ? { ...renewal, subject: editedRenewalSubject, body: editedRenewalBody }
         : legal
           ? { ...legal, title: editedLegalTitle, body: editedLegalBody }
+        : campaign
+          ? campaign.kind === "budget_change"
+            ? Number.isFinite(Number(editedBudget)) && Number(editedBudget) > 0
+              ? { ...campaign, newDailyBudget: Number(editedBudget) }
+              : undefined
+            : campaign.kind === "bid_adjust"
+              ? Number.isFinite(Number(editedBidPct)) &&
+                Math.abs(Number(editedBidPct)) <= 50
+                ? { ...campaign, bidAdjustPct: Number(editedBidPct) }
+                : undefined
+              : { ...campaign }
         : rca
           ? {
               ...rca,
@@ -145,7 +188,7 @@ export function HeimdallrActionRow({
               }
             })();
       if (parsed === undefined) {
-        setError("JSON invalide.");
+        setError(campaign ? "Valeur numérique invalide." : "JSON invalide.");
         return;
       }
       const err = await approveEditedActionSA(id, parsed);
@@ -291,6 +334,52 @@ export function HeimdallrActionRow({
                 </pre>
               </div>
             </div>
+          ) : campaign ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Campagne : </span>
+                {campaign.campaignName ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Décision : </span>
+                {CAMPAIGN_KIND_LABEL[campaign.kind ?? ""] ?? campaign.kind ?? "—"}
+                {campaign.kind === "budget_change" && campaign.newDailyBudget !== undefined
+                  ? ` — ${campaign.evidence?.currentDailyBudget !== undefined ? `${campaign.evidence.currentDailyBudget} € → ` : ""}${campaign.newDailyBudget} € / jour`
+                  : campaign.kind === "bid_adjust" && campaign.bidAdjustPct !== undefined
+                    ? ` — ${campaign.bidAdjustPct > 0 ? "+" : ""}${campaign.bidAdjustPct} %`
+                    : ""}
+              </p>
+              {campaign.evidence && (
+                <p>
+                  <span className="font-medium text-foreground">Métriques 14 j : </span>
+                  {campaign.evidence.spend14dEur !== undefined
+                    ? `${Math.round(campaign.evidence.spend14dEur)} € dépensés`
+                    : "—"}
+                  {campaign.evidence.roas14d !== undefined
+                    ? ` · ROAS ${campaign.evidence.roas14d === null ? "—" : campaign.evidence.roas14d.toFixed(2)}`
+                    : ""}
+                  {campaign.evidence.conversions14d !== undefined
+                    ? ` · ${campaign.evidence.conversions14d} conversions`
+                    : ""}
+                </p>
+              )}
+              {campaign.evidence?.flags && campaign.evidence.flags.length > 0 && (
+                <div>
+                  <span className="font-medium text-foreground">Signaux : </span>
+                  <ul className="mt-1 list-disc pl-4">
+                    {campaign.evidence.flags.map((f) => (
+                      <li key={f.key}>{f.detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-foreground">Justification : </span>
+                <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {campaign.rationale ?? "—"}
+                </pre>
+              </div>
+            </div>
           ) : rca ? (
             <div className="space-y-2">
               {rcaSections.map((s) => (
@@ -403,6 +492,43 @@ export function HeimdallrActionRow({
                 rows={8}
               />
             </>
+          ) : campaign ? (
+            campaign.kind === "budget_change" ? (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted">
+                  Nouveau budget quotidien (€)
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={editedBudget}
+                  onChange={(e) => setEditedBudget(e.target.value)}
+                  disabled={pending}
+                  placeholder="Budget quotidien en euros"
+                />
+              </div>
+            ) : campaign.kind === "bid_adjust" ? (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-muted">
+                  Ajustement d&apos;enchère (%, entre -50 et 50)
+                </label>
+                <Input
+                  type="number"
+                  min="-50"
+                  max="50"
+                  step="1"
+                  value={editedBidPct}
+                  onChange={(e) => setEditedBidPct(e.target.value)}
+                  disabled={pending}
+                  placeholder="Ajustement en %"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-muted">
+                Une mise en pause n&apos;a pas de paramètre modifiable — approuvez ou rejetez.
+              </p>
+            )
           ) : rca ? (
             <>
               {rcaSections.map((s) => (

@@ -709,34 +709,62 @@ not guesses.
       Hiring pipeline, onboarding docs, policy Q&A over Mímisbrunnr. Last on purpose: least
       defined, least urgent for the broker vertical. Scope it fresh at the time.
 
-- [ ] **S25 — Freyja: paid-marketing realm (ad connectors + autonomous campaign agent)** · plan on Opus · M
-      *(new — proposed at the Phase 3 checkpoint 2026-07-18)* A dedicated **marketing realm** —
-      working name **Freyja** (goddess of allure/prosperity; the demand-gen counterpart to Bragi's
-      brand/content work, S18). Two halves, and the split matters:
-      **(a) Insight — connectors + one pane of glass.** Per-tenant OAuth connectors to the paid-ad
-      platforms — **Google Ads** and **Meta (Facebook/Instagram) Ads** first, LinkedIn/TikTok later —
-      each a *config-driven* connector (credentials + account IDs as tenant config, never hardcoded;
-      same per-tenant integration pattern as Gmail/Calendar in `INTEGRATIONS.md`). Pull campaign
-      metrics (spend, impressions, clicks, CPC/CPA/ROAS, conversions) on a cron into a normalized
-      `CampaignInsight` shape so every platform reads the same, and surface them in **one unified
-      dashboard** (reuse the Nornir S17 SavedView/widget pattern — don't build a second dashboard
-      engine). Read-only until (b) is trusted.
-      **(b) Action — the autonomous marketing agent.** The agent reasons over the unified insight and
-      **proposes campaign decisions** — budget shifts, pausing losers, scaling winners, bid/audience
-      tweaks, creative rotation — to *make campaigns powerful and effective*. **Every decision goes
-      through the Heimdallr ledger (D5, no exceptions)**: new autonomy categories (e.g.
-      `marketing.budget_change`, `marketing.campaign_pause`, `marketing.bid_adjust`) start at
-      `level: 0` (propose-only), and only graduate per the S9/S15 breaker+graduation math once the
-      approve/edit history earns it. **Spend is real money — cap the blast radius:** a hard
-      per-category `maxLevel` and a max-daily-budget-delta guardrail so even a graduated agent can't
-      swing spend without a human, mirroring the `finance.commitment` posture.
-      *Model:* plan on **Opus** (connector-normalization + autonomy-category design is
-      schema-that-can't-be-backfilled tier); implement on **Sonnet**; the runtime agent runs on
-      **Sonnet** for the decision drafts (per §0 runtime table — customer/spend-facing reasoning),
-      **Haiku** for metric summarization/classification. Split into S25a (connectors + insight
-      dashboard) and S25b (autonomous agent + new autonomy categories) if it grows past M.
-      *Depends on:* S7 ledger, S17 Nornir dashboard pattern; benefits from S18 Bragi brand voice for
-      ad-copy suggestions. Log the realm name + autonomy categories in `decisions.md` when scoped.
+- [x] **S25 — Freyja: paid-marketing realm (ad connectors + autonomous campaign agent)** · Fable · M · ✅ 2026-07-19
+      Shipped both halves in one session (real Google Ads/Meta APIs unreachable here — no dev
+      token/app review/ad accounts — so the connector interface is real but backed by a
+      deterministic **demo** provider; real adapters slot in later with zero schema change, no
+      Integration row needed since demo has no secret to store). New tenant models `Campaign`,
+      `CampaignInsight` (AiUsage-bucketing shape, `@@unique([day, campaignId])`, CPC/CPA/ROAS
+      derived in code), `FreyjaConfig` (AiBudget-singleton shape: provider, `roasFloor`,
+      `minSpend14dEur`, and the guardrail below). `src/lib/freyja/connectors/{types,demo,index}.ts`
+      (mulberry32/fnv1a-seeded deterministic generator, 4 archetypes — winner/steady/loser/
+      fatiguing — so re-syncs are idempotent and the agent has real decisions to make),
+      `metrics.ts` (pure aggregation/derivation), `decide.ts` (deterministic pre-screen —
+      `flagCampaign`: spend-no-conversions/roas-below-floor/ctr-decay/scaling-opportunity — feeds
+      Sonnet exactly one structured decision per flagged campaign, zod-parsed fail-closed,
+      `kind:"none"` legitimate), `sync.ts` (runs synchronously in `/api/cron/freyja`, Forseti/Thor
+      snapshot posture, no Inngest needed), `executor.ts` (local Campaign write + undo; seam for a
+      real platform's `applyChange` is present but unused). Agent pipeline
+      (`src/lib/jobs/freyja-decide.ts`) mirrors Thor exactly: scan aggregates trailing 14d insight,
+      flags candidates, cross-category PROPOSED dedupe (any pending freyja action blocks a new one
+      on that campaign — prevents stacking a pause and a budget raise), fans out one decide job per
+      campaign; decide loads→re-flags→drafts→proposes. **Three autonomy categories**:
+      `freyja.budget_change` (`maxLevel: 1` — money, never graduates, `finance.commitment`
+      posture), `freyja.campaign_pause` / `freyja.bid_adjust` (`maxLevel: 3`). **NET-NEW guardrail
+      — first magnitude cap in the platform:** `FreyjaConfig.maxBudgetDeltaPct` (default 20),
+      enforced twice: pre-propose (skip + `budget_delta_cap` event, no clamping) and at execute
+      (recheck against the *live* budget → `failAction` + `guardrail_blocked` event if a human's
+      edit or a stale proposal exceeds it). One action type `campaign.decision` with a `kind`
+      discriminator (not three types) — one `heimdallr-action-row.tsx` branch, `category` still
+      carries the autonomy semantics independently of `type`. `/freyja` dashboard (Thor page
+      shape: KPI tiles, campaign table with ROAS-tier badges, pending-proposals card linking the
+      inbox, last-sync card) joins the `mimir` realm. `scripts/freyja/seed-demo-campaigns.ts`: 8
+      French-courtier campaigns (Google/Meta mix), 30-day backfill through the same sync code path
+      the cron uses — idempotent, verified via two consecutive runs (240 rows both times).
+      *Exit met:* `npm run test` green (283, 29 new: demo-generator determinism/invariants/
+      ROAS-ordering/fatigue-decay, metrics math, flag rules, budget-delta boundaries, fail-closed
+      parsing, executor payload schema); lint/build clean (`/freyja`, `/api/cron/freyja`,
+      `/api/freyja/scan` all compile). Verified end-to-end against `crm_demo`: triggered the real
+      scan via Inngest dev, got 6 real proposals across both categories (3 budget_change, 3
+      campaign_pause — the pre-screen correctly found no ROAS-below-floor-only or CTR-decay cases
+      in this particular 30-day synthetic run, only the coarser spend-no-conversions/scaling
+      signals fired); drove the exact guardrail path a human edit would hit — approved a
+      budget_change with an edited value 150% over budget, execute correctly refused
+      (`FAILED`, `guardrail_blocked` event, campaign budget unchanged at 80€) — then proved the
+      happy path on a separate action (approve → execute → Campaign PAUSED → undo → Campaign
+      ACTIVE again). In-browser: logged in as `admin@admin.com`, `/freyja` renders live KPIs (8
+      active, 2 215 € 7d spend, ROAS 2.35 avg) and the campaign table with correct ROAS-tier
+      badges; `/heimdallr/inbox?module=freyja` isolates the 4 remaining proposals with correct
+      French category labels (Pause de campagnes / Budgets publicitaires) and the Freyja module
+      filter. **Note:** the action-row "Détails" click didn't register through the browser
+      automation layer this session (same class of friction logged at S17/S18/S21/S22b/C3 —
+      confirmed not app-related: page rendered correctly via `read_page`, no console errors) — the
+      guardrail/execute/undo round-trip was independently verified by driving the exact library
+      calls (`approveAction`/`executeCampaignDecision`/`undoAction`/`revertCampaignDecision`)
+      directly instead. All scratch data reverted after (autonomy levels reset 1→0, scratch E2E
+      scripts deleted); the 4 remaining PROPOSED/1 FAILED/1 UNDONE demo actions are kept
+      deliberately, same precedent as every other module's seed-demo script leaving a real
+      proposal in the inbox for manual click-through. lint/build clean.
 
 ### Cosmos UI track (parallel, can run alongside Heimdallr phases)
 

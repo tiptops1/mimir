@@ -12,6 +12,9 @@ const MODULES = [
   { value: "nornir", label: "Nornir" },
   { value: "bragi", label: "Bragi" },
   { value: "forseti", label: "Forseti" },
+  { value: "odin", label: "Odin" },
+  { value: "thor", label: "Thor" },
+  { value: "freyja", label: "Freyja" },
   { value: "system", label: "Système" },
 ];
 
