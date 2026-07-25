@@ -21,12 +21,18 @@ export async function createTenant(
     return { error: "Réservé à l'administrateur de la plateforme." };
   }
 
+  // Checkbox group: absent = unchecked, so an empty list falls back to the CRM
+  // default inside provisionTenant.
+  const modules = formData.getAll("modules").map(String).filter(Boolean);
+
   const res = await provisionTenant(
     {
       slug: String(formData.get("slug") ?? ""),
       name: String(formData.get("name") ?? ""),
       adminEmail: String(formData.get("adminEmail") ?? ""),
       adminPassword: String(formData.get("adminPassword") ?? ""),
+      brandName: String(formData.get("brandName") ?? ""),
+      modules,
     },
     session.userId,
   );

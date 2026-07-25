@@ -15,6 +15,9 @@ import { ensureVectorIndex } from "../src/lib/rag/vector-index";
  *   npm run tenant:provision -- --slug demo --name "Demo" \
  *     --admin-email admin@demo.test --admin-password "secret"
  *
+ * Optional: --modules crm,chronos (comma-separated, defaults to "crm") and
+ * --brand "Chronos" to name the tenant's shell. See src/lib/modules.ts.
+ *
  * Requires CONTROL_DATABASE_URL, ENCRYPTION_KEY and CLUSTER_BASE_URL (a base
  * connection string whose DB-name path is swapped for the tenant slug).
  */
@@ -51,6 +54,14 @@ async function main() {
     );
   }
   const name = arg("name") ?? slug;
+  const modules = (arg("modules") ?? "crm")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const brandName = arg("brand")?.trim() || null;
+  if (modules.length === 0) {
+    throw new Error("--modules must list at least one module");
+  }
 
   const connectionString = tenantConnectionString(slug);
 
@@ -67,15 +78,25 @@ async function main() {
   try {
     const tenant = await control.tenant.upsert({
       where: { slug },
-      update: { name, connectionString: encrypt(connectionString), status: "ACTIVE" },
+      update: {
+        name,
+        brandName,
+        modules,
+        connectionString: encrypt(connectionString),
+        status: "ACTIVE",
+      },
       create: {
         slug,
         name,
+        brandName,
+        modules,
         connectionString: encrypt(connectionString),
         status: "ACTIVE",
       },
     });
-    console.log(`✓ Tenant registered: ${tenant.slug} (${tenant.id})`);
+    console.log(
+      `✓ Tenant registered: ${tenant.slug} (${tenant.id}) — modules: ${modules.join(", ")}`,
+    );
 
     const passwordHash = await bcrypt.hash(adminPassword, 10);
     const user = await control.user.upsert({

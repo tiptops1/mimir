@@ -135,6 +135,12 @@
   --realm-subtle: #fffbeb;
   --realm-ring: rgba(217, 119, 6, 0.4);
 }
+[data-realm="chronos"] {
+  --realm: #7c3aed;
+  --realm-hover: #6d28d9;
+  --realm-subtle: #f5f3ff;
+  --realm-ring: rgba(124, 58, 237, 0.4);
+}
 [data-theme="dark"] [data-realm="chasse"] {
   --realm: #4fd8c4; /* well */
   --realm-hover: #7de8d9;
@@ -152,6 +158,12 @@
   --realm-hover: #d97a63;
   --realm-subtle: rgba(192, 91, 71, 0.16);
   --realm-ring: rgba(192, 91, 71, 0.45);
+}
+[data-theme="dark"] [data-realm="chronos"] {
+  --realm: #a78bfa; /* pre-brightened violet — the vertical's own sky */
+  --realm-hover: #c4b5fd;
+  --realm-subtle: rgba(167, 139, 250, 0.16);
+  --realm-ring: rgba(167, 139, 250, 0.45);
 }
 /*
  * relation has no fixed hue (brand fallback, see :root above) — but var()

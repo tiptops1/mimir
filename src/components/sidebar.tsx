@@ -21,38 +21,59 @@ import {
   Gauge,
   HeartPulse,
   Megaphone,
+  Watch,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
 import { logout } from "@/app/actions/auth";
 import { REALMS, realmForPath, type RealmSlug } from "@/lib/realms";
+import { hasModule, type TenantModule } from "@/lib/modules";
 import { cn, initialsFromName } from "@/lib/utils";
 
-const NAV = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/todo", label: "À faire", icon: CheckSquare },
-  { href: "/companies", label: "Suivi", icon: ClipboardList },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { href: "/leadone", label: "Lead One", icon: Radar },
-  { href: "/outreach", label: "Outreach", icon: Send },
-  { href: "/inbox", label: "Boîte de réception", icon: Inbox },
-  { href: "/finances", label: "Finances", icon: Wallet },
-  { href: "/analytics", label: "Analytique", icon: BarChart3 },
-  { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck },
-  { href: "/mimisbrunnr", label: "Mímisbrunnr", icon: BookOpen },
-  { href: "/nornir", label: "Nornir", icon: Gauge },
-  { href: "/forseti", label: "Forseti", icon: ShieldAlert },
-  { href: "/thor", label: "Thor", icon: HeartPulse },
-  { href: "/freyja", label: "Freyja", icon: Megaphone },
+// Each entry declares the module that owns it, so a tenant only ever sees the
+// verticals it bought (src/lib/modules.ts). "core" = every tenant gets it.
+// NOTE: hiding an entry is not access control — the route stays reachable by
+// URL, so module-scoped pages also call requireModule().
+const NAV: Array<{
+  href: string;
+  label: string;
+  icon: typeof Settings;
+  module: TenantModule;
+}> = [
+  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, module: "crm" },
+  { href: "/todo", label: "À faire", icon: CheckSquare, module: "crm" },
+  { href: "/companies", label: "Suivi", icon: ClipboardList, module: "crm" },
+  { href: "/contacts", label: "Contacts", icon: Users, module: "crm" },
+  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare, module: "crm" },
+  { href: "/leadone", label: "Lead One", icon: Radar, module: "crm" },
+  { href: "/outreach", label: "Outreach", icon: Send, module: "crm" },
+  { href: "/inbox", label: "Boîte de réception", icon: Inbox, module: "crm" },
+  { href: "/finances", label: "Finances", icon: Wallet, module: "crm" },
+  { href: "/analytics", label: "Analytique", icon: BarChart3, module: "crm" },
+  { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck, module: "core" },
+  { href: "/mimisbrunnr", label: "Mímisbrunnr", icon: BookOpen, module: "crm" },
+  { href: "/nornir", label: "Nornir", icon: Gauge, module: "crm" },
+  { href: "/forseti", label: "Forseti", icon: ShieldAlert, module: "crm" },
+  { href: "/thor", label: "Thor", icon: HeartPulse, module: "crm" },
+  { href: "/freyja", label: "Freyja", icon: Megaphone, module: "crm" },
+  { href: "/chronos", label: "Inventaire", icon: Watch, module: "chronos" },
 ];
 
-// Nav grouped into realms (the cosmos layer — see src/lib/realms.ts). Realms
-// whose modules don't exist yet (e.g. Mimir before S7) simply render nothing.
-const GROUPS = REALMS.map((realm) => ({
-  realm,
-  items: NAV.filter((item) => realm.routes.includes(item.href.split("/")[1])),
-})).filter((g) => g.items.length > 0);
+/**
+ * Nav grouped into realms (the cosmos layer — see src/lib/realms.ts), filtered
+ * to the tenant's entitlement. Realms with nothing left to show — because the
+ * modules don't exist yet, or this tenant didn't buy them — render nothing.
+ */
+function groupsFor(modules: string[]) {
+  return REALMS.map((realm) => ({
+    realm,
+    items: NAV.filter(
+      (item) =>
+        realm.routes.includes(item.href.split("/")[1]) &&
+        hasModule(modules, item.module),
+    ),
+  })).filter((g) => g.items.length > 0);
+}
 
 function NavItem({
   item,
@@ -106,6 +127,10 @@ function NavItem({
 
 export type SidebarProps = {
   user: { name: string; email: string; role: string };
+  /** The tenant's entitled modules — drives which realms/entries render. */
+  modules: string[];
+  /** The tenant's product name, shown in the wordmark. */
+  brandName: string;
   pendingCount?: number;
   todoCount?: number;
   leadOneCount?: number;
@@ -115,6 +140,8 @@ export type SidebarProps = {
 
 export function Sidebar({
   user,
+  modules,
+  brandName,
   pendingCount = 0,
   todoCount = 0,
   leadOneCount = 0,
@@ -123,6 +150,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const currentRealm = realmForPath(pathname);
+  const groups = groupsFor(modules);
 
   const badgeFor = (href: string) =>
     href === "/inbox"
@@ -144,13 +172,13 @@ export function Sidebar({
       )}
     >
       <div className="px-5 py-4">
-        <BrandEgg>
-          <BrandMark />
+        <BrandEgg label={brandName}>
+          <BrandMark name={brandName} />
         </BrandEgg>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pt-1">
-        {GROUPS.map(({ realm, items }) => (
+        {groups.map(({ realm, items }) => (
           <div key={realm.slug} className="pt-4 first:pt-0">
             <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
               {realm.label}

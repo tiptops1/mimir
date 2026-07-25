@@ -1,5 +1,6 @@
 import { AuthForm } from "@/components/auth-form";
 import { BrandMark } from "@/components/brand";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 
 export default function RegisterPage() {
   return (
@@ -18,13 +19,15 @@ export default function RegisterPage() {
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
             Créer un compte
           </h1>
-          <p className="mt-1 text-sm text-muted">Rejoignez Mimir</p>
+          <p className="mt-1 text-sm text-muted">
+            Rejoignez {DEFAULT_BRAND_NAME}
+          </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-md">
           <AuthForm mode="register" />
         </div>
         <p className="mt-6 text-center text-xs text-faint">
-          © {new Date().getFullYear()} Mimir
+          © {new Date().getFullYear()} {DEFAULT_BRAND_NAME}
         </p>
       </div>
     </main>

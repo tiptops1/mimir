@@ -1,6 +1,7 @@
 import { ViewTransition } from "react";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
+import { getTenantProfile } from "@/lib/tenant-profile";
 import { RealmScope } from "@/components/realm-scope";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -17,6 +18,8 @@ export default async function AppLayout({
 }) {
   const session = await verifySession();
   const prisma = await getTenantDb();
+  // Shares the router's cached control-plane lookup — no extra query.
+  const profile = await getTenantProfile();
 
   // "todo" badge = what needs attention now: open tasks overdue or due today.
   const startOfTomorrow = new Date();
@@ -50,6 +53,8 @@ export default async function AppLayout({
           leadOneCount={leadOneCount}
           heimdallrPendingCount={heimdallrPendingCount}
           user={user}
+          modules={profile.modules}
+          brandName={profile.brandName}
         />
         <main className="flex-1 overflow-y-auto bg-background">
           <header
@@ -62,6 +67,8 @@ export default async function AppLayout({
               leadOneCount={leadOneCount}
               heimdallrPendingCount={heimdallrPendingCount}
               user={user}
+              modules={profile.modules}
+              brandName={profile.brandName}
             />
             <GlobalSearch isAdmin={session.role === "ADMIN"} />
             <div className="ml-auto flex items-center gap-2">

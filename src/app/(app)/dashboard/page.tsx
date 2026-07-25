@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Building2, Users, Trophy, Flame } from "lucide-react";
 import { getTenantDb } from "@/lib/tenant-context";
 import { verifySession } from "@/lib/dal";
+import { getTenantProfile } from "@/lib/tenant-profile";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
 import { ConnectGmailCta } from "@/components/connect-gmail-cta";
@@ -36,6 +37,7 @@ export default async function DashboardPage({
 }) {
   const session = await verifySession();
   const prisma = await getTenantDb();
+  const profile = await getTenantProfile();
   const stageDefs = await getStageDefs();
   const googleStatus = (await searchParams).google;
 
@@ -177,7 +179,9 @@ export default async function DashboardPage({
     },
     {
       slug: "mimir",
-      label: "Mimir",
+      // Matches the sidebar realm heading (src/lib/realms.ts). Labelled by
+      // function, not product — the hub at the centre carries the brand name.
+      label: "Agents",
       role: "Agents autonomes — approbations, connaissance, activité",
       status: "live",
       stats: [
@@ -202,8 +206,9 @@ export default async function DashboardPage({
       <div className="p-4 sm:p-6">
         <Observatory
           realms={observatoryRealms}
+          brandName={profile.brandName}
           hub={{
-            label: "Mimir",
+            label: profile.brandName,
             caption: firstName ? `Bonjour, ${firstName}` : "Bonjour",
             stat: `${total} sociétés · ${observatoryRealms.filter((r) => r.status === "live").length} royaumes actifs`,
           }}

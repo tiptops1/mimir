@@ -3,7 +3,11 @@ import { controlPrisma } from "@/lib/control-db";
 import { encrypt } from "@/lib/crypto";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { seedTenantConfig } from "@/lib/default-config";
+import { DEFAULT_MODULES } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
+
+/** Modules provisioning accepts. Keep in sync with TenantModule (src/lib/modules.ts). */
+const KNOWN_MODULES = ["crm", "chronos"];
 
 // Phase 4 self-serve onboarding: provision a new tenant from the running app —
 // the server-action equivalent of scripts/provision-tenant.ts (which shells out
@@ -15,20 +19,36 @@ import { logAudit } from "@/lib/audit";
 
 export const SLUG_RE = /^[a-z][a-z0-9_]{2,30}$/;
 
-/** Uniques the app logic depends on (dedupe keys, upsert targets). */
-const UNIQUE_INDEXES: Array<{
+type UniqueIndex = {
   collection: string;
   name: string;
   key: Record<string, 1>;
-}> = [
-  { collection: "Company", name: "Company_siret_key", key: { siret: 1 } },
-  { collection: "StageDefinition", name: "StageDefinition_key_key", key: { key: 1 } },
+};
+
+/** Uniques every tenant needs, whatever it sells. */
+const CORE_UNIQUE_INDEXES: UniqueIndex[] = [
   { collection: "FieldDefinition", name: "FieldDefinition_entity_key_key", key: { entity: 1, key: 1 } },
   { collection: "Setting", name: "Setting_key_key", key: { key: 1 } },
   { collection: "SyncCursor", name: "SyncCursor_source_key", key: { source: 1 } },
+];
+
+/** Uniques the inherited CRM's logic depends on (dedupe keys, upsert targets). */
+const CRM_UNIQUE_INDEXES: UniqueIndex[] = [
+  { collection: "Company", name: "Company_siret_key", key: { siret: 1 } },
+  { collection: "StageDefinition", name: "StageDefinition_key_key", key: { key: 1 } },
   { collection: "EmailSyncState", name: "EmailSyncState_mailbox_key", key: { mailbox: 1 } },
   { collection: "BlockedSender", name: "BlockedSender_value_key", key: { value: 1 } },
 ];
+
+/**
+ * Uniques per module. A unique that exists in the Prisma schema but NOT here is
+ * only created by a manual `db push` against that tenant — provisioning builds
+ * these by hand, so correctness-critical dedupe keys must be listed.
+ * Chronos' own (UnitCost_unitId_dedupeKey_key et al.) land with S27.
+ */
+const MODULE_UNIQUE_INDEXES: Record<string, UniqueIndex[]> = {
+  crm: CRM_UNIQUE_INDEXES,
+};
 
 /** Derive the tenant's connection string from CLUSTER_BASE_URL + slug as DB name. */
 export function tenantConnectionString(slug: string): string {
@@ -44,6 +64,10 @@ export interface ProvisionArgs {
   name: string;
   adminEmail: string;
   adminPassword: string;
+  /** Verticals this tenant is entitled to. Defaults to the CRM. */
+  modules?: string[];
+  /** Product name for this tenant's shell. Falls back to the deployment brand. */
+  brandName?: string;
 }
 
 export interface ProvisionOutcome {
@@ -59,6 +83,18 @@ export async function provisionTenant(
   const slug = args.slug.trim().toLowerCase();
   const name = args.name.trim();
   const adminEmail = args.adminEmail.trim().toLowerCase();
+  const modules = (args.modules?.length ? args.modules : DEFAULT_MODULES).map(
+    (m) => m.trim(),
+  );
+  const brandName = args.brandName?.trim() || null;
+
+  // homePathFor() assumes a tenant always has at least one module — a tenant
+  // with none would have no reachable home page.
+  if (modules.length === 0) return { error: "Au moins un module est requis." };
+  const unknown = modules.filter((m) => !KNOWN_MODULES.includes(m));
+  if (unknown.length > 0) {
+    return { error: `Module inconnu : ${unknown.join(", ")}.` };
+  }
 
   if (!SLUG_RE.test(slug)) {
     return { error: "Slug invalide (minuscules/chiffres/_, 3-31 caractères, commence par une lettre)." };
@@ -82,22 +118,29 @@ export async function provisionTenant(
     return { error: `Cluster injoignable : ${(e as Error).message}` };
   }
 
-  // 2) Correctness-critical unique indexes (also materializes the collections).
-  for (const idx of UNIQUE_INDEXES) {
+  // 2) Correctness-critical unique indexes (also materializes the collections),
+  //    scoped to what this tenant actually uses.
+  const indexes = [
+    ...CORE_UNIQUE_INDEXES,
+    ...modules.flatMap((m) => MODULE_UNIQUE_INDEXES[m] ?? []),
+  ];
+  for (const idx of indexes) {
     await tenantPrisma.$runCommandRaw({
       createIndexes: idx.collection,
       indexes: [{ key: idx.key, name: idx.name, unique: true }],
     });
   }
 
-  // 3) Default config (stages, field defs, starter sequence). Idempotent.
-  await seedTenantConfig(tenantPrisma);
+  // 3) Default config for the entitled modules. Idempotent.
+  await seedTenantConfig(tenantPrisma, { modules });
 
   // 4) Register tenant + admin login in the control plane.
   const tenant = await controlPrisma.tenant.create({
     data: {
       slug,
       name,
+      brandName,
+      modules,
       connectionString: encrypt(connectionString),
       status: "ACTIVE",
     },

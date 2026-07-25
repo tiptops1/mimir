@@ -4,10 +4,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Users, Radar, Wallet, Bot } from "lucide-react";
 import type { RealmSlug } from "@/lib/realms";
+import { splitBrand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+/**
+ * The observatory hero is the CRM cosmos: a hand-tuned four-point stage whose
+ * positions and thread curves are drawn for exactly these realms. Verticals
+ * with their own realm (chronos) get their own landing surface instead of a
+ * fifth orb, so this stays a closed subset of RealmSlug rather than growing
+ * with every realm added to src/lib/realms.ts.
+ */
+export type ObservatorySlug = Extract<
+  RealmSlug,
+  "relation" | "chasse" | "tresor" | "mimir"
+>;
+
 export type ObservatoryRealm = {
-  slug: RealmSlug;
+  slug: ObservatorySlug;
   label: string;
   role: string;
   status: "live" | "planned";
@@ -25,9 +38,11 @@ type ObservatoryProps = {
   realms: ObservatoryRealm[];
   hub: ObservatoryHub;
   tenantLabel: string;
+  /** The tenant's product name, shown in the stage wordmark. */
+  brandName: string;
 };
 
-const ICONS: Record<RealmSlug, typeof Users> = {
+const ICONS: Record<ObservatorySlug, typeof Users> = {
   relation: Users,
   chasse: Radar,
   tresor: Wallet,
@@ -37,7 +52,7 @@ const ICONS: Record<RealmSlug, typeof Users> = {
 // Percent positions on the 1180x620 stage. Not a symmetric diamond: the
 // instrument panel occupies the bottom-right corner (right:28px, bottom:26px,
 // width 308px), so nothing can sit there — mimir goes bottom-center instead.
-const POSITIONS: Record<RealmSlug, { left: string; top: string }> = {
+const POSITIONS: Record<ObservatorySlug, { left: string; top: string }> = {
   relation: { left: "18%", top: "20%" },
   chasse: { left: "82%", top: "20%" },
   tresor: { left: "18%", top: "80%" },
@@ -46,14 +61,20 @@ const POSITIONS: Record<RealmSlug, { left: string; top: string }> = {
 
 // Thread paths in the 1180x620 viewBox, endpoints matching POSITIONS above,
 // curving toward the hub at (590, 329) — see .obs-well's left:50%/top:53%.
-const THREADS: Record<RealmSlug, string> = {
+const THREADS: Record<ObservatorySlug, string> = {
   relation: "M212,124 Q420,170 590,329",
   chasse: "M968,124 Q760,170 590,329",
   tresor: "M212,496 Q420,440 590,329",
   mimir: "M590,558 Q590,450 590,329",
 };
 
-export function Observatory({ realms, hub, tenantLabel }: ObservatoryProps) {
+export function Observatory({
+  realms,
+  hub,
+  tenantLabel,
+  brandName,
+}: ObservatoryProps) {
+  const { head: brandHead, tail: brandTail } = splitBrand(brandName);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pinned, setPinned] = useState<RealmSlug | null>(null);
   const [hovered, setHovered] = useState<RealmSlug | null>(null);
@@ -134,7 +155,8 @@ export function Observatory({ realms, hub, tenantLabel }: ObservatoryProps) {
 
         <div className="obs-plate">
           <span className="obs-wordmark">
-            M<b>i</b>mir
+            {brandHead}
+            <b>{brandTail}</b>
           </span>
           <span className="obs-sub">Cosmos · aperçu</span>
           <div className="obs-right">

@@ -1,5 +1,6 @@
 import { AuthForm } from "@/components/auth-form";
 import { BrandMark } from "@/components/brand";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 
 export default function LoginPage() {
   return (
@@ -20,14 +21,14 @@ export default function LoginPage() {
             Bon retour
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Connectez-vous à Mimir
+            Connectez-vous à {DEFAULT_BRAND_NAME}
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-md">
           <AuthForm mode="login" />
         </div>
         <p className="mt-6 text-center text-xs text-faint">
-          © {new Date().getFullYear()} Mimir
+          © {new Date().getFullYear()} {DEFAULT_BRAND_NAME}
         </p>
       </div>
     </main>

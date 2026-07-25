@@ -34,6 +34,21 @@ model Tenant {
   slug String @unique // also the tenant DB name, e.g. "crm_chris", "crm_demo"
   name String
 
+  // Product name rendered in this tenant's shell (wordmark, <title>, PWA
+  // manifest). Null = the platform default, "Mimir". Lives here rather than in
+  // the tenant DB because src/app/layout.tsx and src/app/manifest.ts render
+  // OUTSIDE the (app) group: they have no session, so they can never resolve a
+  // tenant-DB value. See src/lib/tenant-profile.ts.
+  brandName String?
+
+  // Feature modules this tenant has bought — drives sidebar/realm composition
+  // (src/components/sidebar.tsx) and page-level access (requireModule).
+  // Control plane by design: every tenant-DB config store is ADMIN-editable by
+  // the customer through a server action, and a tenant must not be able to grant
+  // itself a module it didn't pay for. Entitlement is a commercial fact, not
+  // tenant config. Legacy rows are stamped by scripts/backfill-tenant-modules.ts.
+  modules String[] @default(["crm"])
+
   // Full connection string to this tenant's data DB, AES-256-GCM encrypted at
   // rest (see src/lib/crypto.ts). Stored whole — not derived — so a large tenant
   // can later be promoted to its own cluster with no app-code change.

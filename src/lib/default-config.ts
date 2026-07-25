@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { DEFAULT_MODULES, hasModule } from "@/lib/modules";
 
 // The default tenant config (stages / field definitions / starter sequence),
 // shared by `npm run config:seed` (scripts/seed-config.ts) and Phase-4
@@ -903,8 +904,31 @@ async function upsertAiBudget(prisma: PrismaClient): Promise<void> {
   });
 }
 
-/** Seed (or refresh) the default config on a tenant DB. Idempotent. */
-export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
+export interface SeedConfigOptions {
+  /** Verticals to seed config for. Defaults to the CRM (the historical behaviour). */
+  modules?: string[];
+}
+
+/**
+ * Seed (or refresh) the default config on a tenant DB. Idempotent.
+ *
+ * Module-scoped: everything below the AI budget is CRM vocabulary — eight
+ * French insurance-broker stages, ~30 broker field definitions, broker prompt
+ * templates, brand voices and a French cold-email sequence. Planting that in a
+ * non-CRM tenant would pollute its DB with another vertical's ontology, which
+ * is exactly what D1's "generic ontology, vertical labels" rule forbids.
+ */
+export async function seedTenantConfig(
+  prisma: PrismaClient,
+  opts: SeedConfigOptions = {},
+): Promise<void> {
+  const modules = opts.modules ?? DEFAULT_MODULES;
+
+  // Universal: every tenant gets an AI spend cap, whatever it sells.
+  await upsertAiBudget(prisma);
+
+  if (!hasModule(modules, "crm")) return;
+
   for (const s of DEFAULT_STAGES) {
     const data = {
       label: s.label,
@@ -932,7 +956,6 @@ export async function seedTenantConfig(prisma: PrismaClient): Promise<void> {
   await upsertRcaTemplates(prisma);
   await upsertBrandVoices(prisma);
   await upsertContentSlots(prisma);
-  await upsertAiBudget(prisma);
 
   for (const seq of DEFAULT_SEQUENCES) {
     const existing = await prisma.sequence.findFirst({ where: { name: seq.name } });

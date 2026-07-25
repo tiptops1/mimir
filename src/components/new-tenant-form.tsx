@@ -6,6 +6,13 @@ import { Button, Input, Label } from "@/components/ui";
 
 // Vendor form: provision a new isolated tenant (Phase 4 "Phase 0 on demand").
 
+// What the tenant is entitled to. Labels are vendor-facing, hence French;
+// the values are the module keys from src/lib/modules.ts.
+const MODULE_CHOICES = [
+  { value: "crm", label: "CRM" },
+  { value: "chronos", label: "Chronos (inventaire)" },
+];
+
 export function NewTenantForm() {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<
@@ -68,6 +75,35 @@ export function NewTenantForm() {
             autoComplete="new-password"
             required
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label htmlFor="brandName">Marque (optionnel)</Label>
+          <Input id="brandName" name="brandName" placeholder="Chronos" />
+        </div>
+        <div>
+          <Label htmlFor="modules-crm">Modules</Label>
+          <div className="mt-1.5 flex flex-wrap items-center gap-4">
+            {MODULE_CHOICES.map((m) => (
+              <label
+                key={m.value}
+                htmlFor={`modules-${m.value}`}
+                className="flex items-center gap-2 text-sm text-foreground"
+              >
+                <input
+                  id={`modules-${m.value}`}
+                  type="checkbox"
+                  name="modules"
+                  value={m.value}
+                  defaultChecked={m.value === "crm"}
+                  className="h-4 w-4 rounded border-border accent-[var(--brand)]"
+                />
+                {m.label}
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 

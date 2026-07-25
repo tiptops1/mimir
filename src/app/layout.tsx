@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
+import { DEFAULT_BRAND_NAME, DEFAULT_BRAND_TAGLINE } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,10 +21,11 @@ const fraunces = Fraunces({
   subsets: ["latin"],
 });
 
+// Renders outside the (app) group — no session here, so this is the deployment
+// brand, not the tenant's. Per-tenant naming happens inside the shell.
 export const metadata: Metadata = {
-  title: "Mimir",
-  description:
-    "Mimir — CRM de prospection pour le courtage en assurance.",
+  title: DEFAULT_BRAND_NAME,
+  description: `${DEFAULT_BRAND_NAME} — ${DEFAULT_BRAND_TAGLINE}`,
 };
 
 export default function RootLayout({

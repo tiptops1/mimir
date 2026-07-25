@@ -903,8 +903,78 @@ the full design system.
   reskinned to the cosmos palette; both themes sane; documented in `decisions.md` (vendor mechanic +
   where custom art goes).
 
-**Parallel premium track** (slot into gaps, one S-session each): per-tenant branding pull-forward →
-Cmd+K palette on Atlas Search → MCP connector.
+**Parallel premium track** (slot into gaps, one S-session each): ~~per-tenant branding
+pull-forward~~ (done, S26) → Cmd+K palette on Atlas Search → MCP connector.
+
+---
+
+### Phase 7 — First paying customer: the Chronos vertical *(opened 2026-07-25)*
+
+First real customer: an Irish company buying watches on eBay, restoring them, reselling across
+EU/UK on eBay + Chrono24 + Vinted + LeBonCoin. Shipped as a **branded tenant on this platform**
+(not a fork, not a generic entity layer). Plan: `~/.claude/plans/i-have-a-first-spicy-adleman.md`.
+
+**Hard external constraint (verified 2026-07-25):** eBay's **Marketplace Insights** API (sold
+comps) is Limited Release and denied to non-major-partners; the Finding API died early 2025. So
+the comp DB is built from **his own completed sales** (Sell API, authoritative incl. real fees)
+plus **asking-price observations** (Browse API, open) — asks must never render as sold comps.
+Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connectors carry
+**capability flags** from day one.
+
+- [x] **S26 — Platform: per-tenant branding + module gating** · Opus · M · ✅ 2026-07-25
+      The prerequisite that makes D1's "sell vertical" real. Control-plane `Tenant.brandName` +
+      `Tenant.modules String[]` (entitlement is a **commercial** fact — every tenant-DB config
+      store is ADMIN-editable by the customer, so a tenant DB is the wrong place to record what a
+      tenant may have). `brandName` is control-plane for a second reason: `app/layout.tsx` and
+      `manifest.ts` render OUTSIDE `(app)`, have no session, and can never reach a tenant-DB value.
+      New `src/lib/modules.ts` (client-safe: `TenantModule`, `hasModule`, `homePathFor`) +
+      `src/lib/tenant-profile.ts` (server: `getTenantRecord`/`getTenantProfile`/`requireModule`) —
+      the stage-config/stage-meta split, needed because the sidebar is a client component.
+      `getTenantDb` now reuses `getTenantRecord`, so routing + gating cost **one** query.
+      `src/lib/brand.ts` holds `DEFAULT_BRAND_NAME`/`splitBrand`, env-overridable via
+      `NEXT_PUBLIC_BRAND_NAME` so pre-auth surfaces (login, `<title>`, manifest) brand correctly on
+      a single-customer deployment. `splitBrand` at `floor(len/2)` reproduces the old hardcoded
+      `Mi<span>mir</span>` exactly and generalises ("Chr"+"onos") — that mid-word split defeated a
+      naive grep during the Vision RM → Mimir rebrand (C3).
+      Gating: NAV entries tagged `core|crm|chronos`, `GROUPS` → `groupsFor(modules)`, plus a
+      5-line `requireModule` **layout guard per top-level CRM route folder** (covers nested routes;
+      hiding nav is not access control). `/dashboard` is CRM-gated — it reads companies, contacts,
+      the stage funnel and the finance cockpit — so `homePathFor()` gives non-CRM tenants their own
+      home and redirect targets can't loop. `seedTenantConfig(prisma, {modules})` withholds the 8
+      French broker stages / ~30 broker fields / broker prompts / French sequence from a non-CRM
+      tenant (verified: **0 stages, 0 field definitions** on `chronos_demo`).
+      **Two defects found and fixed during verification:** (1) the agent realm's sidebar heading was
+      literally `"Mimir"`, leaking the platform name into a rebranded shell → relabelled **"Agents"**
+      by function (slug stays `mimir`; also aligned the observatory orb). This is a deliberate,
+      visible change to `crm_demo`'s sidebar. (2) `Observatory` keys three maps by `RealmSlug`, so
+      adding a realm broke its types → narrowed to an `ObservatorySlug` subset, since the hero is
+      the CRM cosmos with a hand-tuned 4-point stage.
+      **Deferred deliberately:** promoting the `tenant-config.ts` stub — it holds `pipelineCard` +
+      `owner.name`, CRM-specific UI config serving no Chronos need, and making it async would churn
+      4 call sites (incl. the session-less digest cron) for zero S26 benefit.
+      *Exit:* `chronos_demo` (modules `["chronos"]`, brand "Chronos") shows wordmark "Chr|onos",
+      realm hue `#7c3aed`, nav = Agents/Approbations + Chronos/Inventaire + Paramètres only;
+      `/companies` and `/dashboard` both **redirect** to `/chronos`; `crm_demo` keeps all 16 CRM
+      links and 4 realms. lint 0 errors · 283/283 tests · build ✓.
+      **Note:** the browser-tab `<title>` stays the *deployment* brand (no session outside `(app)`)
+      — his S28 deployment sets `NEXT_PUBLIC_BRAND_NAME=Chronos`.
+
+- [ ] **S27 — Chronos v1: inventory + true margin** · plan on Opus · L
+      7 additive models (`ProductRef`, `InventoryUnit`, `UnitCost`, `PartLot`, `PartConsumption`,
+      `UnitStageDefinition`, `ChronosConfig`). **All money `...Cents Int`** — do NOT inherit the
+      `FinanceEntry.amount` euros/cents smell. `@@unique([unitId, dedupeKey])` on `UnitCost` is the
+      load-bearing index (stops re-syncs double-booking fees). Pure `margin.ts` (no Prisma import);
+      margin-scheme VAT is **VAT-inclusive**: `max(0, revenue−acquisition) × rate/(100+rate)`.
+      `StageDefinition` is global (no `entity` field) so unit status needs the additive twin.
+- [ ] **S28 — Production launch** · M — separate EU Atlas cluster + backups, separate control DB,
+      separate Vercel project; rewrite `mimir-env-guard` for a two-environment world.
+- [ ] **S29 — eBay Sell connector + manual marketplaces** · M
+- [ ] **S30 — Comp DB + Argus** · M
+- [ ] **S31 — Platform: entity-scoped `StageDefinition`** · S — the one **non-additive** change in
+      the whole plan; needs a backfill + explicit `dropIndex` (`db push` won't drop the old unique).
+- [ ] **S32 — Kairos sourcing agent** · plan on Opus · M — money category, `maxLevel: 1`, never
+      auto-buys. **Precondition:** the HDS classifier gate becomes mandatory here — marketplace
+      listing text is untrusted third-party input (prompt injection, not health data).
 
 ---
 
