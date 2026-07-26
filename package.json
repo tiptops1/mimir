@@ -15,8 +15,10 @@
     "prisma:generate": "prisma generate --schema=prisma/control/schema.prisma && prisma generate --schema=prisma/tenant/schema.prisma",
     "db:push": "prisma db push --schema=prisma/tenant/schema.prisma",
     "db:push:control": "prisma db push --schema=prisma/control/schema.prisma",
+    "db:push:tenant": "tsx scripts/db-push-tenant.ts",
     "bureau:build": "tsx scripts/bureau-build.ts",
     "tenant:provision": "tsx scripts/provision-tenant.ts",
+    "tenant:branding": "tsx scripts/set-tenant-branding.ts",
     "deals:backfill": "tsx scripts/backfill-deals.ts",
     "config:seed": "tsx scripts/seed-config.ts",
     "tenant:seed-demo": "tsx scripts/seed-demo-data.ts",
@@ -37,6 +39,7 @@
     "huginn:knowledge": "tsx scripts/huginn/seed-knowledge.ts",
     "huginn:fixtures": "tsx scripts/huginn/inject-fixtures.ts",
     "huginn:report": "tsx scripts/huginn/report-drafts.ts",
+    "chronos:seed-demo": "tsx scripts/chronos/seed-demo-units.ts",
     "enrich:dirigeants": "tsx scripts/enrich-dirigeants.ts",
     "cleanup:unnamed": "tsx scripts/delete-unnamed.ts"
   },

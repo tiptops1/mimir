@@ -392,7 +392,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  /* Bottom padding reserves room for the "mimir" realm card (POSITIONS
+     top:90% in observatory.tsx), whose orb+text overflows the aspect-ratio
+     stage box and was getting clipped by .observatory's overflow:hidden. */
+  padding: 0 24px 100px;
 }
 .observatory .obs-stage {
   position: relative;

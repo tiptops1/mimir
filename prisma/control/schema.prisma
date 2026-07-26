@@ -41,6 +41,12 @@ model Tenant {
   // tenant-DB value. See src/lib/tenant-profile.ts.
   brandName String?
 
+  // Logo rendered in this tenant's shell in place of the text wordmark. Null =
+  // fall back to splitBrand(brandName) (src/lib/brand.ts). Same control-plane
+  // reasoning as brandName above: the pre-auth surfaces that need it have no
+  // session. A path under /public or an absolute URL — see src/components/brand.tsx.
+  brandLogoUrl String?
+
   // Feature modules this tenant has bought — drives sidebar/realm composition
   // (src/components/sidebar.tsx) and page-level access (requireModule).
   // Control plane by design: every tenant-DB config store is ADMIN-editable by

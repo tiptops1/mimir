@@ -27,6 +27,8 @@ export interface TenantProfile {
   name: string;
   /** Product name for this tenant's shell — never null; falls back to the default. */
   brandName: string;
+  /** Logo for this tenant's shell, or null to render the text wordmark. */
+  brandLogoUrl: string | null;
   modules: string[];
 }
 
@@ -54,6 +56,7 @@ export const getTenantProfile = cache(async (): Promise<TenantProfile> => {
     slug: t.slug,
     name: t.name,
     brandName: t.brandName?.trim() || DEFAULT_BRAND_NAME,
+    brandLogoUrl: t.brandLogoUrl?.trim() || null,
     modules: t.modules,
   };
 });

@@ -11,6 +11,29 @@ export function formatCurrency(
   }).format(amount);
 }
 
+/**
+ * Money formatter — integer minor units → "1 250,00 €". The Chronos counterpart
+ * to formatCurrency above (S27).
+ *
+ * Deliberately a separate function rather than a flag on formatCurrency: that
+ * one takes WHOLE euros and pins maximumFractionDigits to 0, so feeding it
+ * cents renders 100× too large, and it has eight call sites whose contract must
+ * not shift. Chronos money is always cents and wants the decimals — a margin
+ * that doesn't reconcile to the cent against a marketplace statement is useless.
+ */
+export function formatCents(
+  cents: number | null | undefined,
+  currency = "EUR",
+): string {
+  if (cents == null || Number.isNaN(cents)) return "—";
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
 export function companyName(c: {
   nomSociete?: string | null;
   enseigne?: string | null;

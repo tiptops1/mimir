@@ -40,14 +40,29 @@ const CRM_UNIQUE_INDEXES: UniqueIndex[] = [
   { collection: "BlockedSender", name: "BlockedSender_value_key", key: { value: 1 } },
 ];
 
+/** Uniques the Chronos inventory vertical's logic depends on (S27). */
+const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
+  // The load-bearing one: without it an S29 marketplace re-sync double-books
+  // every fee line it already booked. See prisma/tenant/schema.prisma UnitCost.
+  { collection: "UnitCost", name: "UnitCost_unitId_dedupeKey_key", key: { unitId: 1, dedupeKey: 1 } },
+  { collection: "InventoryUnit", name: "InventoryUnit_sku_key", key: { sku: 1 } },
+  { collection: "ProductRef", name: "ProductRef_brand_reference_variant_key", key: { brand: 1, reference: 1, variant: 1 } },
+  { collection: "UnitStageDefinition", name: "UnitStageDefinition_key_key", key: { key: 1 } },
+  // Must exist before seedTenantConfig runs (step 3 below) for the singleton
+  // upsert to be race-safe.
+  { collection: "ChronosConfig", name: "ChronosConfig_singleton_key", key: { singleton: 1 } },
+];
+
 /**
  * Uniques per module. A unique that exists in the Prisma schema but NOT here is
  * only created by a manual `db push` against that tenant — provisioning builds
- * these by hand, so correctness-critical dedupe keys must be listed.
- * Chronos' own (UnitCost_unitId_dedupeKey_key et al.) land with S27.
+ * these by hand, so correctness-critical dedupe keys must be listed. Names must
+ * match Prisma's `<Model>_<field>…_key` convention exactly, or a later db push
+ * creates a second duplicate index alongside.
  */
 const MODULE_UNIQUE_INDEXES: Record<string, UniqueIndex[]> = {
   crm: CRM_UNIQUE_INDEXES,
+  chronos: CHRONOS_UNIQUE_INDEXES,
 };
 
 /** Derive the tenant's connection string from CLUSTER_BASE_URL + slug as DB name. */
