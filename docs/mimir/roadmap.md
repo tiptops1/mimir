@@ -992,7 +992,7 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       independent computation (fee 14872, cost 85492, VAT 9572, net 17803, 88 days, 202/day — all
       matched); module boundary verified both ways — `crm_demo` kept 8 stages / 36 fields / 45
       companies with zero Chronos rows, `chronos_demo` has zero broker vocabulary.
-- [ ] **S27b — Chronos v1: inventory UI** · Sonnet · M
+- [x] **S27b — Chronos v1: inventory UI** · Sonnet · M · ✅ 2026-07-29
       Units list (filters per the identity-first `CLAUDE.md` order), unit detail with the margin
       waterfall + cost-line table + inline add-cost, cockpit KPIs, `src/app/actions/chronos.ts`.
       Two shared-component refactors confirmed in scope: prop-ify `EnumCell` (it hardcodes
@@ -1007,6 +1007,22 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       2.1 MB — optimise it, and cut a wordmark-free square variant for the small sidebar mark.
       Margin is derived, so it can't be filtered/sorted in Prisma — post-filter in memory, which
       means `count` and `skip/take` operate on the filtered array.
+      *Shipped as* [PR #5](https://github.com/tiptops1/mimir/pull/5) *(carried the unpushed S27a
+      commit with it).* `/chronos` cockpit = 5 KPIs (stock, capital tied up, realised net margin,
+      margin % vs target, margin/day-of-capital) computed over the **filtered** rows, + filter bar,
+      paginated table (25/page), create-unit form. `/chronos/[id]` = margin waterfall, consumed part
+      lots, inline sale-side editor (listed/sold dates, marketplace, price, currency, FX, VAT-scheme
+      override, notes), cost-line ledger, custom fields. New `lib/chronos/`: `config.ts` (tenant
+      marketplaces + target margin), `cost-meta.ts` (cost-kind vocabulary/grouping), `list.ts` +
+      17 unit tests. Both shared-component refactors landed (`EnumCell` and `CustomFieldsSection`
+      prop-ified; `INVENTORY_UNIT` added across all three `ConfigEntity` sources of truth). Chronos
+      realm + "Inventaire" nav gated on the `chronos` module, `requireModule` still guarding the
+      routes. Brand assets: 2.1 MB banner moved to `assets/brands/chronos/logo-source.png`, square
+      wordmark-free `public/brands/chronos/mark.png` cut via new
+      `scripts/chronos/build-brand-assets.mjs`. *Exit met:* lint 0 errors (3 pre-existing warnings
+      elsewhere) · **341 tests** (17 new) · build clean, both `/chronos` routes compiled · both
+      schemas already in sync on `mimir-dev`. **Not deployed** — Chronos stays demo-tenant-only
+      until S28.
 - [ ] **S28 — Production launch** · M — separate EU Atlas cluster + backups, separate control DB,
       separate Vercel project; rewrite `mimir-env-guard` for a two-environment world.
 - [ ] **S29 — eBay Sell connector + manual marketplaces** · M
