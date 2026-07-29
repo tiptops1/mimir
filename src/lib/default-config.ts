@@ -1024,6 +1024,24 @@ const DEFAULT_MARKETPLACES = [
   { key: "leboncoin", label: "LeBonCoin", sync: "manual" },
 ];
 
+/**
+ * Metadata for the InventoryUnit columns the detail editor exposes, so a tenant
+ * relabels "SKU" or "Fournisseur" into their own vocabulary without a deploy —
+ * the same config-not-code posture as DEFAULT_NATIVE_COMPANY_FIELDS.
+ *
+ * The sale block (prix, devise, taux de change, régime TVA) is deliberately NOT
+ * here: those fields need cents parsing, an FX rate and a scheme allow-list that
+ * NativeFieldControl has no type for, so they stay hand-rendered.
+ */
+export const DEFAULT_NATIVE_UNIT_FIELDS: FieldSeed[] = [
+  { key: "sku", label: "SKU", type: "text", order: 1, section: "Identité", required: true },
+  { key: "serial", label: "N° de série", type: "text", order: 2, section: "Identité" },
+  { key: "condition", label: "État", type: "text", order: 3, section: "Identité" },
+  { key: "acquiredAt", label: "Date d'acquisition", type: "date", order: 1, section: "Acquisition" },
+  { key: "acquiredVia", label: "Canal d'achat", type: "text", order: 2, section: "Acquisition" },
+  { key: "supplier", label: "Fournisseur", type: "text", order: 3, section: "Acquisition" },
+];
+
 const DEFAULT_FEE_MODEL = {
   ebay: { finalValuePct: 12.8, fixedCents: 30, paymentPct: 0, regulatoryPct: 0.35 },
   chrono24: { finalValuePct: 6.5, fixedCents: 0, paymentPct: 2.5, regulatoryPct: 0 },
@@ -1048,6 +1066,8 @@ async function seedChronosConfig(prisma: PrismaClient): Promise<void> {
       create: { key: s.key, ...data },
     });
   }
+
+  await upsertFields(prisma, "INVENTORY_UNIT", "NATIVE", DEFAULT_NATIVE_UNIT_FIELDS);
 
   // Empty `update`, like upsertAiBudget: fee percentages, the labour rate and
   // the VAT scheme are commercial facts the tenant edits, and a re-seed must

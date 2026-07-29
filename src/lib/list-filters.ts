@@ -9,10 +9,12 @@ import { SPECIALTY_FIELDS } from "@/lib/constants";
 
 export type Sp = { [key: string]: string | string[] | undefined };
 
-const str = (sp: Sp, key: string): string =>
+/** Read a single-valued search param, "" when absent or repeated. */
+export const str = (sp: Sp, key: string): string =>
   typeof sp[key] === "string" ? (sp[key] as string) : "";
 
-const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
+/** Case-insensitive contains — the only text-match shape used across lists. */
+export const ci = (v: string) => ({ contains: v, mode: "insensitive" as const });
 
 export function buildCompanyWhere(sp: Sp): {
   where: Prisma.CompanyWhereInput;

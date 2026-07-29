@@ -15,7 +15,14 @@ export interface FieldConfigResult {
   ok?: boolean;
 }
 
-const VALID_ENTITIES = ["COMPANY", "CONTACT", "DEAL", "FINANCE"];
+// Keep in sync with ConfigEntity in src/lib/field-config.ts.
+const VALID_ENTITIES = [
+  "COMPANY",
+  "CONTACT",
+  "DEAL",
+  "FINANCE",
+  "INVENTORY_UNIT",
+];
 const VALID_TYPES = ["text", "number", "select", "bool", "date"];
 const KEY_RE = /^[a-z][a-zA-Z0-9]*$/;
 
@@ -24,6 +31,7 @@ function revalidateAll() {
   revalidatePath("/contacts");
   revalidatePath("/pipeline");
   revalidatePath("/finances");
+  revalidatePath("/chronos");
   revalidatePath("/settings/fields");
 }
 

@@ -42,6 +42,13 @@ export function groupForKind(kind: string): CostGroup {
   return KIND_TO_GROUP[kind] ?? "other";
 }
 
+/**
+ * Every kind the waterfall knows how to bucket, plus the OTHER escape hatch.
+ * Derived from COST_GROUPS so a kind added there is offered in the UI without
+ * a second list drifting behind it.
+ */
+export const COST_KINDS: string[] = [...Object.keys(KIND_TO_GROUP), "OTHER"];
+
 export type VatScheme = "MARGIN" | "STANDARD" | "EXEMPT";
 
 export interface UnitCostInput {
@@ -202,7 +209,12 @@ export interface MarginSummary {
   avgMarginPerDayCents: number | null;
 }
 
-function ageingBucketFor(daysHeld: number | null): string {
+/**
+ * Which ageing bucket a holding period falls in. Exported so the inventory
+ * list's ageing filter and this summary's tiles can never disagree about a
+ * boundary day (a unit held exactly `near` days is in the UPPER bucket).
+ */
+export function ageingBucketFor(daysHeld: number | null): string {
   const [near, mid] = AGEING_BUCKET_DAYS;
   if (daysHeld == null || daysHeld < near) return `0-${near}`;
   if (daysHeld < mid) return `${near}-${mid}`;

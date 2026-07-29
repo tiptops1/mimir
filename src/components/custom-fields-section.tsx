@@ -2,27 +2,39 @@
 
 import { useState, useTransition } from "react";
 import { Input, Label, Select } from "@/components/ui";
-import { setCompanyCustomField } from "@/app/actions/custom-fields";
 import type { FieldDef } from "@/lib/field-config";
 
-// Renders a company's tenant-defined custom fields from config (FieldDefinition),
+// Renders a record's tenant-defined custom fields from config (FieldDefinition),
 // reading/writing the flexible `customFields` document. Each field saves on
 // blur/change — no schema migration was needed to add any of them.
+//
+// Entity-agnostic: the caller supplies the write action, so this serves
+// companies and Chronos inventory units alike. `save` must be a Server Action
+// reference — inline arrows don't cross the RSC boundary.
+
+/** Writes one field value; the caller binds it to the right entity. */
+export type SaveCustomField = (
+  recordId: string,
+  key: string,
+  raw: string,
+) => Promise<void>;
 
 function FieldRow({
-  companyId,
+  recordId,
   def,
   initial,
+  save: saveField,
 }: {
-  companyId: string;
+  recordId: string;
   def: FieldDef;
   initial: string;
+  save: SaveCustomField;
 }) {
   const [val, setVal] = useState(initial);
   const [pending, start] = useTransition();
   const save = (raw: string) =>
     start(async () => {
-      await setCompanyCustomField(companyId, def.key, raw);
+      await saveField(recordId, def.key, raw);
     });
 
   return (
@@ -79,13 +91,15 @@ function FieldRow({
 }
 
 export function CustomFieldsSection({
-  companyId,
+  recordId,
   defs,
   values,
+  save,
 }: {
-  companyId: string;
+  recordId: string;
   defs: FieldDef[];
   values: Record<string, unknown>;
+  save: SaveCustomField;
 }) {
   if (defs.length === 0) {
     return (
@@ -104,9 +118,10 @@ export function CustomFieldsSection({
       {defs.map((def) => (
         <FieldRow
           key={def.key}
-          companyId={companyId}
+          recordId={recordId}
           def={def}
           initial={toStr(values[def.key], def.type)}
+          save={save}
         />
       ))}
     </div>

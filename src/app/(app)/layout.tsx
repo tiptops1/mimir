@@ -55,6 +55,7 @@ export default async function AppLayout({
           user={user}
           modules={profile.modules}
           brandName={profile.brandName}
+          brandLogoUrl={profile.brandLogoUrl}
         />
         <main className="flex-1 overflow-y-auto bg-background">
           <header
@@ -69,6 +70,7 @@ export default async function AppLayout({
               user={user}
               modules={profile.modules}
               brandName={profile.brandName}
+              brandLogoUrl={profile.brandLogoUrl}
             />
             <GlobalSearch isAdmin={session.role === "ADMIN"} />
             <div className="ml-auto flex items-center gap-2">

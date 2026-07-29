@@ -43,24 +43,36 @@ export async function loadVatConfig(prisma: PrismaClient): Promise<ChronosVatCon
   };
 }
 
+/** An InventoryUnit joined to its catalog entry — what any list surface needs. */
+export type UnitWithRef = Prisma.InventoryUnitGetPayload<{
+  include: { ref: true };
+}>;
+
+/** A unit paired with its derived margin. */
+export interface UnitMarginRow {
+  unit: UnitWithRef;
+  margin: UnitMargin;
+}
+
 /**
- * Margin for every unit matching `where`, newest acquisition first.
+ * Units matching `where` with their derived margin, newest acquisition first.
  *
  * Margin is derived, not stored, so it cannot be filtered or sorted in Prisma —
- * callers post-filter and sort the returned array. Fine at this tenant's
+ * callers post-filter and sort the returned array, which also means `count` and
+ * any skip/take run on the filtered array, not on Prisma. Fine at this tenant's
  * lifetime volume (low thousands); denormalising netMarginCents onto the unit
  * is the upgrade if that ever stops being true.
  */
-export async function loadUnitMargins(
+export async function loadUnitsWithMargins(
   prisma: PrismaClient,
   where: Prisma.InventoryUnitWhereInput = {},
   opts: { now?: Date; vat?: ChronosVatConfig } = {},
-): Promise<UnitMargin[]> {
+): Promise<UnitMarginRow[]> {
   const vat = opts.vat ?? (await loadVatConfig(prisma));
   const units = await prisma.inventoryUnit.findMany({
     where,
     orderBy: [{ acquiredAt: "desc" }],
-    include: { costs: { select: { kind: true, baseAmountCents: true } } },
+    include: { ref: true, costs: { select: { kind: true, baseAmountCents: true } } },
   });
 
   return units.map((u) => {
@@ -77,8 +89,21 @@ export async function loadUnitMargins(
       vatRatePct: vat.vatRatePct,
       costs: u.costs,
     };
-    return computeUnitMargin(input, opts.now);
+    // Drop the cost rows from the returned unit: they exist only to feed the
+    // margin, and shipping them to a client component would double the payload.
+    const { costs, ...unit } = u;
+    void costs;
+    return { unit, margin: computeUnitMargin(input, opts.now) };
   });
+}
+
+/** Margin only, for callers that don't need the unit rows (cockpit rollups). */
+export async function loadUnitMargins(
+  prisma: PrismaClient,
+  where: Prisma.InventoryUnitWhereInput = {},
+  opts: { now?: Date; vat?: ChronosVatConfig } = {},
+): Promise<UnitMargin[]> {
+  return (await loadUnitsWithMargins(prisma, where, opts)).map((r) => r.margin);
 }
 
 /** Cockpit rollup across every unit matching `where`. */

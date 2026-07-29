@@ -34,6 +34,22 @@ export function formatCents(
   }).format(cents / 100);
 }
 
+/**
+ * Percentage formatter — "29,2 %". The Chronos margin percentages are exact
+ * ratios (netMargin / revenue × 100), deliberately unrounded in margin.ts so
+ * the maths stays lossless; rounding is a display concern and belongs here.
+ */
+export function formatPct(
+  pct: number | null | undefined,
+  digits = 1,
+): string {
+  if (pct == null || Number.isNaN(pct)) return "—";
+  return `${new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(pct)} %`;
+}
+
 export function companyName(c: {
   nomSociete?: string | null;
   enseigne?: string | null;

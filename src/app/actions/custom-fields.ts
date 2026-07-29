@@ -34,3 +34,32 @@ export async function setCompanyCustomField(
   });
   revalidatePath(`/companies/${companyId}`);
 }
+
+// Chronos sibling. A separate function rather than an entity-parameterised one:
+// the entity, the Prisma delegate and the revalidate path all differ, so the
+// parameterised version would be three switches wearing one signature.
+export async function setUnitCustomField(
+  unitId: string,
+  key: string,
+  raw: string,
+): Promise<void> {
+  await verifySession();
+  const prisma = await getTenantDb();
+  const def = (await getFieldDefs("INVENTORY_UNIT")).find((d) => d.key === key);
+  if (!def) return;
+
+  const value = coerceFieldValue(def, raw);
+  const current = await prisma.inventoryUnit.findUnique({
+    where: { id: unitId },
+    select: { customFields: true },
+  });
+  const cf = readCustomFields(current?.customFields);
+  if (value === null) delete cf[key];
+  else cf[key] = value;
+
+  await prisma.inventoryUnit.update({
+    where: { id: unitId },
+    data: { customFields: cf as Prisma.InputJsonValue },
+  });
+  revalidatePath(`/chronos/${unitId}`);
+}
