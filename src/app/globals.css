@@ -116,6 +116,18 @@
   --realm-hover: var(--brand-hover);
   --realm-subtle: var(--brand-subtle);
   --realm-ring: var(--ring);
+  --realm-2: #0891b2;
+}
+/*
+ * --realm-2 is the realm's SECOND accent, for the rare surface that needs two
+ * distinguishable series in one chart (today: only the Chronos margin
+ * waterfall). Realms that don't need one inherit this neutral. It is a literal,
+ * not `var(--realm)`, for the substitution reason documented further down.
+ * This generic dark rule sits ABOVE the realm blocks so the two-attribute
+ * `[data-theme="dark"] [data-realm="…"]` selectors still outrank it.
+ */
+[data-theme="dark"] {
+  --realm-2: #5eb6d6;
 }
 [data-realm="chasse"] {
   --realm: #0891b2;
@@ -135,11 +147,14 @@
   --realm-subtle: #fffbeb;
   --realm-ring: rgba(217, 119, 6, 0.4);
 }
+/* Tuned to the customer's own emblem (public/brands/chronos/mark.png): the
+ * disc's blue-violet as the primary, the orbit rings' cyan as the second. */
 [data-realm="chronos"] {
-  --realm: #7c3aed;
-  --realm-hover: #6d28d9;
-  --realm-subtle: #f5f3ff;
-  --realm-ring: rgba(124, 58, 237, 0.4);
+  --realm: #5b45d6;
+  --realm-hover: #4a35c0;
+  --realm-subtle: #f1eeff;
+  --realm-ring: rgba(91, 69, 214, 0.4);
+  --realm-2: #0e8ea6;
 }
 [data-theme="dark"] [data-realm="chasse"] {
   --realm: #4fd8c4; /* well */
@@ -160,10 +175,11 @@
   --realm-ring: rgba(192, 91, 71, 0.45);
 }
 [data-theme="dark"] [data-realm="chronos"] {
-  --realm: #a78bfa; /* pre-brightened violet — the vertical's own sky */
-  --realm-hover: #c4b5fd;
-  --realm-subtle: rgba(167, 139, 250, 0.16);
-  --realm-ring: rgba(167, 139, 250, 0.45);
+  --realm: #9b8cff; /* pre-brightened blue-violet — the vertical's own sky */
+  --realm-hover: #b5aaff;
+  --realm-subtle: rgba(155, 140, 255, 0.16);
+  --realm-ring: rgba(155, 140, 255, 0.45);
+  --realm-2: #4fd1e0;
 }
 /*
  * relation has no fixed hue (brand fallback, see :root above) — but var()
@@ -392,7 +408,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  /* Bottom padding reserves room for the "mimir" realm card (POSITIONS
+     top:90% in observatory.tsx), whose orb+text overflows the aspect-ratio
+     stage box and was getting clipped by .observatory's overflow:hidden. */
+  padding: 0 24px 100px;
 }
 .observatory .obs-stage {
   position: relative;
@@ -1224,6 +1243,7 @@
   --color-realm: var(--realm);
   --color-realm-hover: var(--realm-hover);
   --color-realm-subtle: var(--realm-subtle);
+  --color-realm-2: var(--realm-2);
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);

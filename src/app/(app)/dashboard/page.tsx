@@ -188,7 +188,7 @@ export default async function DashboardPage({
         { value: String(pendingApprovals), label: "à approuver" },
         { value: `$${aiBudget.used.toFixed(2)}`, label: "IA ce mois" },
       ],
-      href: "/nornir",
+      href: "/heimdallr/inbox",
     },
   ];
 

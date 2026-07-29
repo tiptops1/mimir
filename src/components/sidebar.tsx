@@ -131,6 +131,8 @@ export type SidebarProps = {
   modules: string[];
   /** The tenant's product name, shown in the wordmark. */
   brandName: string;
+  /** The tenant's logo, replacing the default glyph tile. Null = built-in mark. */
+  brandLogoUrl?: string | null;
   pendingCount?: number;
   todoCount?: number;
   leadOneCount?: number;
@@ -142,6 +144,7 @@ export function Sidebar({
   user,
   modules,
   brandName,
+  brandLogoUrl = null,
   pendingCount = 0,
   todoCount = 0,
   leadOneCount = 0,
@@ -173,7 +176,7 @@ export function Sidebar({
     >
       <div className="px-5 py-4">
         <BrandEgg label={brandName}>
-          <BrandMark name={brandName} />
+          <BrandMark name={brandName} logoUrl={brandLogoUrl} />
         </BrandEgg>
       </div>
 

@@ -1106,3 +1106,202 @@ model FreyjaConfig {
   minSpend14dEur    Float    @default(50) // pre-screen: ignore below this 14d spend
   updatedAt         DateTime @updatedAt
 }
+
+// --- Chronos (S27) — buy / restore / resell inventory vertical ---------------
+//
+// MONEY RULE for this whole block: every monetary field is `Int`, named
+// `...Cents`, in minor units of ChronosConfig.baseCurrency. This deliberately
+// breaks with FinanceEntry.amount (Int, whole euros) and Campaign.dailyBudget
+// (Float EUR) — both are inherited smells, neither is a precedent. Never Float
+// for money: this vertical's whole point is a margin figure that reconciles to
+// the cent against a marketplace statement.
+//
+// Model names stay generic (ProductRef, InventoryUnit, UnitCost) per D1's
+// "generic ontology, vertical labels" rule — "Montre" and "Référence" live in
+// FieldDefinition.label and page copy. Same buy/restore/resell shape serves
+// sneakers, cameras or bikes with no schema change. Open-vocab strings, no enums.
+
+// A catalog entry — the join key between market data (S30) and physical stock.
+model ProductRef {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  brand      String
+  reference  String
+  model      String   @default("")
+  // "" rather than null: Mongo uniques treat an absent field as null, so a
+  // nullable variant would collapse every variant-less ref into one row.
+  variant    String   @default("")
+  attributes Json? // { caliber, caseSizeMm, material, year } — open vocab
+  aliases    String[] // lowercased title-match keys for comp ingest (S30)
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  units InventoryUnit[]
+
+  @@unique([brand, reference, variant])
+  @@index([brand])
+}
+
+// One physical item, from acquisition through restoration to sale.
+model InventoryUnit {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  refId  String @db.ObjectId
+  // His own handle, and the eBay listing custom label the S29 order sync
+  // matches on. Unique so a re-sync can never fork a unit.
+  sku    String @unique
+  serial String?
+  // A UnitStageDefinition.key — config-driven, not a code enum.
+  status String @default("ACQUIRED")
+  condition String @default("") // open vocab
+
+  acquiredAt         DateTime?
+  acquiredVia        String? // "ebay" | "salon" | "particulier" (open vocab)
+  acquiredExternalId String? // marketplace order id, when bought through one
+  supplier           String?
+
+  listedAt       DateTime?
+  soldAt         DateTime?
+  soldOn         String? // marketplace key, see ChronosConfig.marketplaces
+  saleExternalId String?
+  salePriceCents Int?
+  saleCurrency   String?
+  saleFxRate     Float? // -> baseCurrency; null means 1:1
+
+  // Per-unit override of ChronosConfig.vatScheme (a unit bought with a VAT
+  // invoice can't go through the margin scheme). Null = use the tenant default.
+  vatScheme    String?
+  customFields Json?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ref              ProductRef        @relation(fields: [refId], references: [id])
+  costs            UnitCost[]
+  partConsumptions PartConsumption[]
+
+  @@index([status])
+  @@index([refId])
+  @@index([soldAt])
+  @@index([acquiredAt])
+}
+
+// One cost line against a unit. The heart of the margin computation.
+model UnitCost {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  unitId String @db.ObjectId
+  // ACQUISITION | PART | CONSUMABLE | LABOUR | TOOL_ALLOCATION | SHIPPING_IN
+  // | SHIPPING_OUT | MARKETPLACE_FEE | PAYMENT_FEE | DUTY | REFUND | OTHER
+  // (open vocab — src/lib/chronos/margin.ts buckets these into COST_GROUPS)
+  kind   String
+  label  String @default("")
+
+  // ALWAYS positive. `kind` carries the sign semantics, so a sum is never
+  // accidentally cancelled out by a mis-signed row.
+  amountCents     Int
+  currency        String @default("EUR")
+  fxRate          Float  @default(1)
+  // = round(amountCents * fxRate), computed once at write by
+  // src/lib/chronos/costs.ts so every sum has ONE source of truth.
+  baseAmountCents Int
+
+  incurredAt DateTime @default(now())
+  source     String   @default("MANUAL") // MANUAL | EBAY_ORDER | PART_LOT | IMPORT
+  // REQUIRED and never "" — manual lines use "manual:<uuid>". Paired with the
+  // unique below, this is what stops an S29 re-sync double-booking eBay fees.
+  // It is the single most load-bearing index in the Chronos design.
+  dedupeKey  String
+  partLotId  String?  @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit InventoryUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, dedupeKey])
+  @@index([unitId])
+  @@index([kind])
+}
+
+// A bulk purchase drawn down across many units — 100 gaskets for 20 € becomes
+// 0.20 €/unit. Avoids booking a whole lot against whichever unit came first.
+model PartLot {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  label          String
+  supplier       String?
+  purchasedAt    DateTime @default(now())
+  quantity       Int
+  totalCostCents Int
+  // = round(totalCostCents / quantity), snapshotted at creation.
+  unitCostCents  Int
+  remaining      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  consumptions PartConsumption[]
+
+  @@index([purchasedAt])
+}
+
+// One draw-down from a lot onto a unit.
+model PartConsumption {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  lotId  String @db.ObjectId
+  unitId String @db.ObjectId
+  quantity Int  @default(1)
+  // Snapshotted at time of use, NOT read through to the lot: re-pricing a lot
+  // must never retroactively move the margin on a unit already sold.
+  unitCostCents Int
+  consumedAt    DateTime @default(now())
+
+  lot  PartLot       @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  unit InventoryUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([lotId])
+  @@index([unitId])
+}
+
+// Field-for-field twin of StageDefinition. A twin rather than a reuse because
+// StageDefinition is GLOBAL (key @unique, no entity field, read with no where
+// clause by src/lib/stage-config.ts) — adding IN_WORKSHOP/LISTED rows there
+// would inject watch columns into the broker's kanban. Entity-scoping the real
+// thing is the one non-additive change in the Chronos plan, quarantined in S31.
+model UnitStageDefinition {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  key         String   @unique
+  label       String
+  order       Int      @default(0)
+  accentClass String   @default("")
+  badgeClass  String   @default("")
+  dotClass    String   @default("")
+  isSold      Boolean  @default(false)
+  isDead      Boolean  @default(false) // written off / returned to supplier
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Tenant config — AiBudget/FreyjaConfig singleton pattern. Config-not-code:
+// fee percentages, labour rate, VAT scheme and rate are all a tenant's own
+// commercial facts and must never be hardcoded.
+model ChronosConfig {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  singleton    String @unique @default("default")
+  baseCurrency String @default("EUR")
+  // [{ key, label, sync: "api" | "manual" }] — Chrono24/Vinted/LeBonCoin have
+  // no public API, so "manual" is a first-class state, not a degraded one.
+  marketplaces Json
+  // { <marketplaceKey>: { finalValuePct, fixedCents, paymentPct, regulatoryPct } }
+  feeModel     Json
+
+  labourRateCentsPerHour   Int @default(0)
+  // Flat overhead per unit standing in for tool depreciation. 0 = off.
+  toolOverheadPerUnitCents Int @default(0)
+
+  vatScheme  String @default("MARGIN") // MARGIN | STANDARD | EXEMPT
+  vatRatePct Int    @default(23) // IE standard rate — config, never code
+
+  fxRates         Json? // { USD: 0.92, GBP: 1.17 } -> baseCurrency
+  targetMarginPct Int   @default(25)
+
+  updatedAt DateTime @updatedAt
+}

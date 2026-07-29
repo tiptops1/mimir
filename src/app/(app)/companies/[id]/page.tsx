@@ -21,6 +21,8 @@ import { EnrichButton } from "@/components/enrich-button";
 import { CompanyInlineEditor } from "@/components/company-inline-editor";
 import { DealsCard, type DealRow } from "@/components/deals-card";
 import { CustomFieldsSection } from "@/components/custom-fields-section";
+import { setCompanyEnum } from "@/app/actions/companies";
+import { setCompanyCustomField } from "@/app/actions/custom-fields";
 import { getFieldDefs, readCustomFields } from "@/lib/field-config";
 import {
   SequencesCard,
@@ -157,6 +159,7 @@ export default async function CompanyDetailPage({
           field="stage"
           value={company.stage}
           options={stageOptions}
+          action={setCompanyEnum}
         />
         <a
           href={company.siteWeb || companyLinkedInSearch(company)}
@@ -217,9 +220,10 @@ export default async function CompanyDetailPage({
             </CardHeader>
             <CardBody>
               <CustomFieldsSection
-                companyId={company.id}
+                recordId={company.id}
                 defs={customFieldDefs}
                 values={customFieldValues}
+                save={setCompanyCustomField}
               />
             </CardBody>
           </Card>

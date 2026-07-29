@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { setCompanyEnum, type EnumField } from "@/app/actions/companies";
 import { Badge } from "@/components/ui";
 
 export interface EnumOption {
@@ -15,20 +14,29 @@ export interface EnumOption {
 
 /**
  * Inline dropdown-badge editor for a single enum column (étape, priorité,
- * potentiel). Click the badge → pick a value → saved immediately.
+ * potentiel, statut d'une pièce…). Click the badge → pick a value → saved
+ * immediately.
+ *
+ * Entity-agnostic: the caller supplies the server action. `action` must be a
+ * Server Action reference, not an inline arrow — arrows don't cross the RSC
+ * boundary. That's also why `field` is a plain string: an
+ * `(id, field: EnumField, …)` function isn't assignable to this prop under
+ * strictFunctionTypes, and the actions validate `field` themselves anyway.
  */
 export function EnumCell({
   id,
   field,
   value,
   options,
+  action,
   nullable = false,
   placeholder = "—",
 }: {
   id: string;
-  field: EnumField;
+  field: string;
   value: string | null;
   options: EnumOption[];
+  action: (id: string, field: string, value: string) => Promise<void>;
   nullable?: boolean;
   placeholder?: string;
 }) {
@@ -54,7 +62,7 @@ export function EnumCell({
   function choose(next: string) {
     setCurrent(next === "" ? null : next);
     setOpen(false);
-    startTransition(() => setCompanyEnum(id, field, next));
+    startTransition(() => action(id, field, next));
   }
 
   const selected = options.find((o) => o.value === current);

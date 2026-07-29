@@ -9,6 +9,7 @@ import { PRIORITE_OPTIONS, POTENTIEL_OPTIONS, SPECIALTY_FIELDS } from "@/lib/con
 import { SpecialtiesCell } from "@/components/specialties-cell";
 import { NotesCell } from "@/components/notes-cell";
 import { EnumCell } from "@/components/enum-cell";
+import { setCompanyEnum } from "@/app/actions/companies";
 import { BulkProvider, BulkHeaderCheckbox, BulkRowCheckbox } from "@/components/bulk-select";
 
 const PAGE_SIZE = 20;
@@ -169,7 +170,13 @@ export async function CompaniesTable({
                       <NotesCell id={c.id} value={c.notes} />
                     </td>
                     <td className="px-4 py-3">
-                      <EnumCell id={c.id} field="stage" value={c.stage} options={stageOptions} />
+                      <EnumCell
+                        id={c.id}
+                        field="stage"
+                        value={c.stage}
+                        options={stageOptions}
+                        action={setCompanyEnum}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <EnumCell
@@ -177,6 +184,7 @@ export async function CompaniesTable({
                         field="priorite"
                         value={c.priorite}
                         options={PRIORITE_CELL_OPTIONS}
+                        action={setCompanyEnum}
                         nullable
                       />
                     </td>
@@ -186,6 +194,7 @@ export async function CompaniesTable({
                         field="potentiel"
                         value={c.potentiel}
                         options={POTENTIEL_CELL_OPTIONS}
+                        action={setCompanyEnum}
                         nullable
                       />
                     </td>

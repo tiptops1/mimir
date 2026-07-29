@@ -959,13 +959,54 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       **Note:** the browser-tab `<title>` stays the *deployment* brand (no session outside `(app)`)
       — his S28 deployment sets `NEXT_PUBLIC_BRAND_NAME=Chronos`.
 
-- [ ] **S27 — Chronos v1: inventory + true margin** · plan on Opus · L
-      7 additive models (`ProductRef`, `InventoryUnit`, `UnitCost`, `PartLot`, `PartConsumption`,
-      `UnitStageDefinition`, `ChronosConfig`). **All money `...Cents Int`** — do NOT inherit the
-      `FinanceEntry.amount` euros/cents smell. `@@unique([unitId, dedupeKey])` on `UnitCost` is the
-      load-bearing index (stops re-syncs double-booking fees). Pure `margin.ts` (no Prisma import);
-      margin-scheme VAT is **VAT-inclusive**: `max(0, revenue−acquisition) × rate/(100+rate)`.
-      `StageDefinition` is global (no `entity` field) so unit status needs the additive twin.
+- [x] **S27a — Chronos v1: data model + true-margin math** · plan on Opus · M · ✅ 2026-07-26
+      Split out of the original S27 (which was past the "beyond M, split it" line — see
+      `decisions.md` 2026-07-26); S27b below carries the UI. **7 additive models** appended to
+      `prisma/tenant/schema.prisma` (`ProductRef`, `InventoryUnit`, `UnitCost`, `PartLot`,
+      `PartConsumption`, `UnitStageDefinition`, `ChronosConfig`), open-vocab strings, no enums.
+      **All money `Int ...Cents`** — deliberately breaking with `FinanceEntry.amount` (Int euros)
+      and `Campaign.dailyBudget` (Float EUR); `formatCents` added beside `formatCurrency` rather
+      than changing that function's 8-call-site contract. `@@unique([unitId, dedupeKey])` on
+      `UnitCost` is the load-bearing index, and `src/lib/chronos/costs.ts`'s `addUnitCost` is the
+      only permitted write path (nothing calls `unitCost.create`) — proven live, the demo seed run
+      twice converged on 169 cost lines both times. Pure `src/lib/chronos/margin.ts` (no Prisma
+      import, thor/health.ts posture): `computeUnitMargin`/`summarizeMargins`/`estimateFees`/
+      `marginSchemeVatCents`/`toCents`/`COST_GROUPS`, carrying net margin, margin %, days held,
+      **margin per day of capital held**, and cash tied up with 0-30/30-90/90+ ageing.
+      Margin-scheme VAT is **VAT-inclusive** — `max(0, revenue−acquisition) × rate/(100+rate)`,
+      not `/100`, which overstates it by ~23% — isolated with its own boundary tests.
+      `inventory.ts` is the Prisma half; `unit-stage-config.ts`/`unit-stage-meta.ts` mirror the
+      server/client `stage-config`/`stage-meta` split (`StageDefinition` is global with no `entity`
+      field, hence the twin; entity-scoping it stays quarantined in S31). Marketplace connector
+      interface defined (S29 implements): capabilities as an explicit data object with a
+      drift test, `soldComps: false` everywhere. **Structural fix:** S26's module gate was an early
+      `return`, so a Chronos config block would have been unreachable for chronos-only tenants —
+      now a real `seedCrmConfig`/`seedChronosConfig` dispatch. New generic
+      `npm run db:push:tenant -- --slug <slug>` (`db:push` only ever hit the default DATABASE_URL).
+      Control-plane `Tenant.brandLogoUrl String?` added and threaded through `TenantProfile`; the
+      supplied logo is committed at `public/brands/chronos/logo.png` and `chronos_demo` points at
+      it via the new `npm run tenant:branding` (nothing could change branding post-provision
+      before). Nothing renders it yet — that's S27b. *Exit met:* lint 0 errors · **324 tests** (41 new) ·
+      build clean; seed run twice byte-identical (8 refs / 30 units / 169 cost lines, 12 sold, 4
+      loss-making, 1 return, 7 with real fee lines); WCH-0005's margin hand-checked against an
+      independent computation (fee 14872, cost 85492, VAT 9572, net 17803, 88 days, 202/day — all
+      matched); module boundary verified both ways — `crm_demo` kept 8 stages / 36 fields / 45
+      companies with zero Chronos rows, `chronos_demo` has zero broker vocabulary.
+- [ ] **S27b — Chronos v1: inventory UI** · Sonnet · M
+      Units list (filters per the identity-first `CLAUDE.md` order), unit detail with the margin
+      waterfall + cost-line table + inline add-cost, cockpit KPIs, `src/app/actions/chronos.ts`.
+      Two shared-component refactors confirmed in scope: prop-ify `EnumCell` (it hardcodes
+      `setCompanyEnum`/`EnumField`) and `CustomFieldsSection` (hardcodes `companyId`), plus
+      extending `ConfigEntity` with `INVENTORY_UNIT` across its **three** unsynced sources of truth
+      (`field-config.ts:10`, `actions/field-config.ts:18`'s `VALID_ENTITIES`, and
+      `settings/fields/page.tsx`'s `ENTITIES`). Also the Chronos visual identity: render
+      `brandLogoUrl` in `brand.tsx` with the `splitBrand` wordmark as fallback, and retune the
+      `chronos` realm hue (currently `#7c3aed`/`#a78bfa`) toward the supplied logo's blue-violet
+      with cyan as secondary, both themes. Logo is already committed at
+      `public/brands/chronos/logo.png` and wired on `chronos_demo`, but it is a 1408×768 banner at
+      2.1 MB — optimise it, and cut a wordmark-free square variant for the small sidebar mark.
+      Margin is derived, so it can't be filtered/sorted in Prisma — post-filter in memory, which
+      means `count` and `skip/take` operate on the filtered array.
 - [ ] **S28 — Production launch** · M — separate EU Atlas cluster + backups, separate control DB,
       separate Vercel project; rewrite `mimir-env-guard` for a two-environment world.
 - [ ] **S29 — eBay Sell connector + manual marketplaces** · M

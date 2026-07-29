@@ -140,10 +140,17 @@ const ENUM_FIELDS = {
 
 export type EnumField = "stage" | keyof typeof ENUM_FIELDS;
 
-/** Inline-edit a single enum column (stage / priorité / potentiel) from the table. */
+/**
+ * Inline-edit a single enum column (stage / priorité / potentiel) from the table.
+ *
+ * `field` is a plain string, not EnumField, so this is assignable to EnumCell's
+ * entity-agnostic `action` prop (strictFunctionTypes makes the narrower
+ * signature incompatible, and an inline arrow can't cross the RSC boundary).
+ * Unrecognised fields were already ignored, so nothing changes at runtime.
+ */
 export async function setCompanyEnum(
   id: string,
-  field: EnumField,
+  field: string,
   value: string,
 ): Promise<void> {
   const session = await verifySession();
@@ -154,7 +161,7 @@ export async function setCompanyEnum(
     if (!stageKeys.includes(value)) return;
     next = value;
   } else {
-    const def = ENUM_FIELDS[field];
+    const def = ENUM_FIELDS[field as keyof typeof ENUM_FIELDS];
     if (!def) return;
     if (def.values.includes(value as never)) {
       next = value;

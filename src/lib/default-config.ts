@@ -912,11 +912,17 @@ export interface SeedConfigOptions {
 /**
  * Seed (or refresh) the default config on a tenant DB. Idempotent.
  *
- * Module-scoped: everything below the AI budget is CRM vocabulary — eight
- * French insurance-broker stages, ~30 broker field definitions, broker prompt
- * templates, brand voices and a French cold-email sequence. Planting that in a
- * non-CRM tenant would pollute its DB with another vertical's ontology, which
- * is exactly what D1's "generic ontology, vertical labels" rule forbids.
+ * Module-scoped: each vertical's config is its own function and only runs for a
+ * tenant entitled to it. CRM config is eight French insurance-broker stages,
+ * ~30 broker field definitions, broker prompt templates, brand voices and a
+ * French cold-email sequence; planting that in a non-CRM tenant would pollute
+ * its DB with another vertical's ontology, which is exactly what D1's "generic
+ * ontology, vertical labels" rule forbids.
+ *
+ * S26 expressed that gate as an early `return` after the CRM check, which made
+ * the whole rest of the function CRM-only by position. S27 made that a real
+ * dispatch, because a second vertical's block appended to the end would have
+ * been unreachable for precisely the tenant it exists to serve.
  */
 export async function seedTenantConfig(
   prisma: PrismaClient,
@@ -927,8 +933,11 @@ export async function seedTenantConfig(
   // Universal: every tenant gets an AI spend cap, whatever it sells.
   await upsertAiBudget(prisma);
 
-  if (!hasModule(modules, "crm")) return;
+  if (hasModule(modules, "crm")) await seedCrmConfig(prisma);
+  if (hasModule(modules, "chronos")) await seedChronosConfig(prisma);
+}
 
+async function seedCrmConfig(prisma: PrismaClient): Promise<void> {
   for (const s of DEFAULT_STAGES) {
     const data = {
       label: s.label,
@@ -970,4 +979,112 @@ export async function seedTenantConfig(
       });
     }
   }
+}
+
+// --- Chronos (S27) — the buy / restore / resell inventory vertical -----------
+
+interface UnitStageSeed {
+  key: string;
+  label: string;
+  order: number;
+  accentClass: string;
+  badgeClass: string;
+  dotClass: string;
+  isSold?: boolean;
+  isDead?: boolean;
+}
+
+/**
+ * The unit lifecycle, seeded as DATA (UnitStageDefinition rows) exactly like
+ * the CRM's DEFAULT_STAGES — a tenant renames or reorders these without a
+ * deploy. Keys are generic; only the labels are vertical vocabulary.
+ */
+export const DEFAULT_UNIT_STAGES: UnitStageSeed[] = [
+  { key: "ACQUIRED", label: "Acquise", order: 1, accentClass: "border-t-slate-400", badgeClass: "bg-slate-100 text-slate-700", dotClass: "bg-slate-400" },
+  { key: "IN_WORKSHOP", label: "En atelier", order: 2, accentClass: "border-t-amber-400", badgeClass: "bg-amber-100 text-amber-700", dotClass: "bg-amber-400" },
+  { key: "READY", label: "Prête", order: 3, accentClass: "border-t-sky-400", badgeClass: "bg-sky-100 text-sky-700", dotClass: "bg-sky-400" },
+  { key: "LISTED", label: "En vente", order: 4, accentClass: "border-t-violet-400", badgeClass: "bg-violet-100 text-violet-700", dotClass: "bg-violet-400" },
+  { key: "SOLD", label: "Vendue", order: 5, accentClass: "border-t-emerald-500", badgeClass: "bg-emerald-100 text-emerald-700", dotClass: "bg-emerald-500", isSold: true },
+  { key: "WRITTEN_OFF", label: "Perte", order: 6, accentClass: "border-t-rose-400", badgeClass: "bg-rose-100 text-rose-700", dotClass: "bg-rose-400", isDead: true },
+];
+
+/**
+ * Marketplaces and their fee models. `sync: "manual"` is a first-class state,
+ * not a degraded one — Chrono24, Vinted and LeBonCoin have no public API, so
+ * those units are hand-entered or CSV-imported (S29).
+ *
+ * Fee percentages are a STARTING POINT, not the truth: every marketplace varies
+ * them by category, seller tier and country. A tenant edits these, and from S29
+ * eBay's real fee lines land on the unit directly and supersede the estimate.
+ */
+const DEFAULT_MARKETPLACES = [
+  { key: "ebay", label: "eBay", sync: "api" },
+  { key: "chrono24", label: "Chrono24", sync: "manual" },
+  { key: "vinted", label: "Vinted", sync: "manual" },
+  { key: "leboncoin", label: "LeBonCoin", sync: "manual" },
+];
+
+/**
+ * Metadata for the InventoryUnit columns the detail editor exposes, so a tenant
+ * relabels "SKU" or "Fournisseur" into their own vocabulary without a deploy —
+ * the same config-not-code posture as DEFAULT_NATIVE_COMPANY_FIELDS.
+ *
+ * The sale block (prix, devise, taux de change, régime TVA) is deliberately NOT
+ * here: those fields need cents parsing, an FX rate and a scheme allow-list that
+ * NativeFieldControl has no type for, so they stay hand-rendered.
+ */
+export const DEFAULT_NATIVE_UNIT_FIELDS: FieldSeed[] = [
+  { key: "sku", label: "SKU", type: "text", order: 1, section: "Identité", required: true },
+  { key: "serial", label: "N° de série", type: "text", order: 2, section: "Identité" },
+  { key: "condition", label: "État", type: "text", order: 3, section: "Identité" },
+  { key: "acquiredAt", label: "Date d'acquisition", type: "date", order: 1, section: "Acquisition" },
+  { key: "acquiredVia", label: "Canal d'achat", type: "text", order: 2, section: "Acquisition" },
+  { key: "supplier", label: "Fournisseur", type: "text", order: 3, section: "Acquisition" },
+];
+
+const DEFAULT_FEE_MODEL = {
+  ebay: { finalValuePct: 12.8, fixedCents: 30, paymentPct: 0, regulatoryPct: 0.35 },
+  chrono24: { finalValuePct: 6.5, fixedCents: 0, paymentPct: 2.5, regulatoryPct: 0 },
+  vinted: { finalValuePct: 0, fixedCents: 0, paymentPct: 0, regulatoryPct: 0 },
+  leboncoin: { finalValuePct: 0, fixedCents: 0, paymentPct: 0, regulatoryPct: 0 },
+};
+
+async function seedChronosConfig(prisma: PrismaClient): Promise<void> {
+  for (const s of DEFAULT_UNIT_STAGES) {
+    const data = {
+      label: s.label,
+      order: s.order,
+      accentClass: s.accentClass,
+      badgeClass: s.badgeClass,
+      dotClass: s.dotClass,
+      isSold: s.isSold ?? false,
+      isDead: s.isDead ?? false,
+    };
+    await prisma.unitStageDefinition.upsert({
+      where: { key: s.key },
+      update: data,
+      create: { key: s.key, ...data },
+    });
+  }
+
+  await upsertFields(prisma, "INVENTORY_UNIT", "NATIVE", DEFAULT_NATIVE_UNIT_FIELDS);
+
+  // Empty `update`, like upsertAiBudget: fee percentages, the labour rate and
+  // the VAT scheme are commercial facts the tenant edits, and a re-seed must
+  // never reset them to our guesses.
+  await prisma.chronosConfig.upsert({
+    where: { singleton: "default" },
+    update: {},
+    create: {
+      singleton: "default",
+      baseCurrency: "EUR",
+      marketplaces: DEFAULT_MARKETPLACES as never,
+      feeModel: DEFAULT_FEE_MODEL as never,
+      labourRateCentsPerHour: 3500,
+      toolOverheadPerUnitCents: 0,
+      vatScheme: "MARGIN",
+      vatRatePct: 23,
+      targetMarginPct: 25,
+    },
+  });
 }

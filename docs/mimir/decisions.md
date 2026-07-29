@@ -610,3 +610,70 @@ campaign_pause/bid_adjust) across all three categories** — not three separate 
 the `heimdallr-action-row.tsx` branch count at one; `type` (UI rendering) and `category`
 (autonomy/ledger semantics) are independent axes on `AgentAction`, same as how Odin's
 `directive.set` type spans multiple potential scopes.
+
+---
+
+## 2026-07-26 — S27a: Chronos v1 data model + true-margin math
+
+**S27 split into S27a (data + math) and S27b (UI).** As written, S27 was 7 models + the margin
+library + a connector interface + the full list/detail/cockpit UI + two shared-component refactors
++ a demo seed — past the roadmap's own "split anything beyond M" line (§2). S27a ships the data
+model and the arithmetic, verified by tests and by running the seed twice; S27b builds the UI on
+top. This keeps the margin math provable *before* any UI depends on it, the same rationale that
+already orders S27 ahead of the S29 eBay connector.
+
+**Money is `Int ...Cents` throughout the Chronos block, breaking with both existing precedents.**
+`FinanceEntry.amount` is `Int` whole euros (and is seeded as cents, so `/finances` demo numbers are
+~100× off) and `Campaign.dailyBudget` is `Float` EUR. Neither is a precedent to inherit: this
+vertical's whole point is a margin figure that reconciles to the cent against a marketplace
+statement. `formatCents` was added beside `formatCurrency` in `src/lib/display.ts` rather than
+adding a flag to it — that function pins `maximumFractionDigits: 0` and has 8 call sites whose
+contract must not shift.
+
+**VAT under the second-hand margin scheme is VAT-INCLUSIVE**: `vat = max(0, revenue − acquisition)
+× rate / (100 + rate)`, not `× rate / 100`, which overstates VAT by the rate itself (~23% too much
+at the Irish standard rate). Isolated in `marginSchemeVatCents` with its own boundary tests
+(negative margin → 0, break-even → 0, zero rate → 0) because it is the single easiest thing in this
+domain to get quietly wrong. v1 simplification, stated in the module header: input VAT on
+restoration parts is **not** reclaimable under the margin scheme and no reclaim is modelled.
+Flagged to Nicolas that the customer should confirm the scheme with his accountant before trusting
+the figures for a return — this is not tax advice, and scheme/rate are tenant config.
+
+**`seedTenantConfig`'s module gate became a real dispatch.** S26 expressed it as an early `return`
+after the CRM check, which made everything below CRM-only *by position*. A Chronos block appended
+to the end would have been unreachable for precisely the tenant it exists to serve. The CRM body is
+now `seedCrmConfig(prisma)` and the function dispatches per module. Verified in both directions:
+`crm_demo` still has 8 stages / 36 field defs / 45 companies and got **zero** Chronos rows;
+`chronos_demo` has 6 `UnitStageDefinition`s and its config singleton and **zero** broker vocabulary.
+
+**`UnitCost.@@unique([unitId, dedupeKey])` is the load-bearing constraint**, and `addUnitCost`
+(`src/lib/chronos/costs.ts`) is the only permitted write path — nothing may call
+`prisma.unitCost.create` directly. Without it an S29 marketplace re-sync double-books every fee
+line it already booked. `dedupeKey` is required and never `""` (Mongo uniques treat absent as
+null); manual lines get `manual:<uuid>`. Proven live, not just declared: the demo seed run twice
+converged on 169 cost lines both times.
+
+**New `scripts/db-push-tenant.ts` + `npm run db:push:tenant -- --slug <slug>`.** `npm run db:push`
+only ever targets the single `DATABASE_URL`, which was fine with one demo tenant and wrong with
+two. Provisioning already solved this inline for *new* tenants (`provision-tenant.ts` step 1); this
+is the same mechanic for an existing one. Generic, not Chronos-specific.
+
+**`Tenant.brandLogoUrl String?` added to the control plane** (S26 shipped `brandName` only), same
+reasoning: the pre-auth surfaces that need it render outside `(app)` and have no session. Threaded
+through `TenantProfile`. The supplied Chronos logo is committed at `public/brands/chronos/logo.png`
+and `chronos_demo` now points at it. New `npm run tenant:branding -- --slug <s> [--brand] [--logo]`
+because nothing could change either value after provisioning. **Nothing renders it yet** — S27b
+does that (with the `splitBrand` wordmark as fallback) and retunes the `chronos` realm hue toward
+the logo's blue-violet. Two asset caveats for S27b: the file is a 1408×768 banner at 2.1 MB, so it
+needs optimising and a wordmark-free square crop for the small sidebar mark.
+
+**Connector interface defined now, implemented S29** (`src/lib/chronos/connectors/`). Unlike
+Freyja's optional-method-presence check, capabilities are an explicit data object — the settings UI
+must render "Chrono24 : saisie manuelle" without instantiating behaviour — with a registry test
+asserting the two can never drift. `soldComps: false` on every provider and expected to stay that
+way: eBay's Marketplace Insights API is Limited Release and denied to non-major-partners, so
+asking prices must never be rendered as sold comps.
+
+**Deliberately cut from v1:** `Tool` (a flat `toolOverheadPerUnitCents` covers it), `WorkOrder`
+(its real payoff is Hermes listing copy; labour is a `LABOUR` line of hours × config rate), and
+`PricePoint`/`RefPriceStat`/`MarketAlert` (S30). Seven models is a shippable session.
