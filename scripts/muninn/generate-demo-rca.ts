@@ -17,6 +17,9 @@ import {
   type RcaSectionResult,
   type RcaTemplateSection,
 } from "@/lib/muninn/draft";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S16 dev verification script — exercises the real Muninn pipeline in-process
 // (same library calls the Inngest job makes, without the queue) against

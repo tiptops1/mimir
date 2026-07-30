@@ -4,6 +4,9 @@ import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
 import { checkAndReserveIndexSlot, indexBudgetSnapshot } from "../../src/lib/rag/index-budget";
 import { ensureVectorIndex, isVectorIndexReady } from "../../src/lib/rag/vector-index";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // One-off backfill for tenants provisioned before S12 added vector-index
 // provisioning to scripts/provision-tenant.ts (crm_demo). Not part of any

@@ -6,6 +6,9 @@ import {
   verifyUnsubscribeToken,
 } from "../src/lib/outreach/unsubscribe";
 import { canEnroll } from "../src/lib/outreach/enroll";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 /**
  * Opt-out end-to-end probe: real HTTP against the local dev server

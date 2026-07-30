@@ -3,6 +3,9 @@ import { pathToFileURL } from "node:url";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { crawlSite } from "../../src/lib/leadone/crawler";
 import { takeQuota } from "../../src/lib/leadone/quota";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 3 — email / phone / speciality extraction by politely
 // crawling the candidate's own website (homepage + contact + mentions

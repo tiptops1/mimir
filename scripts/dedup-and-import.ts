@@ -15,6 +15,9 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 const prisma = new PrismaClient();
 const DRY = process.argv.includes("--dry");

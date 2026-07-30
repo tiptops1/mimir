@@ -7,6 +7,9 @@ import {
 } from "../src/lib/outreach/reply-sync";
 import type { OutgoingEmail } from "../src/lib/gmail-send";
 import type { GoogleOAuthClient } from "../src/lib/google-oauth";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 /**
  * Reply/bounce sync + circuit-breaker probe (fake Gmail, real tenant DB).

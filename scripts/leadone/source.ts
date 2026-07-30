@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { PrismaClient } from "@prisma/client";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 1 — sourcing from recherche-entreprises.api.gouv.fr (free, no
 // key). Pulls every ACTIVE unité légale under the configured NAF codes

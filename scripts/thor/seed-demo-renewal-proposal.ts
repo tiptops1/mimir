@@ -14,6 +14,9 @@ import {
   THOR_RENEWAL_CATEGORY,
   THOR_RENEWAL_PROMPT_KEY,
 } from "@/lib/thor/renewal";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S22b one-off UI verification aid (heimdallr/seed-demo-proposal.ts twin) —
 // leaves ONE real PROPOSED thor.renewal action in the inbox for manual

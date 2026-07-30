@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { discoverWebsiteFree } from "../src/lib/enrich";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 // Free, keyless website enrichment for companies that don't have a siteWeb yet.
 // Uses Bing HTML + DuckDuckGo Lite and only saves a domain that strongly

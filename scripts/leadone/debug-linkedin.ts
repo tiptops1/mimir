@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // One-off inspection helper: why didn't the LinkedIn verification stage spend
 // any SerpApi quota? Checks the quota row, the last few runs' stage-5 stats,

@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { seedTenantConfig } from "../src/lib/default-config";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 // Seed the default tenant config (stages / field defs / starter sequence)
 // against DATABASE_URL. Idempotent — safe to re-run. The seed data itself

@@ -17,6 +17,9 @@ import {
   renderBrandVoiceBlock,
   type ContentSlotInput,
 } from "@/lib/bragi/draft";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S18 dev verification script — exercises the real Bragi pipeline in-process
 // (same library calls the Inngest job makes, without the queue) against

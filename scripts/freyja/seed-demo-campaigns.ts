@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { runFreyjaSyncForTenant } from "@/lib/freyja/sync";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S25 — Freyja demo seed: 8 demo-provider campaigns for crm_demo (courtier
 // flavor, Google/Meta-style mix encoded as channel + config.network), the

@@ -44,20 +44,24 @@ the memo's rate snapshot is dated 2026-07 and explicitly says verify before quot
 
 ## 0.5 Environment model — read this before anything else
 
-Two independent environments from now on:
+> **Revised again 2026-07-30 at S28.** This started as a two-environment table. Mimir now has a
+> production environment of its own (the Chronos customer), so it is three. The operational
+> detail lives in **`docs/mimir/ops.md`**; this table is the map.
 
-| | **CRM baseline (prod)** | **Mimir (new)** |
-|---|---|---|
-| Repo | the baseline repo | new repo, seeded from the baseline repo @ `719f842` |
-| Atlas | `crm-railway` cluster (legacy name), prod data | **new project/cluster**, no prod data, ever |
-| Host | existing Vercel project | **new Vercel project** |
-| Crons | cron-job.org, 4 routes ✅ verified scheduled | **new schedules, new `CRON_SECRET`** |
-| Secrets | existing `.env` | **all fresh** — never reuse `ENCRYPTION_KEY`, `SESSION_SECRET`, `CRON_SECRET` |
-| Live user | the baseline's original tenant | none — demo tenants only |
+| | **CRM baseline (prod)** | **Mimir dev** | **Mimir prod** *(S28)* |
+|---|---|---|---|
+| Repo | the baseline repo | this repo, seeded from the baseline @ `719f842` | this repo, same `main` |
+| Atlas | `crm-railway` (legacy name), prod data | project *mimir*, cluster `mimir-dev` (M0, EU) | **its own Atlas project** + M0 cluster (EU) |
+| Host | existing Vercel project | local only | **its own Vercel project**, own domain |
+| Crons | cron-job.org, 4 routes ✅ | none | own schedules, own `CRON_SECRET` |
+| Secrets | existing `.env` | dev `.env` | Vercel env vars, **all fresh** |
+| Live user | the baseline's original tenant | none — demo tenants only | **the Chronos customer** |
+| `MIMIR_ENV` | n/a | `dev` (default) | `prod` |
 
-**What this buys:** a real staging environment for the first time. The brief's standing constraint
-("local `.env` points at prod Atlas — every script run is production") **no longer applies in the
-Mimir repo**. It still applies in the baseline repo.
+**What the dev/prod split buys:** a real staging environment. The brief's standing constraint
+("local `.env` points at prod Atlas — every script run is production") **does not apply to Mimir
+dev**. It still applies in the baseline repo, and it now applies to Mimir prod too — which is why
+S28 put the guards in code rather than trusting the rule to be remembered.
 
 **What this costs — accept it consciously:** the D4/D5 reuse story now means *inheriting a copy* of
 `/inbox`, `AuditLog`, the outreach ledger and the DB router, not extending the live ones. The two

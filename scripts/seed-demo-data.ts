@@ -5,6 +5,9 @@ import { decrypt } from "../src/lib/crypto";
 import { seedTenantConfig } from "../src/lib/default-config";
 import { runComplianceSnapshotForTenant } from "../src/lib/forseti/snapshot";
 import { runHealthSnapshotForTenant } from "../src/lib/thor/snapshot";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 // S6: give a tenant (default crm_demo) realistic French insurance-broker
 // (courtier) prospect data, so it stops being the empty shell tenant:provision

@@ -15,6 +15,9 @@ import {
   THOR_RENEWAL_CATEGORY,
   THOR_RENEWAL_PROMPT_KEY,
 } from "@/lib/thor/renewal";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S22b dev verification script — exercises the real Thor renewal pipeline
 // in-process (same library calls the Inngest job makes, without the queue)

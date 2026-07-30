@@ -12,6 +12,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { fetchUniteLegale } from "../src/lib/enrich";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 const prisma = new PrismaClient();
 const DRY = process.argv.includes("--dry");

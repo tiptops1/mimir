@@ -13,17 +13,12 @@ if (process.env.NODE_ENV !== "production") {
   globalForTenants.tenantClients = clients;
 }
 
-/**
- * Phase 0 single-tenant escape hatch for SESSION-LESS server contexts (the cron
- * route, CLI sync scripts): returns the tenant-#1 client from DATABASE_URL.
- * Phase 3 replaces this with per-tenant routing of ingestion — until then,
- * ingestion stays single-tenant by design (not a regression).
- */
-export function getTenant1Prisma(): PrismaClient {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
-  return getTenantPrisma(url);
-}
+// S28 removed `getTenant1Prisma()`, the Phase 0 single-tenant escape hatch: it
+// resolved a client straight from DATABASE_URL, bypassing the control plane. It
+// had no callers left, and with a production cluster in existence a function
+// that reads a raw env var into a live client is precisely the shape of an
+// accidental cross-environment write. Session-less contexts go through
+// listActiveTenants() (src/lib/tenant-cron.ts) instead.
 
 /** Resolve (and cache) the tenant-data client for a given connection string. */
 export function getTenantPrisma(connectionString: string): PrismaClient {

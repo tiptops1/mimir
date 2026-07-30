@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorized } from "@/lib/cron-auth";
 import { inngest, jobsEnabled } from "@/lib/jobs/client";
-import { controlPrisma } from "@/lib/control-db";
+import { requireTenantParam } from "@/lib/route-tenant";
 
 // S4 proof-job trigger — the cron-job.org-style external entry point:
 //   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
 //     "https://<app>/api/jobs/proof?failOnce=1"
-// Query params: tenant (slug, default crm_demo), failOnce=1, failAlways=1.
+// Query params: tenant (slug, REQUIRED since S28), failOnce=1, failAlways=1.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,14 +23,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const slug = req.nextUrl.searchParams.get("tenant") ?? "crm_demo";
-  const tenant = await controlPrisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, slug: true },
-  });
-  if (!tenant) {
-    return NextResponse.json({ error: `Unknown tenant: ${slug}` }, { status: 404 });
-  }
+  const lookup = await requireTenantParam(req);
+  if (!lookup.ok) return lookup.response;
+  const { tenant } = lookup;
 
   const { ids } = await inngest.send({
     name: "system/proof.requested",

@@ -65,37 +65,20 @@ npm run dev         # http://localhost:3000
 
 Log in with the account created by `tenant:provision`.
 
-## Deployment — GitHub → Vercel
+## Deployment
 
-1. **Push to GitHub**
-   ```bash
-   git remote add origin https://github.com/<you>/<repo>.git
-   git push -u origin main
-   ```
-2. **Import in Vercel** → "Add New Project" → pick this repo.
-   Vercel auto-detects Next.js; `vercel.json` provides minimal config.
-3. **Set environment variables** in the Vercel project → *Settings → Environment Variables*:
-   - `DATABASE_URL` — your MongoDB Atlas URI
-   - `CONTROL_DATABASE_URL` — control-plane MongoDB URI
-   - `SESSION_SECRET` — a fresh random secret
-   - `ENCRYPTION_KEY` — AES-256-GCM key for encrypted secrets
-   - `APP_URL` — the Vercel domain (e.g. `https://your-project.vercel.app`)
-   - `CRON_SECRET` — bearer token for cron endpoints
-   - All other env vars from `.env.example`
-4. **Allow Atlas network access** from anywhere (`0.0.0.0/0`) so Vercel can connect.
-5. **First deploy** builds and starts automatically. Run the one-off setup locally (pointed at the
-   prod `DATABASE_URL`/`CONTROL_DATABASE_URL`):
-   ```bash
-   npm run db:push:control
-   npm run db:push
-   npm run tenant:provision
-   npm run config:seed
-   ```
-6. **Set up cron-job.org** to hit the cron endpoints on the Vercel domain:
-   - `/api/cron` (sync) — every 4 hours
-   - `/api/cron/enrich` — every hour
-   - `/api/cron/advance` — every 4 hours
-   - `/api/cron/outreach` — hourly, Mon-Fri 08:00-18:00 Europe/Paris
+**See [`docs/mimir/ops.md`](docs/mimir/ops.md)** — the operations runbook. It covers standing up an
+environment (Atlas project, Vercel project, fresh secrets), the free-tier constraints that shape
+how this is operated, provisioning the first tenant, the full cron schedule, backups and restores,
+and what each safety guard will refuse.
+
+Two things worth knowing before you open it:
+
+- **`MIMIR_ENV` declares which environment a process is talking to** (`dev` by default, `prod`
+  explicitly). Data-touching scripts read it: production operations require an explicit `--prod`
+  flag, and demo seeders refuse to run against production at all.
+- **Run `npm run env:check` first.** It reports the resolved environment, whether every required
+  variable is present, and the DB hostnames — without printing a single secret.
 
 > The build command (`prisma generate && next build`) and `postinstall` (`prisma generate`) are
 > already configured in `package.json`.

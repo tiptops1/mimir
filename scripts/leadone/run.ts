@@ -7,6 +7,9 @@ import { runEnrichWebsite } from "./enrich-website";
 import { runEnrichContact } from "./enrich-contact";
 import { runValidate } from "./validate";
 import { runVerifyLinkedin } from "./verify-linkedin";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One orchestrator — the single entry point GitHub Actions runs daily.
 // Stages run sequentially under one global time budget (LEADONE_MAX_MINUTES,

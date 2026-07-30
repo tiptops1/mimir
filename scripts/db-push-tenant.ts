@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { execSync } from "node:child_process";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 /**
  * Push the tenant schema against ONE named tenant DB.

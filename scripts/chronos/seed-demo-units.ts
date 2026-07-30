@@ -7,6 +7,9 @@ import { addUnitCost } from "../../src/lib/chronos/costs";
 import { loadUnitMargins } from "../../src/lib/chronos/inventory";
 import { summarizeMargins } from "../../src/lib/chronos/margin";
 import { formatCents } from "../../src/lib/display";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 /**
  * Chronos (S27) demo inventory — 30 units across the whole lifecycle.

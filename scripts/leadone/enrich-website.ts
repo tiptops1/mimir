@@ -2,6 +2,9 @@ import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { discoverWebsiteQuotaed } from "../../src/lib/leadone/search";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 2 — website discovery for SOURCED candidates, gated by the
 // LeadOneQuota ledger (Google CSE 100/day, then Exa.ai 1000/mo). One search

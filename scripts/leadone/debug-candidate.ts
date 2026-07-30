@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // One-off inspection helper: shows a candidate's state and any Company rows
 // that could trip the promotion dedupe guards. Usage:

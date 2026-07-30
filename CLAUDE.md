@@ -4,8 +4,12 @@
 
 Mimir is an **agentic platform** built on top of an inherited multi-tenant, config-driven CRM
 baseline (companies/contacts/pipeline/tasks/deals/finances, plus a **Lead One** lead-gen pipeline
-and a cold-outreach engine). There is **no production tenant in this repo** — every environment is
-staging/demo. See `docs/CRM-BASELINE-BRIEF.md` for what the inherited baseline actually is.
+and a cold-outreach engine). See `docs/CRM-BASELINE-BRIEF.md` for what the inherited baseline
+actually is.
+
+**Since S28 there is a production environment** (the Chronos customer) on its own Atlas project,
+control DB and Vercel project. Your local `.env` is a *dev* environment and must stay one —
+`docs/mimir/ops.md` is the runbook.
 
 **`crm_demo`** is the default dev/demo tenant, seeded with synthetic French-broker (courtier)
 data — 20 companies across all 8 pipeline stages, contacts, deals, activities, tasks, finance
@@ -19,6 +23,7 @@ feature work and demos.
 - `docs/CRM-BASELINE-BRIEF.md` — the inherited CRM/Lead One/Outreach structure: architecture, data
   model, feature surface, gotchas
 - `docs/architecture.md` — the multi-tenant target design + the decisions behind it
+- `docs/mimir/ops.md` — the operations runbook: environments, guards, provisioning, crons, backups
 - `README.md` / `INTEGRATIONS.md` — the inherited CRM app + its integrations, how to run it
 
 ## Rules that protect the goal (don't violate these)
@@ -29,9 +34,11 @@ feature work and demos.
   `tenantId → connection`; never hardcode a DB/connection. Control plane (tenants, users,
   billing) = **Prisma**; per-tenant CRM data = **flexible documents** (so self-serve custom
   fields need no migration).
-- **Never point this repo at the prod cluster.** There's no live user here — the constraint that
-  replaces "don't break the live app." Run the `mimir-env-guard` skill before anything
-  data-touching.
+- **A shell's `.env` must match the environment the command intends.** `MIMIR_ENV` declares it
+  (`dev` by default). Prod operations require an explicit `--prod`; demo seeders refuse to run
+  against prod at all. Run the `mimir-env-guard` skill before anything data-touching, and
+  `npm run env:check` when in any doubt. Never edit a dev `.env` to point at the prod cluster
+  "just to check something" — that is the one manoeuvre every guard exists to stop.
 - **One bridge for side effects.** From Heimdallr (S7) on, every side-effectful agent action goes
   through the ledger — no module ships its own approval flow.
 

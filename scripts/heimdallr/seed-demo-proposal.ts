@@ -3,6 +3,9 @@ import { PrismaClient as ControlClient } from "../../src/generated/control";
 import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
 import { proposeAction } from "../../src/lib/heimdallr/ledger";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // One-off demo aid for S8 — creates a single hand-inserted PROPOSED AgentAction
 // against a real crm_demo company, so the approval inbox has something to

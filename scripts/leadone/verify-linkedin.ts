@@ -2,6 +2,9 @@ import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { verifyLinkedinProfile } from "../../src/lib/leadone/linkedin";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 5 — LinkedIn profile verification for dirigeants of already
 // VALIDATED candidates (the ones actually shown in the /leadone review queue).

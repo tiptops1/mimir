@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { KNOWLEDGE_PACK } from "./knowledge-pack";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S14b — seed the demo support knowledge pack through the REAL Mimisbrunnr
 // ingest route (chunk -> health classify -> embed -> store). Idempotent: the

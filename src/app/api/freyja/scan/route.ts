@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorized } from "@/lib/cron-auth";
 import { inngest, jobsEnabled } from "@/lib/jobs/client";
-import { controlPrisma } from "@/lib/control-db";
+import { requireTenantParam } from "@/lib/route-tenant";
 
 // S25 — Freyja decision-scan trigger (thor/scan twin). Aggregates trailing
 // insight per campaign, flags candidates, fans out one decision job each.
@@ -25,14 +25,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const slug = req.nextUrl.searchParams.get("tenant") ?? "crm_demo";
-  const tenant = await controlPrisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, slug: true },
-  });
-  if (!tenant) {
-    return NextResponse.json({ error: `Unknown tenant: ${slug}` }, { status: 404 });
-  }
+  const lookup = await requireTenantParam(req);
+  if (!lookup.ok) return lookup.response;
+  const { tenant } = lookup;
 
   const { ids } = await inngest.send({
     name: "freyja/campaign.scan.requested",

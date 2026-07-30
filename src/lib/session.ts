@@ -14,16 +14,35 @@ export interface SessionPayload {
 }
 
 const COOKIE_NAME = "session";
-const secret = process.env.SESSION_SECRET;
-const encodedKey = new TextEncoder().encode(secret);
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
+/**
+ * Signing key for session JWTs.
+ *
+ * Resolved per call, and it THROWS when SESSION_SECRET is absent. It used to be
+ * `new TextEncoder().encode(process.env.SESSION_SECRET)` at module load, which
+ * silently encodes `undefined` into a valid-looking key: every sign succeeds,
+ * every verify fails, and the only symptom is that the whole app bounces
+ * everyone to /login with nothing in the logs. That is a plausible first day on
+ * a fresh Vercel project, so it must be loud (see docs/mimir/ops.md).
+ */
+function signingKey(): Uint8Array {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error(
+      "SESSION_SECRET is not set — session JWTs cannot be signed or verified. " +
+        "Set it in this environment (see .env.example) before serving traffic.",
+    );
+  }
+  return new TextEncoder().encode(secret);
+}
 
 export async function encrypt(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(encodedKey);
+    .sign(signingKey());
 }
 
 export async function decrypt(
@@ -31,11 +50,13 @@ export async function decrypt(
 ): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, encodedKey, {
+    const { payload } = await jwtVerify(token, signingKey(), {
       algorithms: ["HS256"],
     });
     return payload as SessionPayload;
-  } catch {
+  } catch (e) {
+    // A misconfigured environment must not masquerade as a bad token.
+    if (e instanceof Error && e.message.startsWith("SESSION_SECRET")) throw e;
     return null;
   }
 }

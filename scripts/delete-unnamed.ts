@@ -11,6 +11,9 @@
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 const prisma = new PrismaClient();
 const DRY = process.argv.includes("--dry");

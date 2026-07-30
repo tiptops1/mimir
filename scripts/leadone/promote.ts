@@ -2,6 +2,9 @@ import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { promoteCandidate } from "../../src/lib/leadone/promote";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 5 — batch promotion CLI. Day-to-day promotion happens in the
 // /leadone review queue (human approves); this wrapper exists for bulk moves

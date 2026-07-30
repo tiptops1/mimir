@@ -10,6 +10,9 @@ import {
 } from "../src/lib/outreach/business-days";
 import type { OutgoingEmail } from "../src/lib/gmail-send";
 import type { GoogleOAuthClient } from "../src/lib/google-oauth";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 /**
  * Outreach engine probe — runs the WHOLE send pipeline against the real tenant

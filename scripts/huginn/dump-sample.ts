@@ -2,6 +2,9 @@ import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { HUGINN_CATEGORY } from "../../src/lib/huginn/draft";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S14b dev helper — dump one drafted proposal + event/quarantine audit to a
 // UTF-8 file (console is cp1252; never print French bodies).

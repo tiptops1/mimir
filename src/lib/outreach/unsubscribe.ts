@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { appUrl } from "@/lib/app-url";
 
 // Stateless unsubscribe tokens for the cold-email opt-out link (RGPD). Token =
 // base64url("tenantId.enrollmentId.HMAC(payload)") — the public route can
@@ -52,9 +53,8 @@ export function verifyUnsubscribeToken(
 
 /** Absolute opt-out URL for one enrollment (goes in the mail footer + header). */
 export function unsubscribeUrl(tenantId: string, enrollmentId: string): string {
-  const base = process.env.APP_URL || "http://localhost:3000";
   const token = mintUnsubscribeToken(tenantId, enrollmentId);
-  return `${base.replace(/\/$/, "")}/api/outreach/unsubscribe?t=${token}`;
+  return `${appUrl()}/api/outreach/unsubscribe?t=${token}`;
 }
 
 /** The plain-text footer appended to every outreach email body. */

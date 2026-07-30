@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { authorized } from "@/lib/cron-auth";
 import { inngest, jobsEnabled } from "@/lib/jobs/client";
-import { controlPrisma } from "@/lib/control-db";
+import { requireTenantParam } from "@/lib/route-tenant";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { decrypt } from "@/lib/crypto";
 import { sha256 } from "@/lib/rag/classify";
@@ -42,14 +42,9 @@ export async function POST(req: NextRequest) {
   }
   const { title, text, sourceType } = parsed.data;
 
-  const slug = req.nextUrl.searchParams.get("tenant") ?? "crm_demo";
-  const tenant = await controlPrisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, slug: true, connectionString: true },
-  });
-  if (!tenant) {
-    return NextResponse.json({ error: `Unknown tenant: ${slug}` }, { status: 404 });
-  }
+  const lookup = await requireTenantParam(req);
+  if (!lookup.ok) return lookup.response;
+  const { tenant } = lookup;
   const prisma = getTenantPrisma(decrypt(tenant.connectionString));
 
   // Idempotent re-ingest: same content (by checksum) that isn't FAILED is a

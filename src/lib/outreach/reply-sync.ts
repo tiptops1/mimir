@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { GoogleOAuthClient } from "@/lib/google-oauth";
 import { isAutomatedSender } from "@/lib/email-sync";
 import { sendGmail } from "@/lib/gmail-send";
+import { appUrl } from "@/lib/app-url";
 
 // Stop-on-reply + bounce detection for the OUTREACH inbox. Deliberately NOT the
 // heavy runGmailSync pipeline (that would turn every prospect reply into
@@ -236,7 +237,7 @@ export async function runOutreachReplySync(
 
     // A hot reply is worth minutes, not the daily digest — ping the MAIN box.
     if (main) {
-      const base = process.env.APP_URL || "http://localhost:3000";
+      const base = appUrl();
       try {
         const doSend = opts.send ?? sendGmail;
         await doSend(main.client, {

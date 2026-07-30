@@ -6,6 +6,9 @@ import { PrismaClient as ControlClient } from "../src/generated/control";
 import { encrypt } from "../src/lib/crypto";
 import { checkAndReserveIndexSlot } from "../src/lib/rag/index-budget";
 import { ensureVectorIndex } from "../src/lib/rag/vector-index";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 /**
  * Provision a NEW tenant: create its isolated data DB on the cluster, register

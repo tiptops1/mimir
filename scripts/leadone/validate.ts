@@ -2,6 +2,9 @@ import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { isValidated, scoreCandidate, validateEmail } from "../../src/lib/leadone/validate";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Lead One stage 4 — validation & scoring of ENRICHED_CONTACT candidates.
 // Free in-process checks only (syntax + DNS MX). Deterministic on the data we

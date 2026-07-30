@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 // Create the MongoDB Atlas Search indexes that power the global search bar.
 // Run once (idempotent) against the Atlas cluster — after a schema/field change

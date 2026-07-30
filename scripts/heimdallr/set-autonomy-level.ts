@@ -2,6 +2,9 @@ import "dotenv/config";
 import { PrismaClient as ControlClient } from "../../src/generated/control";
 import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // Heimdallr helper — set an autonomy category's level (seeds leave every
 // category at 0 = off, so nothing agentic runs until turned on explicitly).

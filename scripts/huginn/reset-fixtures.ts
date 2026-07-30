@@ -2,6 +2,9 @@ import "dotenv/config";
 import { PrismaClient as ControlClient } from "../../src/generated/control";
 import { PrismaClient as TenantClient, type Prisma } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S14b — re-drive helper: UNSET huginnStatus/huginnProcessedAt on fixture
 // Activities (messageId "fixture:*") so the next scan picks them up again

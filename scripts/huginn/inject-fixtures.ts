@@ -3,6 +3,9 @@ import { PrismaClient as ControlClient } from "../../src/generated/control";
 import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
 import { SAMPLE_INBOX } from "./sample-inbox";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S14b — inject SAMPLE_INBOX fixtures as inbound EMAIL Activities so the
 // Huginn draft pipeline can be exercised without a live Gmail inbox.

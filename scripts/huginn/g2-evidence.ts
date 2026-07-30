@@ -9,6 +9,9 @@ import {
   partitionByVerdict,
 } from "../../src/lib/rag/classify";
 import { SAMPLE_INBOX, CORPUS_STATS, type InboundEmail } from "./sample-inbox";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // G2 evidence — quantify what a "typical month" of client email contains for
 // the platform's assumed vertical (multi-line FR insurance brokerage), and

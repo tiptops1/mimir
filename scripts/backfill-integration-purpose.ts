@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient as ControlClient } from "../src/generated/control";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 /**
  * One-time backfill after adding Integration.purpose (outreach WP1): rows

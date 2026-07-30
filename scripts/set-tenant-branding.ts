@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient as ControlClient } from "../src/generated/control";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 /**
  * Set an EXISTING tenant's shell branding.

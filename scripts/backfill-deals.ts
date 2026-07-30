@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { statusForStage } from "../src/lib/deals";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 // One-time, idempotent backfill: give every company a PRIMARY deal carrying its
 // current pipeline stage, so the new Deal layer is consistent with the existing

@@ -1,5 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { refuseInProd } from "../lib/guard";
+
+refuseInProd();
 
 // S14b dev helper — inject one clearly non-support inbound email (vendor
 // newsletter) to exercise the Haiku not_support branch. Idempotent.

@@ -17,6 +17,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { discoverWebsiteFree, scrapeSiteContacts } from "../src/lib/enrich";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 const prisma = new PrismaClient();
 const DRY = process.argv.includes("--dry");

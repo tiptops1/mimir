@@ -4,6 +4,9 @@ import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../../src/lib/crypto";
 import { evaluateGraduation } from "../../src/lib/heimdallr/ledger";
 import { listGraduationCandidates } from "../../src/lib/heimdallr/queries";
+import { assertProdAllowed } from "../lib/guard";
+
+assertProdAllowed();
 
 // S15 — manual graduation sweep. Not wired to a cron (no Inngest cron infra
 // exists for any Heimdallr sweep yet, same parked status as sweepExpired /

@@ -1,6 +1,9 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient as ControlClient } from "../src/generated/control";
+import { assertProdAllowed } from "./lib/guard";
+
+assertProdAllowed();
 
 /**
  * Add (or update) a login account in the control plane and attach it to a tenant.

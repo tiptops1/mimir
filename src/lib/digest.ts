@@ -3,14 +3,13 @@ import { getNotificationSummary } from "./notifications";
 import type { GoogleOAuthClient } from "./google-oauth";
 import { sendGmail } from "./gmail-send";
 import { getTenantConfig } from "./tenant-config";
+import { appUrl } from "./app-url";
 
 // Daily email digest: "X prospects à relancer / Y tâches aujourd'hui", emailed to
 // the owner's own mailbox via the connected Gmail account. Guarded by a per-day
 // cursor (SyncCursor "digest") so the 4-hourly cron sends it at most once a day.
 
 const CURSOR = "digest";
-const APP_URL =
-  process.env.APP_URL || "http://localhost:3000";
 
 function todayKey(d = new Date()): string {
   return d.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
@@ -62,7 +61,7 @@ export async function sendDailyDigest(
     "À traiter en priorité :",
     ...summary.items.map((it) => `- ${it.label} (${it.sub})`),
     "",
-    `Agir maintenant : ${APP_URL}/todo`,
+    `Agir maintenant : ${appUrl()}/todo`,
     "",
     "— Mimir",
   ].join("\n");

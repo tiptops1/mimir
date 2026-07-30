@@ -3,6 +3,9 @@ import { PrismaClient as ControlClient } from "../src/generated/control";
 import { PrismaClient as TenantClient } from "@prisma/client";
 import { decrypt } from "../src/lib/crypto";
 import { extractInsight, aiEnabled } from "../src/lib/ai-extract";
+import { refuseInProd } from "./lib/guard";
+
+refuseInProd();
 
 // Probe: runs the EXACT Gemini path the cron uses (extractInsight) on a
 // synthetic prospect meeting. No CRM data mutated — it just proves the
