@@ -22,7 +22,33 @@ export interface ChartDatum {
   href?: string;
 }
 
-const AXIS = { fontSize: 12, fill: "#64748b" };
+/*
+ * Recharts renders colors as SVG presentation attributes, which resolve `var()`
+ * — so the design tokens reach the chart the same way they reach everything
+ * else, and dark mode stays a free token swap (C4). The primary series takes
+ * the REALM hue: charts in Trésor glow emerald, in Chasse cyan, with no
+ * per-page chart code. Data-supplied colors (stage/priority hues from
+ * StageDefinition.badgeClass' sibling STAGE_HEX) still win — those are data.
+ */
+/* --muted, not --faint: axis labels are data a user reads, and --faint on the
+ * dark card is only 3.2:1. --muted clears 4.5:1 in both themes (4.9 / 6.3). */
+const AXIS = { fontSize: 12, fill: "var(--muted)" };
+
+/** Realm-tinted hover band behind the focused category. */
+const CURSOR = { fill: "color-mix(in srgb, var(--realm) 8%, transparent)" };
+
+const TOOLTIP = {
+  contentStyle: {
+    borderRadius: 8,
+    border: "1px solid var(--border)",
+    background: "var(--card)",
+    boxShadow: "var(--shadow-lg)",
+    fontSize: 12,
+  },
+  labelStyle: { color: "var(--foreground)" },
+} as const;
+
+const LEGEND = { fontSize: 12, color: "var(--muted)" };
 
 /** Shared hook: navigate to a datum's href on click, if it has one. */
 function useDrill() {
@@ -46,17 +72,10 @@ export function VerticalBars({ data }: { data: ChartDatum[] }) {
           height={70}
         />
         <YAxis tick={AXIS} allowDecimals={false} />
-        <Tooltip
-          cursor={{ fill: "rgba(79,70,229,0.06)" }}
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            fontSize: 12,
-          }}
-        />
+        <Tooltip cursor={CURSOR} {...TOOLTIP} />
         <Bar dataKey="value" radius={[6, 6, 0, 0]}>
           {data.map((d, i) => (
-            <Cell key={i} fill={d.color ?? "#4f46e5"} />
+            <Cell key={i} fill={d.color ?? "var(--realm)"} />
           ))}
         </Bar>
       </BarChart>
@@ -82,14 +101,7 @@ export function HorizontalBars({ data }: { data: ChartDatum[] }) {
           tick={AXIS}
           width={120}
         />
-        <Tooltip
-          cursor={{ fill: "rgba(79,70,229,0.06)" }}
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            fontSize: 12,
-          }}
-        />
+        <Tooltip cursor={CURSOR} {...TOOLTIP} />
         <Bar
           dataKey="value"
           radius={[0, 6, 6, 0]}
@@ -97,7 +109,7 @@ export function HorizontalBars({ data }: { data: ChartDatum[] }) {
           onClick={clickable ? drill : undefined}
         >
           {data.map((d, i) => (
-            <Cell key={i} fill={d.color ?? "#4f46e5"} />
+            <Cell key={i} fill={d.color ?? "var(--realm)"} />
           ))}
         </Bar>
       </BarChart>
@@ -124,17 +136,22 @@ export function DualBars({ data }: { data: DualDatum[] }) {
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
         <XAxis dataKey="name" tick={AXIS} interval={0} />
         <YAxis tick={AXIS} allowDecimals={false} />
-        <Tooltip
-          cursor={{ fill: "rgba(79,70,229,0.06)" }}
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            fontSize: 12,
-          }}
+        <Tooltip cursor={CURSOR} {...TOOLTIP} />
+        <Legend iconType="circle" wrapperStyle={LEGEND} />
+        {/* Won/lost is semantic, not realm — outcome color must not drift with
+            the realm you happen to be standing in. */}
+        <Bar
+          dataKey="won"
+          name="Gagnés"
+          fill="var(--success)"
+          radius={[6, 6, 0, 0]}
         />
-        <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="won" name="Gagnés" fill="#10b981" radius={[6, 6, 0, 0]} />
-        <Bar dataKey="lost" name="Perdus" fill="#fb7185" radius={[6, 6, 0, 0]} />
+        <Bar
+          dataKey="lost"
+          name="Perdus"
+          fill="var(--danger)"
+          radius={[6, 6, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -158,20 +175,11 @@ export function Donut({ data }: { data: ChartDatum[] }) {
           onClick={clickable ? drill : undefined}
         >
           {data.map((d, i) => (
-            <Cell key={i} fill={d.color ?? "#4f46e5"} />
+            <Cell key={i} fill={d.color ?? "var(--realm)"} />
           ))}
         </Pie>
-        <Legend
-          iconType="circle"
-          wrapperStyle={{ fontSize: 12 }}
-        />
-        <Tooltip
-          contentStyle={{
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            fontSize: 12,
-          }}
-        />
+        <Legend iconType="circle" wrapperStyle={LEGEND} />
+        <Tooltip {...TOOLTIP} />
       </PieChart>
     </ResponsiveContainer>
     {clickable && (

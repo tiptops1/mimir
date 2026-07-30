@@ -207,6 +207,70 @@
 }
 
 /*
+ * C4 atmosphere — the PageHeader aura (src/components/page-header.tsx).
+ * One radial gradient in the realm hue, parked off the top-right corner so it
+ * never sits behind the title, and clipped by the header's overflow-hidden.
+ * Mixed from --realm rather than --realm-subtle because that token is a solid
+ * near-white in light themes (#ecfdf5 &c.) — a gradient from it over the white
+ * card is literally invisible, while color-mix gives the same faintness in both
+ * themes from one declaration.
+ *
+ * This carries the ONE sanctioned ambient loop (mimir-cosmos law 3): a slow
+ * drift, transform/opacity only so it stays on the compositor (the blur is
+ * rasterised once into the layer, not re-run per frame), well away from the
+ * text-dense surfaces the law rules out. Reduced motion removes it — the aura
+ * itself stays, it just stops breathing.
+ *
+ * No color transition here: the aura re-renders with its page, so the hue sweep
+ * on a realm crossing rides the realm-shift crossfade below. Transitioning it
+ * would be dead CSS anyway — gradients don't interpolate.
+ */
+.realm-aura {
+  position: absolute;
+  top: -6rem;
+  right: -8%;
+  height: 14rem;
+  width: 45%;
+  min-width: 15rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(44px);
+  opacity: 0.7;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--realm) 22%, transparent),
+    transparent
+  );
+  animation: realm-drift 24s ease-in-out infinite;
+}
+/* On a phone the header is ~375px wide and min-width alone would drag the aura
+   back over the title. Pull it up and in so the light stays in the corner —
+   atmosphere never competes with text. */
+@media (max-width: 640px) {
+  .realm-aura {
+    top: -8rem;
+    height: 12rem;
+    min-width: 10rem;
+  }
+}
+@keyframes realm-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.58;
+  }
+  50% {
+    transform: translate3d(-2.5%, 8px, 0) scale(1.07);
+    opacity: 0.82;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .realm-aura {
+    animation: none;
+  }
+}
+
+/*
  * Cosmos motion (C2, see .claude/skills/mimir-cosmos/references/mechanics.md).
  * Sidebar/topbar are anchored view-transition groups (fixed stars, never
  * animate); realm-shift is the crossfade+rise applied to routed content when

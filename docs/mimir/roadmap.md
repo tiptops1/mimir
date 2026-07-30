@@ -848,12 +848,44 @@ the full design system.
   client product's name on every screen. `docs/mimir/*.md` and `.claude/skills/*` deliberately
   left alone (dev-facing history, not what a user sees in the app).
 
-- [ ] **C4 — Atmosphere + final polish** · **Sonnet** · S
-  Add header auras (realm-subtle gradient in `PageHeader`), realm-tinted chart primary series,
-  `::selection` styling. Run `design-review` at both themes. Verify "cosmos outside, clarity
-  inside" — immersive surfaces stay vibrant, working surfaces (tables, filters) keep design-system
-  density.
-  *Exit:* visual polish complete; design review green at both themes.
+- [x] **C4 — Atmosphere + final polish** · **Sonnet** · S · ✅ 2026-07-30
+  `::selection` + realm focus rings turned out to be **already shipped at C1** (`globals.css`
+  `[data-realm] ::selection`) — nothing to do there. The two real deliverables:
+  **(1) `PageHeader` aura** — new `.realm-aura` element, one `radial-gradient` parked off the
+  top-right corner. Mixed from `--realm` via `color-mix` rather than `--realm-subtle`, because
+  that token is a solid near-white in light themes (`#ecfdf5` &c.) and a gradient from it over a
+  white card is literally invisible; `color-mix` gives the same faintness in both themes from one
+  declaration. Carries the **one sanctioned ambient loop** (cosmos law 3): a 24s transform/opacity
+  drift, GPU-only (the blur rasterises once into the layer), removed — not paused — under
+  `prefers-reduced-motion`. No color transition: gradients don't interpolate, and the hue sweep
+  already rides the C2 realm-shift crossfade. Verified across **all five realms + the no-realm
+  settings fallback in both themes** (light indigo/cyan/emerald/amber/blue-violet, dark
+  brass/well/live/ember/`#9b8cff`).
+  **(2) Charts tokenised + realm-tinted** — `charts.tsx` + `funnel-chart.tsx` were full of
+  literals (`#4f46e5` series, `#64748b` axes, `#e5e7eb` tooltip borders, `rgba(79,70,229,…)`
+  cursors), so `/analytics` and `/finances` (both **tresor**) rendered white tooltips and slate
+  axis text in dark mode — a live design-system violation, not just a missing tint. Confirmed in
+  the browser that **`var()` resolves in SVG presentation attributes**, so the skill's
+  `fill="var(--realm)"` recipe works directly and no wrapper-class layer was needed. Primary
+  series now defaults to `var(--realm)`; data-supplied colors (`STAGE_HEX`, priority hues) still
+  win, since those are data. Won/lost bars deliberately stay **semantic** (`--success`/`--danger`)
+  — outcome color must not drift with the realm you're standing in.
+  **Found and fixed during the review, both by measurement:** (a) axis labels were first set to
+  `--faint`, which is only **3.2:1** on the dark card — moved to `--muted` (4.9:1 light /
+  6.3:1 dark); (b) the aura's first version put `overflow-hidden` on the header itself, which
+  **clipped `EnumCell`'s `top-full` dropdown** on `/companies/[id]` and `/chronos/[id]` — the clip
+  now lives on a dedicated `absolute inset-0` aura wrapper so the header stays `overflow: visible`
+  (verified: stage picker opens 270px tall, 8 options, extends well past the header bottom).
+  Mobile: the aura's `min-width` dragged it back over the title at 375px — tightened under a
+  `max-width: 640px` query so it clears the title (x 236 > title right 209), no horizontal
+  overflow. *Exit met:* lint 0 errors (same 3 pre-existing warnings) · **341 tests** green ·
+  build clean. **Note:** the browser pane never composited frames this session (`rAF` verified
+  not firing), so recharts' entrance animation never ran and no chart geometry rendered —
+  screenshots were unavailable for the same reason (the friction logged at S17/S18/S21/S22b/C3).
+  Token resolution was verified instead by probing `fill="var(--realm)"` / `--muted` /
+  `color-mix(…)` inside each page's live realm scope. Also worth knowing for future UI sessions:
+  Turbopack served a **stale `globals.css`** across two full dev-server restarts (same chunk hash,
+  new rules silently absent) — only `rm -rf .next` picked the CSS up.
 
 - [x] **C5 — 🥚 Easter egg: "Le Bureau" — pixel-art agents' house at work** · plan on Opus, implement on Sonnet · M · ✅ 2026-07-19
   **Shipped:** vendored `pixel-agents` @ `cd0343b` into `vendor/pixel-agents/` (plain copy, MIT);

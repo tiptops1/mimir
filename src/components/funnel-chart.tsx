@@ -19,7 +19,9 @@ export interface FunnelDatum {
   stage: string;
 }
 
-const AXIS = { fontSize: 12, fill: "#64748b" };
+/* Token-driven like charts.tsx — see the note there on var() in SVG
+ * presentation attributes and why the realm hue is the primary-series default. */
+const AXIS = { fontSize: 12, fill: "var(--muted)" };
 
 /**
  * Stage funnel where each bar is clickable — navigates to the pipeline board
@@ -46,12 +48,15 @@ export function FunnelChart({ data }: { data: FunnelDatum[] }) {
           />
           <YAxis tick={AXIS} allowDecimals={false} />
           <Tooltip
-            cursor={{ fill: "rgba(79,70,229,0.06)" }}
+            cursor={{ fill: "color-mix(in srgb, var(--realm) 8%, transparent)" }}
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              boxShadow: "var(--shadow-lg)",
               fontSize: 12,
             }}
+            labelStyle={{ color: "var(--foreground)" }}
           />
           <Bar
             dataKey="value"
@@ -61,7 +66,7 @@ export function FunnelChart({ data }: { data: FunnelDatum[] }) {
           >
             <LabelList dataKey="value" position="top" style={AXIS} />
             {data.map((d, i) => (
-              <Cell key={i} fill={d.color ?? "#4f46e5"} />
+              <Cell key={i} fill={d.color ?? "var(--realm)"} />
             ))}
           </Bar>
         </BarChart>
