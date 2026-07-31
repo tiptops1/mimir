@@ -1059,9 +1059,103 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       elsewhere) · **341 tests** (17 new) · build clean, both `/chronos` routes compiled · both
       schemas already in sync on `mimir-dev`. **Not deployed** — Chronos stays demo-tenant-only
       until S28.
-- [ ] **S28 — Production launch** · M — separate EU Atlas cluster + backups, separate control DB,
-      separate Vercel project; rewrite `mimir-env-guard` for a two-environment world.
-- [ ] **S29 — eBay Sell connector + manual marketplaces** · M
+- [x] **S28 — Production launch (safety half)** · M · ✅ 2026-07-31
+      Pointing at a second cluster needed **zero application-code change** (control client + tenant
+      router both follow ambient env, connection strings stored whole) — so the session was the
+      safety work a two-environment world requires, not infra plumbing. `src/lib/env-identity.ts`:
+      `MIMIR_ENV` declares dev/prod (declared, never sniffed from a hostname). Fail-loud fixes:
+      `SESSION_SECRET` now throws instead of silently producing a key that verifies nothing (every
+      visitor bounced to `/login` with no diagnostic); `appUrl()` throws in prod instead of leaking
+      `localhost` into outbound email links (digest, unsubscribe). `scripts/lib/guard.ts` —
+      `assertProdAllowed()` (22 provisioning/schema/backfill/enrichment scripts, demands `--prod` in
+      prod) and `refuseInProd()` (23 demo/fixture/debug scripts, **no override**). `npm run db:push`
+      now refuses in prod (it only ever hit `DATABASE_URL`, wrong with several tenants) and points at
+      `db:push:tenant --slug --prod`. Eight route handlers defaulted to `?? "crm_demo"` —
+      `/api/cron/odin` now loops every ACTIVE tenant (Forseti's shape, the extension S21 itself
+      named); the other seven require `?tenant=` via new `src/lib/route-tenant.ts`, 400 without it.
+      Deleted `getTenant1Prisma()` (callerless, read `DATABASE_URL` straight into a live client).
+      `cron-auth.ts`: timing-safe compare, `?key=` disabled in prod (lands in cron-job.org URLs +
+      Vercel logs). Inngest app id carries the environment; `vercel.json` pins `dub1` (EU). New
+      `scripts/backup-tenant.ts` (`npm run backup:dump`, wraps `mongodump`) — the free-tier M0
+      choice means **no snapshots exist at all**, so this script plus a documented cadence *is* the
+      recovery story; `mongodump` itself isn't installed on this machine yet, flagged in the go-live
+      checklist. New `docs/mimir/ops.md` runbook (environment matrix, M0 constraints — one free
+      cluster per Atlas *project*, not per cluster — provisioning, cron schedule, restore drill,
+      go-live checklist); README deploy section rewritten (used to instruct running provisioning
+      locally against prod URLs — the exact manoeuvre the guard exists to catch); `mimir-env-guard`
+      skill rewritten for three clusters (and its stale worktree copies refreshed);  `mimir-ship`
+      gained the environment question; `CLAUDE.md` + roadmap §0.5 updated. *Exit met:* `npm run
+      env:check` clean; 16 new tests (357 total) pin the safety contract including the prod `?key=`
+      refusal, which can't be exercised against a running dev server; verified live — demo seeder
+      refuses under `MIMIR_ENV=prod` with no override, `provision-tenant` demands `--prod`, a
+      half-edited `.env` (disagreeing hosts) is refused, `/api/huginn/scan` 400s with no `?tenant=`.
+      **Deliberately not done here** (yours, from `ops.md`): creating the actual prod Atlas
+      project/cluster and Vercel project — the session produced the code + the exact checklist, not
+      the infra itself.
+- [x] **S29 — eBay Sell connector + manual marketplaces** · M · ✅ 2026-07-31
+      **B1 OAuth** — `src/lib/ebay-oauth.ts`, structurally the twin of `google-oauth.ts` but not a
+      copy: the redirect is a registered **RuName** not a URL, sandbox/production are separate
+      keysets, and **we own the refresh** (no `googleapis`-equivalent mints tokens for us) — an
+      in-process `Map<tenantId, {token, expiresAt}>` cache refreshed at T−5min against ~2h access
+      tokens. No schema change: `Integration{provider:"ebay"}` fits as-is, `refreshToken` is already
+      the generic encrypted-secret slot (Fireflies precedent). Routes
+      `src/app/api/integrations/ebay/{connect,callback}` mirror the Google pair.
+      **B2/B3 the pure core** — `src/lib/chronos/sync-map.ts` (no Prisma import, `margin.ts`
+      posture): `mapOrderToUnitWrites()` turns a `ConnectorOrder` into sale facts + deterministic
+      `AddUnitCostInput[]`. Dedupe keys are `<provider>:<orderId>:<lineIdx>:<feeKind>:<ordinal>` —
+      namespaced by provider so eBay and a CSV import can never collide, and stable across re-syncs
+      so `addUnitCost`'s `@@unique([unitId, dedupeKey])` upsert converges instead of double-booking.
+      **Never guesses a match**: no SKU or quantity>1 → zero writes, routed to the reconciliation
+      queue instead — a wrong match corrupts two units' margins at once and is far harder to notice
+      than a queue item. `src/lib/chronos/connectors/ebay.ts` implements `ownOrders`/`ownListings`
+      (`soldComps` stays false, the drift test enforces it) — orders joined from Sell *Fulfillment*
+      (line items, SKU) + Sell *Finances* (the authoritative fee breakdown); a `FEE_CODE_MAP`
+      normalises eBay's fee-type strings onto `UnitCost.kind`, case/separator-insensitive, unknown
+      codes fall to `OTHER` rather than being dropped (dropping would silently overstate margin).
+      **B4 reconciliation** — new additive `MarketplaceOrder` model (`@@unique([provider,
+      externalId])`, added to `CHRONOS_UNIQUE_INDEXES` in `provision.ts`) doubles as the mirrored-
+      order log and the unmatched queue; `InventoryUnit.listingExternalId` added for
+      `fetchOwnListings`. A human decision (`MATCHED`/`IGNORED`) outranks a later sync run — it
+      won't reopen what a human already resolved.
+      **B5 sync runner** — `src/lib/chronos/sync.ts`, Freyja/Forseti's synchronous shape (no LLM, no
+      Inngest): rolling overlap window (not a cursor — a cursor would lose a late-settling fee),
+      idempotent by the two uniques above with no state table needed. `/api/cron/chronos` loops
+      every ACTIVE tenant; `/api/chronos/sync?tenant=` is the manual trigger (S28's explicit-tenant
+      rule). Ingestion, not a ledger action — mirrors `runGmailSync`'s posture, never touches
+      Heimdallr.
+      **B6 UI** — `/chronos/settings` (eBay connect/sync/disconnect, marketplace capability table
+      rendered as *data* — "Chrono24 : saisie manuelle" without instantiating a connector) and
+      `/chronos/reconciliation` (queue, unit picker restricted to unsold stock via `UNSOLD_WHERE`'s
+      `isSet:false` form) — both under the existing module-gated `chronos/layout.tsx`, not the
+      hardcoded `/settings` tab array (no module awareness there).
+      **Track C — CSV wizard** for Chrono24/Vinted/LeBonCoin (no public API): `/chronos/import`
+      reuses `src/lib/import/{csv,coerce,batch}` (genuinely generic) but deliberately does **not**
+      extend the S13b engine (`ImportEntity` hardcoded to COMPANY/CONTACT/DEAL, `dedupe.ts` is
+      SIRET-centric). New pure `src/lib/chronos/sale-import.ts` maps a CSV row into the same
+      `ConnectorOrder` shape and hands it to the identical `mapOrderToUnitWrites` — one tested core
+      serves both eBay and CSV. No `ImportRun` model: idempotency already comes from the dedupe keys
+      + `MarketplaceOrder`'s unique, so re-applying a file converges — a run-tracking model would be
+      state nothing needs.
+      *Exit met:* 52 new tests (393 total) — `sync-map.test.ts` covers fee-code mapping, dedupe
+      determinism, never-guess (no-SKU/multi-quantity), FX, negative-amount handling;
+      `sale-import.test.ts` covers FR/EN header matching, malformed cells, and proves the CSV and
+      eBay paths produce identical dedupe-key shapes off the same order. Connector drift test green
+      with `ebay` registered (`soldComps: false` asserted). Fixture-driven E2E via
+      `scripts/chronos/sync-fixture-check.ts` against `chronos_demo` (no live eBay account — the
+      production RuName redirect requires public https, so OAuth click-through is **unverified**,
+      flagged not pretended): two runs converged byte-for-byte (4 cost lines, 4 orders, 2 pending
+      both runs); an unmatched SKU and a no-SKU line wrote nothing and queued correctly. Verified
+      live in-browser: reconciled a queued order to a real unit (sale + 1 fee line landed correctly,
+      order flipped `MATCHED`); ran the CSV wizard against a synthetic Chrono24 export — dry-run
+      totals matched hand-computed fee sums, a bad date and an unknown SKU were correctly isolated,
+      apply wrote 4 cost lines across 2 orders, **re-applying the identical file converged with zero
+      new writes**. Dark theme + realm hue (`chronos` → `#9b8cff` dark) confirmed via computed
+      styles; 375px confirmed no horizontal overflow on settings/reconciliation. All scratch data
+      reverted, `chronos_demo` re-seeded back to its exact S27a exit numbers (12 sold, 4 loss-making)
+      after an over-broad cleanup query briefly touched two seeded sales. lint/build clean.
+      **Not verified**: real eBay OAuth consent (needs a public https tunnel under the registered
+      RuName) and a real order sync against his actual account — first real-account check is
+      pending his production keyset going live against a deployed (not local) environment.
 - [ ] **S30 — Comp DB + Argus** · M
 - [ ] **S31 — Platform: entity-scoped `StageDefinition`** · S — the one **non-additive** change in
       the whole plan; needs a backfill + explicit `dropIndex` (`db push` won't drop the old unique).

@@ -3,7 +3,7 @@ import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { getTenantProfile } from "@/lib/tenant-profile";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardBody } from "@/components/ui";
+import { Card, CardBody, LinkButton } from "@/components/ui";
 import { UnitFilters } from "@/components/chronos/unit-filters";
 import { UnitsTable } from "@/components/chronos/units-table";
 import { NewUnitForm } from "@/components/chronos/new-unit-form";
@@ -76,7 +76,14 @@ export default async function ChronosPage({
       <PageHeader
         title="Inventaire"
         subtitle={`Achat, restauration et revente — ${profile.brandName}`}
-      />
+      >
+        <LinkButton href="/chronos/import" variant="secondary" size="sm">
+          Importer des ventes
+        </LinkButton>
+        <LinkButton href="/chronos/settings" variant="ghost" size="sm">
+          Paramètres
+        </LinkButton>
+      </PageHeader>
       <div className="space-y-6 p-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <Card>

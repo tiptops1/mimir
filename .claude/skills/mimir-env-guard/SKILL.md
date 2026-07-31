@@ -30,13 +30,16 @@ That is the primary check. It prints the resolved environment, every DB **hostna
 credentials), which required variables are present, and whether the DB URLs agree with each other.
 It exits non-zero on any FAIL.
 
-Then the one thing `env:check` cannot know — that the *legacy baseline* cluster must never appear
-here at all:
+Then the one thing `env:check` cannot know — that the *legacy baseline* cluster must never be
+reachable from here. Scoped to the places where a hostname could actually become a connection:
 
 ```bash
-grep -rli "crm-railway" --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.git --exclude-dir=backups . \
-  && echo "FAIL: Vision RM prod host referenced in this repo" || echo "OK: no baseline prod host"
+grep -rli "crm-railway" .env .env.local src scripts prisma vercel.json next.config.ts 2>/dev/null \
+  && echo "FAIL: Vision RM prod host in code or config" || echo "OK: no baseline prod host"
 ```
+
+`docs/` and `.claude/skills/` are deliberately **not** scanned: they name `crm-railway` on purpose,
+to say never to use it. A check that flags its own documentation trains you to ignore it.
 
 ## Reading the result
 

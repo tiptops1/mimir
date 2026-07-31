@@ -196,3 +196,98 @@ export async function deleteFirefliesIntegration(tenantId: string): Promise<void
     where: { tenantId, provider: FIREFLIES },
   });
 }
+
+// ————— eBay (Chronos, S29) —————
+// Same Integration row again, no schema change: `refreshToken` holds the eBay
+// OAuth refresh token (encrypted, ~18-month lifetime) and `accountEmail` holds
+// a display label, since eBay identifies a seller by username rather than by an
+// email we're entitled to. Access tokens are short-lived and cached in-process
+// by src/lib/ebay-oauth.ts — they are never persisted here.
+
+const EBAY = "ebay";
+
+export interface EbayCredential {
+  tenantId: string;
+  accountLabel: string;
+  refreshToken: string;
+  scopes: string[];
+  lastSyncedAt: Date | null;
+}
+
+/** Public view for the settings UI (no secret material). */
+export interface EbayConnection {
+  accountLabel: string;
+  scopes: string[];
+  connectedAt: Date;
+  lastSyncedAt: Date | null;
+}
+
+export async function getEbayConnection(tenantId: string): Promise<EbayConnection | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: {
+      tenantId_provider_purpose: { tenantId, provider: EBAY, purpose: "MAIN" },
+    },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return {
+    accountLabel: row.accountEmail,
+    scopes: row.scopes,
+    connectedAt: row.connectedAt,
+    lastSyncedAt: row.lastSyncedAt,
+  };
+}
+
+export async function getEbayCredential(tenantId: string): Promise<EbayCredential | null> {
+  const row = await controlPrisma.integration.findUnique({
+    where: {
+      tenantId_provider_purpose: { tenantId, provider: EBAY, purpose: "MAIN" },
+    },
+  });
+  if (!row || row.status !== "ACTIVE") return null;
+  return {
+    tenantId: row.tenantId,
+    accountLabel: row.accountEmail,
+    refreshToken: decrypt(row.refreshToken),
+    scopes: row.scopes,
+    lastSyncedAt: row.lastSyncedAt,
+  };
+}
+
+export async function upsertEbayIntegration(args: {
+  tenantId: string;
+  accountEmail: string;
+  refreshToken: string;
+  scopes: string[];
+}): Promise<void> {
+  const data = {
+    accountEmail: args.accountEmail,
+    refreshToken: encrypt(args.refreshToken),
+    scopes: args.scopes,
+    status: "ACTIVE",
+  };
+  await controlPrisma.integration.upsert({
+    where: {
+      tenantId_provider_purpose: {
+        tenantId: args.tenantId,
+        provider: EBAY,
+        purpose: "MAIN",
+      },
+    },
+    update: data,
+    create: { tenantId: args.tenantId, provider: EBAY, purpose: "MAIN", ...data },
+  });
+}
+
+export async function deleteEbayIntegration(tenantId: string): Promise<void> {
+  await controlPrisma.integration.deleteMany({
+    where: { tenantId, provider: EBAY },
+  });
+}
+
+/** Stamp lastSyncedAt after a successful marketplace sync. */
+export async function touchEbayLastSynced(tenantId: string): Promise<void> {
+  await controlPrisma.integration.updateMany({
+    where: { tenantId, provider: EBAY },
+    data: { lastSyncedAt: new Date() },
+  });
+}

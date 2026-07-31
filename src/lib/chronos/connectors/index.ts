@@ -1,13 +1,20 @@
 import { CAPABILITY_METHODS, type MarketplaceConnector } from "./types";
 import { demoConnector } from "./demo";
+import { ebayConnector } from "./ebay";
 
 const REGISTRY: Record<string, MarketplaceConnector> = {
   demo: demoConnector,
-  // "ebay" registers here once a production keyset exists on a business
-  // account (S29). Chrono24 / Vinted / LeBonCoin have no public API and will
-  // never appear here — they stay CSV/manual, which ChronosConfig.marketplaces
-  // records as `sync: "manual"`.
+  // Registered at S29. Chrono24 / Vinted / LeBonCoin have no public API and
+  // will never appear here — they stay CSV/manual, which
+  // ChronosConfig.marketplaces records as `sync: "manual"` and the Chronos
+  // import wizard (/chronos/import) serves.
+  ebay: ebayConnector,
 };
+
+/** Providers this build can actually sync from, for the settings UI. */
+export function isApiConnector(provider: string): boolean {
+  return provider in REGISTRY;
+}
 
 export function getConnector(provider: string): MarketplaceConnector {
   const connector = REGISTRY[provider];

@@ -1160,6 +1160,10 @@ model InventoryUnit {
   supplier           String?
 
   listedAt       DateTime?
+  // The marketplace's LISTING id (S29 fetchOwnListings), distinct from the
+  // order id below — a unit is listed long before it is sold, and may be
+  // relisted. Additive; nothing depends on it being present.
+  listingExternalId String?
   soldAt         DateTime?
   soldOn         String? // marketplace key, see ChronosConfig.marketplaces
   saleExternalId String?
@@ -1304,4 +1308,49 @@ model ChronosConfig {
   targetMarginPct Int   @default(25)
 
   updatedAt DateTime @updatedAt
+}
+
+// ————— S29: marketplace order sync —————
+
+// A mirrored marketplace order, and the reconciliation queue in one model.
+//
+// A line carries a SKU only if the seller set a listing custom label, so
+// matching an order to a unit is best-effort. Rather than guessing — which
+// corrupts TWO units' margins at once and is nearly invisible afterwards — an
+// unmatchable order is stored here as PENDING with no unit writes at all, and a
+// human resolves it. Matched orders are stored too, so the sync has a record of
+// what it has already applied and the operator can audit it.
+//
+// This is INGESTION, not an agent action: mirroring a sale that already
+// happened writes domain state directly, the same posture as runGmailSync and
+// runFreyjaSyncForTenant. It never touches the Heimdallr ledger.
+model MarketplaceOrder {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  provider   String // marketplace key — "ebay", "chrono24", …
+  externalId String // the marketplace's own order id
+
+  soldAt     DateTime
+  currency   String @default("EUR")
+  grossCents Int    @default(0)
+
+  // PENDING (awaiting a human match) | MATCHED (applied to a unit) | IGNORED
+  status String  @default("PENDING")
+  // The SKU that resolved, once matched. Null while PENDING.
+  sku    String?
+  unitId String? @db.ObjectId
+
+  // The normalised ConnectorOrder lines, kept so a later manual match can
+  // replay the exact same mapping without re-fetching from the marketplace
+  // (an order can age out of an API window; a reconciliation queue can't).
+  lines Json
+
+  // Why it could not be matched automatically: no_sku | multi_quantity | null.
+  unmatchedReason String?
+
+  syncedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, externalId])
+  @@index([status])
+  @@index([soldAt])
 }

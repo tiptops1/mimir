@@ -51,6 +51,9 @@ const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
   // Must exist before seedTenantConfig runs (step 3 below) for the singleton
   // upsert to be race-safe.
   { collection: "ChronosConfig", name: "ChronosConfig_singleton_key", key: { singleton: 1 } },
+  // S29: the marketplace sync upserts on this, so a re-sync over an overlapping
+  // window updates the same order row instead of piling up duplicates.
+  { collection: "MarketplaceOrder", name: "MarketplaceOrder_provider_externalId_key", key: { provider: 1, externalId: 1 } },
 ];
 
 /**

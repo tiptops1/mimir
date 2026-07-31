@@ -677,3 +677,81 @@ asking prices must never be rendered as sold comps.
 **Deliberately cut from v1:** `Tool` (a flat `toolOverheadPerUnitCents` covers it), `WorkOrder`
 (its real payoff is Hermes listing copy; labour is a `LABOUR` line of hours × config rate), and
 `PricePoint`/`RefPriceStat`/`MarketAlert` (S30). Seven models is a shippable session.
+
+---
+
+## 2026-07-31 — S28/S29: two-environment safety, and the eBay connector
+
+**S28 needed no application-code change to add a second cluster** — only discipline around it.
+`control-db.ts` and `tenant-db.ts` both follow ambient env with no hardcoded assumption of a
+single cluster, and tenant connection strings are stored whole in the control plane specifically
+so a tenant can move clusters with zero app-code change (a decision from the original architecture
+doc, now paying off for the platform itself, not just a tenant). So the session's real content was
+closing the gaps a second, real, paying-customer environment exposes: 62 scripts with no
+environment selector, 8 routes defaulting to a hardcoded demo tenant, and two silent-failure modes
+(`SESSION_SECRET`, `APP_URL`) that were harmless on a demo-only platform and become customer-facing
+incidents on a real one.
+
+**Atlas tier: M0 (free), by explicit choice, customer informed.** This means **zero backups exist
+at the platform level** — no snapshots, no PITR. `scripts/backup-tenant.ts` (`npm run backup:dump`,
+wrapping `mongodump`) plus a documented weekly cadence in `docs/mimir/ops.md` is not a nice-to-have
+alongside the "real" backup system — it **is** the backup system. Flagged explicitly in the go-live
+checklist that `mongodump` itself isn't installed on the dev machine yet, so the recovery path is
+not actually armed until that's done.
+
+**The guard's line: `assertProdAllowed()` (needs `--prod`) vs. `refuseInProd()` (no override,
+ever).** A script that fabricates demo data has no legitimate reason to touch a paying customer's
+cluster under any circumstances — giving it an escape hatch just moves the mistake one step later.
+Provisioning/schema/backfill scripts are genuinely dual-use and get the flag; every demo seeder,
+fixture injector and debug script does not.
+
+**`npm run db:push` refused outright in prod**, not just gated. It only ever targeted the single
+`DATABASE_URL` — harmless with one demo tenant, silently wrong with several (pushes to whichever
+tenant happens to be in `.env`, leaves the rest on the old schema with no error). `db:push:tenant
+--slug --prod` is the only path in prod, one tenant at a time, on purpose.
+
+**`/api/cron/odin` now loops every ACTIVE tenant instead of defaulting to `crm_demo`.** This was
+already named as the intended extension at S21 ("natural once a second tenant exists") — S28 is
+that trigger. The other seven scan/trigger routes went the other way: `?tenant=` is now *required*,
+because they're per-tenant triggers by design (manual re-run of one tenant's scan), and a silent
+default is worse than a 400 there.
+
+**eBay OAuth could not be a copy of `google-oauth.ts`.** Four real differences: the redirect is a
+registered **RuName** string, not a URL; sandbox and production are entirely separate keysets;
+`googleapis` mints access tokens transparently and nothing does that for eBay, so the platform owns
+the refresh (access tokens ~2h, refresh tokens ~18 months, in-process cache refreshed 5 minutes
+before expiry); and a production RuName redirect must be public https, so local consent
+click-through needs a tunnel. No control-plane schema change regardless —
+`Integration{provider:"ebay"}` fits the existing shape, `refreshToken` is already a generic
+encrypted-secret slot (Fireflies precedent).
+
+**The order-fee mapping is one pure function serving two marketplaces.** `sync-map.ts`'s
+`mapOrderToUnitWrites()` takes a marketplace-agnostic `ConnectorOrder` and produces deterministic
+`UnitCost` writes; the eBay adapter and the new Chrono24/Vinted/LeBonCoin CSV importer both build a
+`ConnectorOrder` and hand it to the same function. One tested core, not two subtly-different write
+paths. Dedupe keys are `<provider>:<orderId>:<lineIdx>:<feeKind>:<ordinal>` — provider-namespaced
+so eBay and a CSV import of the same order number (unlikely but not impossible) can never collide,
+and fully deterministic so a re-sync or a re-import converges through `addUnitCost`'s existing
+unique instead of double-booking.
+
+**Matching is best-effort and the sync never guesses.** An order line carries a SKU only if the
+seller set a listing custom label (eBay) or the export happens to include an internal reference
+(manual). No SKU, or quantity > 1 (one `InventoryUnit` is one physical item — splitting a
+multi-quantity line across units would itself be a guess), writes **nothing** and lands in a new
+`MarketplaceOrder` reconciliation queue instead. A wrong match would corrupt two units' margins at
+once and be far harder to notice afterward than an item sitting in a queue.
+
+**The CSV wizard is deliberately not built on the S13b import engine.** `ImportEntity` there is
+hardcoded to `COMPANY|CONTACT|DEAL`, `dedupe.ts` is SIRET-centric, and `ImportRecord.rowKey` *is*
+the company upsert key — extending it would have meant bending a company-shaped model into a
+sale-shaped one. What's genuinely generic (`csv.ts`, `coerce.ts`, `normalizeHeader`) is reused; the
+rest is a new, smaller, sibling pipeline. No `ImportRun`/`ImportRecord` tracking model either —
+idempotency already comes from the dedupe keys and `MarketplaceOrder`'s unique, so a run-tracking
+model would carry state nothing needs.
+
+**Not verified this session, and said so rather than assumed:** real eBay OAuth consent (the
+production RuName redirect requires public https; this repo's dev server is localhost) and a sync
+against his actual seller account. The mapping, the write paths, the idempotency, the
+reconciliation queue and the CSV path are all verified end-to-end against fixtures and a synthetic
+CSV; only the token exchange itself is unexercised. First real check is pending a deployed
+environment and his production keyset.

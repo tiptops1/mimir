@@ -22,6 +22,7 @@ import {
   HeartPulse,
   Megaphone,
   Watch,
+  Scale,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
@@ -57,6 +58,7 @@ const NAV: Array<{
   { href: "/thor", label: "Thor", icon: HeartPulse, module: "crm" },
   { href: "/freyja", label: "Freyja", icon: Megaphone, module: "crm" },
   { href: "/chronos", label: "Inventaire", icon: Watch, module: "chronos" },
+  { href: "/chronos/reconciliation", label: "Rapprochement", icon: Scale, module: "chronos" },
 ];
 
 /**
