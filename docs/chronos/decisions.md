@@ -755,3 +755,56 @@ against his actual seller account. The mapping, the write paths, the idempotency
 reconciliation queue and the CSV path are all verified end-to-end against fixtures and a synthetic
 CSV; only the token exchange itself is unexercised. First real check is pending a deployed
 environment and his production keyset.
+
+## 2026-07-31 — S30: `kind` is a correctness boundary, and Argus stays out of the ledger
+
+**The comp DB separates SOLD from ASK at three layers, on purpose.** eBay's Marketplace
+Insights API (third-party sold comps) is Limited Release and denied to non-major-partners, and
+the Finding API died in early 2025. So the only two sources that exist are *his own completed
+sales* — authoritative, a real buyer paid, real fees already booked — and *asking prices* from
+open listing search. An ask is what a seller hopes for and a large share never sell at all;
+blending the two produces a number that is neither, biased high, and at S32 it would make
+Kairos bid too much on every lot.
+
+One layer would have been enough to *describe* the rule. Three enforce it:
+
+1. `PricePoint.kind` discriminates in the model, and `recordPricePoint` rejects an ASK that
+   carries a `soldAt`.
+2. `computeBand()` **throws** when handed a mixed array rather than returning a plausible
+   wrong band. A silently-wrong band is the failure mode that would survive review.
+3. `/chronos/argus` renders the two in separate, separately-labelled columns and never
+   combines them into a "market price".
+
+Rejected: a single `PricePoint` with a `confidence` weight blending both kinds. It reads
+elegant and destroys the one distinction the module exists to preserve.
+
+**`RefPriceStat` is a cache, not a second source of truth.** The history is the PricePoint
+rows; any window recomputes from them. Same reasoning that kept B1's finance tab derived from
+the unit cost ledger rather than a second set of books — a derived store that can drift from
+its inputs is a bug generator. Drift therefore compares against the median the row held
+immediately before the sweep overwrote it, which is why the previous value is carried on the
+row and no history table exists.
+
+**Drift is gated on sample size as well as magnitude** (`MIN_BAND_SAMPLE`, mirroring
+`breakerMinSample` in the Heimdallr state machine). A 40% move computed over 2 points is one
+unusual listing, not the market moving. Alerting on it would train the operator to ignore
+alerts, which costs more than the missed signal.
+
+**Argus is detection-only and never touches the Heimdallr ledger.** D5 governs *side-effectful
+agent actions*. Re-reading a price and recomputing a band is an observation — there is nothing
+for a human to approve, and routing it through the ledger would fill the inbox with items that
+have no decision attached. This mirrors Thor's S22a detection half exactly. Kairos (S32) is
+where a band becomes a **buy offer**, and that does go through the ledger, at
+`maxLevel: 1` — money never graduates.
+
+**Attribution never guesses, and drops rather than queues.** A listing is attributed to a
+reference only if its title contains one of that reference's declared aliases — no brand-only
+fallback, no fuzzy scoring, because an ask filed against the wrong reference silently poisons
+that reference's band. Unlike S29's unmatchable *orders*, which go to the reconciliation queue,
+an unattributable listing is simply dropped. The asymmetry is deliberate: an order is money
+that already moved and must be accounted for; a missed ask observation costs one data point.
+
+**Browse shipped here rather than being deferred.** `ebay.searchListings` + a
+client-credentials `appAccessToken()` — Browse reads public data, so asking-price observations
+work for a tenant that has never connected an eBay account. Without it the ASK half would have
+had only the demo connector behind it, which is a stub pretending to be a feature.

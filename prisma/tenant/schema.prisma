@@ -1136,7 +1136,9 @@ model ProductRef {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  units InventoryUnit[]
+  units       InventoryUnit[]
+  pricePoints PricePoint[]
+  priceStats  RefPriceStat[]
 
   @@unique([brand, reference, variant])
   @@index([brand])
@@ -1353,4 +1355,98 @@ model MarketplaceOrder {
   @@unique([provider, externalId])
   @@index([status])
   @@index([soldAt])
+}
+
+// ————— S30: comp DB + Argus (market intelligence) —————
+
+// One price observation for a reference.
+//
+// `kind` is a CORRECTNESS BOUNDARY, not a label:
+//   SOLD — a completed sale from HIS OWN account (a sold InventoryUnit, or a
+//          matched MarketplaceOrder). Authoritative: a real buyer paid it, and
+//          the real fees are already booked on the unit.
+//   ASK  — an asking price observed on an open listing search (eBay Browse).
+//          It is what a seller HOPES to get; a large share never sell at all.
+//
+// eBay's Marketplace Insights API (third-party sold comps) is Limited Release
+// and denied to non-major-partners, and the Finding API died in early 2025 — so
+// there is no third source, and there will not be one. Rendering an ASK as a
+// SOLD would systematically overstate what a watch is worth, and downstream at
+// S32 would make Kairos bid too high on every lot. Every read path therefore
+// filters on `kind` explicitly; see src/lib/chronos/comps.ts.
+model PricePoint {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  refId String @db.ObjectId
+
+  kind     String // SOLD | ASK — see the header; never inferred, always explicit
+  provider String // marketplace key: "ebay", "chrono24", "demo", …
+
+  priceCents Int
+  currency   String @default("EUR")
+  fxRate     Float  @default(1)
+  // = round(priceCents * fxRate), computed once at write exactly as
+  // UnitCost.baseAmountCents is, so band math has ONE source of truth.
+  basePriceCents Int
+
+  condition String  @default("") // open vocab
+  title     String  @default("")
+  url       String?
+
+  // When we SAW it (both kinds) vs. when it SOLD (SOLD only). An ask observed
+  // today says nothing about a sale date, so soldAt stays null for ASK.
+  observedAt DateTime  @default(now())
+  soldAt     DateTime?
+
+  source String @default("BROWSE") // OWN_SALE | BROWSE | MANUAL
+  // REQUIRED and never "". Mirrors UnitCost.dedupeKey: re-running the sweep
+  // over an overlapping window must converge, not pile up duplicates.
+  dedupeKey String
+
+  createdAt DateTime @default(now())
+
+  ref ProductRef @relation(fields: [refId], references: [id], onDelete: Cascade)
+
+  @@unique([refId, dedupeKey])
+  @@index([refId, kind])
+  @@index([observedAt])
+}
+
+// The derived price band for one (reference × kind), recomputed by the Argus
+// sweep.
+//
+// Deliberately a CACHE. The history is the PricePoint rows, and any window can
+// be recomputed from them — so this model must never become a second source of
+// truth that can drift from the observations underneath it (the same reasoning
+// that kept B1's finance tab derived from the cost ledger instead of a second
+// set of books). Drift compares the freshly computed median against the one
+// this row held immediately before the sweep overwrote it, which is why the
+// previous value is carried here rather than in a history table.
+model RefPriceStat {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  refId String @db.ObjectId
+  kind  String // SOLD | ASK — a band NEVER mixes the two
+
+  windowDays Int @default(180)
+  sampleSize Int @default(0)
+
+  p25Cents    Int
+  medianCents Int
+  p75Cents    Int
+  minCents    Int
+  maxCents    Int
+
+  prevMedianCents Int?
+  prevComputedAt  DateTime?
+  // (median − prevMedian) / prevMedian × 100. Null until there is a previous.
+  driftPct Float?
+  // |driftPct| over threshold AND enough sample to trust it. Both conditions —
+  // a 40% swing on a sample of 2 is noise, not a market move.
+  drifted Boolean @default(false)
+
+  computedAt DateTime @default(now())
+
+  ref ProductRef @relation(fields: [refId], references: [id], onDelete: Cascade)
+
+  @@unique([refId, kind])
+  @@index([drifted])
 }

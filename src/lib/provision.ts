@@ -54,6 +54,11 @@ const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
   // S29: the marketplace sync upserts on this, so a re-sync over an overlapping
   // window updates the same order row instead of piling up duplicates.
   { collection: "MarketplaceOrder", name: "MarketplaceOrder_provider_externalId_key", key: { provider: 1, externalId: 1 } },
+  // S30: the comp DB's idempotency. Without it a re-run of the Argus window
+  // double-weights the same observation in the median, which silently biases
+  // the band that S32's bid ceiling is derived from.
+  { collection: "PricePoint", name: "PricePoint_refId_dedupeKey_key", key: { refId: 1, dedupeKey: 1 } },
+  { collection: "RefPriceStat", name: "RefPriceStat_refId_kind_key", key: { refId: 1, kind: 1 } },
 ];
 
 /**

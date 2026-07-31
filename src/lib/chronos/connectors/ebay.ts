@@ -1,7 +1,8 @@
-import { accessTokenForTenant, ebayHosts } from "@/lib/ebay-oauth";
+import { accessTokenForTenant, appAccessToken, ebayHosts } from "@/lib/ebay-oauth";
 import type {
   ConnectorCtx,
   ConnectorFee,
+  ConnectorListing,
   ConnectorOrder,
   ConnectorOrderLine,
   ConnectorOwnListing,
@@ -18,10 +19,11 @@ import type {
  *  - `ownListings: true` — his live listings, to stamp listing ids on units.
  *  - `soldComps: false` — Marketplace Insights is Limited Release and denied to
  *    non-major-partners. connectors.test.ts asserts this stays false.
- *  - `searchListings: false` — Browse (asking prices, app token) is S30's comp
- *    DB work, and asking prices must never render as sold comps. Flipping this
- *    on means implementing the method in the same commit; the drift test
- *    enforces that.
+ *  - `searchListings: true`  — Browse, added at S30. It runs on an APPLICATION
+ *    token (client credentials), not the seller's, because it reads public
+ *    listings: a tenant that has never connected eBay still gets asking-price
+ *    observations. Those are stored as `ASK` price points and must never render
+ *    as sold comps — the constraint the whole comp DB is built around.
  *
  * ORDER FEES COME FROM TWO APIS, joined on order id:
  *   Fulfillment /order       → line items, SKU, per-line gross
@@ -38,6 +40,21 @@ import type {
 const PAGE_LIMIT = 50;
 /** Stop rather than page forever if a filter is wrong. */
 const MAX_PAGES = 40;
+/**
+ * Listings per Browse query. Unpaged on purpose: a band wants a representative
+ * sample of what is on the market, not an exhaustive census, and the sweep runs
+ * this once per reference per day.
+ */
+const BROWSE_LIMIT = 50;
+
+/** Browse item_summary — read defensively, like every eBay shape in this file. */
+interface BrowseItemSummary {
+  itemId?: string;
+  title?: string;
+  price?: EbayAmount;
+  condition?: string;
+  itemWebUrl?: string;
+}
 
 interface EbayAmount {
   value?: string;
@@ -180,10 +197,61 @@ interface FulfillmentOrder {
 export const ebayConnector: MarketplaceConnector = {
   provider: "ebay",
   capabilities: {
-    searchListings: false,
+    searchListings: true,
     soldComps: false,
     ownListings: true,
     ownOrders: true,
+  },
+
+  /**
+   * Active listings matching a query — ASKING prices, never sales.
+   *
+   * Returns [] rather than throwing when the keyset isn't configured, so a
+   * sweep on an unconfigured environment degrades to "sold comps only" instead
+   * of failing. That is the correct degradation: the sold half is the
+   * authoritative half.
+   */
+  async searchListings(_ctx: ConnectorCtx, query: string): Promise<ConnectorListing[]> {
+    const token = await appAccessToken();
+    if (!token) return [];
+
+    const url = new URL("/buy/browse/v1/item_summary/search", ebayHosts().api);
+    url.searchParams.set("q", query);
+    url.searchParams.set("limit", String(BROWSE_LIMIT));
+    // Used items only: this is a second-hand trade, and a new-old-stock listing
+    // sits in a different price world that would widen every band wrongly.
+    url.searchParams.set("filter", "conditions:{USED}");
+
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "X-EBAY-C-MARKETPLACE-ID": process.env.EBAY_MARKETPLACE_ID?.trim() || "EBAY_GB",
+      },
+    });
+    if (!res.ok) {
+      throw new Error(
+        `eBay Browse search failed (${res.status}): ${(await res.text()).slice(0, 300)}`,
+      );
+    }
+
+    const data = (await res.json()) as { itemSummaries?: BrowseItemSummary[] };
+    const observedAt = new Date();
+
+    return (data.itemSummaries ?? [])
+      .filter((item) => item.itemId && item.price?.value)
+      .map((item) => ({
+        externalId: item.itemId!,
+        title: item.title ?? "",
+        priceCents: toCentsFromEbayAmount(item.price),
+        currency: item.price?.currency ?? "EUR",
+        condition: item.condition ?? "",
+        url: item.itemWebUrl,
+        observedAt,
+      }))
+      // A zero price means a shape we did not understand; dropping it is safer
+      // than letting a 0 € observation drag a median down.
+      .filter((listing) => listing.priceCents > 0);
   },
 
   async fetchOwnOrders(ctx: ConnectorCtx, since: Date): Promise<ConnectorOrder[]> {

@@ -1,4 +1,5 @@
 import type { ConnectorFee, ConnectorOrder, ConnectorOrderLine } from "./connectors/types";
+import { fxRateFor as baseFxRateFor } from "./comps";
 
 /**
  * Chronos (S29) — turn a marketplace order into unit writes. PURE: no Prisma
@@ -135,10 +136,11 @@ export interface MappedOrder {
   unmatched: UnmatchedLine[];
 }
 
+// Delegates to comps.ts (S30) so the order-sync and comp-ingest paths can never
+// disagree about a conversion — the same price would otherwise land in a unit's
+// margin and in its reference's band at two different base amounts.
 function fxRateFor(currency: string, opts: MapOrderOptions): number {
-  if (!currency || currency.toUpperCase() === opts.baseCurrency.toUpperCase()) return 1;
-  const rate = opts.fxRates?.[currency.toUpperCase()];
-  return typeof rate === "number" && rate > 0 ? rate : 1;
+  return baseFxRateFor(currency, opts.baseCurrency, opts.fxRates);
 }
 
 /**

@@ -31,7 +31,7 @@ export const REALMS: Realm[] = [
   {
     slug: "marche",
     label: "Marché",
-    routes: ["chronos/import", "chronos/reconciliation"],
+    routes: ["chronos/import", "chronos/reconciliation", "chronos/argus"],
   },
   {
     slug: "tresor",

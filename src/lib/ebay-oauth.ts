@@ -218,3 +218,41 @@ export async function accessTokenForTenant(tenantId: string): Promise<string | n
 export function forgetAccessToken(tenantId: string): void {
   accessTokens.delete(tenantId);
 }
+
+// ————— application token (S30, Browse) —————
+
+/**
+ * The Browse API's scope. Public data only — no seller identity is involved,
+ * which is exactly why the comp sweep can read asking prices for a tenant that
+ * has never connected an eBay account.
+ */
+const EBAY_APP_SCOPE = "https://api.ebay.com/oauth/api_scope";
+
+/** Cache key for the app token — one per deployment, not per tenant. */
+const APP_TOKEN_KEY = "__app__";
+
+/**
+ * An application access token (client-credentials grant), or null when the eBay
+ * keyset isn't configured on this environment.
+ *
+ * Distinct from `accessTokenForTenant` in the thing that matters: that one acts
+ * AS a seller and needs their consent, this one identifies only the app. Browse
+ * returns public listings, so asking-price observations need no user OAuth —
+ * which is the whole reason the ASK half of the comp DB can run on day one
+ * while sold comps stay gated behind Marketplace Insights forever.
+ */
+export async function appAccessToken(): Promise<string | null> {
+  if (!ebayConfigured()) return null;
+
+  const cached = accessTokens.get(APP_TOKEN_KEY);
+  if (cached && cached.expiresAt - REFRESH_SKEW_MS > Date.now()) return cached.token;
+
+  const tokens = await tokenRequest(
+    new URLSearchParams({ grant_type: "client_credentials", scope: EBAY_APP_SCOPE }),
+  );
+  accessTokens.set(APP_TOKEN_KEY, {
+    token: tokens.accessToken,
+    expiresAt: Date.now() + tokens.expiresInSeconds * 1000,
+  });
+  return tokens.accessToken;
+}

@@ -1198,7 +1198,54 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       errors. lint/typecheck/build clean, 413 tests green.
       **Not verified**: no screenshots — the browser pane could not composite frames in this
       session, so the visual check is structural (accessibility tree + computed styles), not visual.
-- [ ] **S30 — Comp DB + Argus** · M
+- [x] **S30 — Comp DB + Argus** · M · ✅ 2026-07-31
+      Two additive models. `PricePoint` is one observation, and its `kind` is a **correctness
+      boundary rather than a label**: `SOLD` = one of his own completed sales (a real buyer paid
+      it, real fees already booked), `ASK` = an asking price observed on an open listing. There is
+      no third source and there will not be one — Marketplace Insights stays Limited Release. The
+      separation is enforced at three layers, deliberately: the model discriminates, `computeBand`
+      **throws** on a mixed array rather than returning a plausible wrong number, and the dashboard
+      renders the two in separate labelled columns. The demo data shows exactly why — Longines
+      L3.716 sold at 501 € against a 2 655 € ask.
+      `RefPriceStat` is explicitly a **cache**, not a second source of truth: the history *is* the
+      PricePoint rows and any window recomputes from them (the same reasoning that kept B1's
+      finance tab derived from the cost ledger). Drift compares against the median the row held
+      immediately before the sweep overwrote it, which is why no history table is needed.
+      Pure `src/lib/chronos/comps.ts` (no Prisma import, margin.ts posture): interpolated
+      `percentile` — nearest-rank collapses the band at the 4-comp sample sizes this actually runs
+      on — `computeBand`, `driftFor`, `confidenceFor`, `positionInBand`, dedupe keys, and
+      `titleMatchesAliases`. Drift is gated on **sample size as well as magnitude**: a 40% swing
+      over 2 points is one odd listing, and alerting on it trains the operator to ignore alerts.
+      Verified live: a probe pushed a median 200% and fired correctly at n=5, then the same
+      reference sat at −66.7% *uncoloured* at n=2 — the gate visibly doing its job.
+      `comps-store.ts` is the Prisma half, with `recordPricePoint` as the **single permitted write
+      path** (costs.ts's `addUnitCost` discipline). Attribution never guesses: a listing is
+      attributed only if its title contains a declared alias of the reference — no brand-only
+      fallback, no fuzzy scoring. Unmatched listings are **dropped, not queued**, and the asymmetry
+      with S29's order queue is deliberate: an order is money that already moved, a missed ask
+      costs one data point.
+      `argus.ts` is the sweep (Forseti/Thor synchronous shape, no LLM, no Inngest) and is
+      **detection-only — it never touches the ledger**. A drift alert is an observation, not a side
+      effect; Kairos at S32 is what turns a band into a buy offer, and that does go through
+      Heimdallr. `/api/cron/argus` loops every ACTIVE tenant (S28 rule).
+      **Also shipped, not originally scoped:** `ebay.searchListings` against the real **Browse API**
+      plus `appAccessToken()` (client-credentials) in `ebay-oauth.ts` — Browse reads public data, so
+      the ASK half works for a tenant that has never connected an eBay account. The capability flag
+      flipped `false → true` in the same change, as the drift test requires. Also collapsed a real
+      duplication: `fxRateFor` now lives in comps.ts and `sync-map.ts` delegates to it, so the
+      order-sync and comp-ingest paths cannot disagree about a conversion.
+      *Exit met:* lint 0 errors (3 pre-existing warnings) · **445 tests** (32 new) · build clean,
+      `/chronos/argus` + `/api/cron/argus` both compile. Verified against `chronos_demo` via
+      `scripts/chronos/argus-check.ts` (kept, sync-fixture-check.ts's twin): two sweeps converged
+      byte-for-byte (12 sold / 5 ask recorded on run 1, **0 / 0** on run 2), 35 of 40 demo listings
+      correctly dropped as unattributed, first sweep reported no drift, and the `--drift-probe`
+      flag proves the alert path end to end and cleans up after itself. In-browser: page renders 8
+      references with correctly separated bands, dark tokens resolve to the void palette
+      (`#05070f`, realm `#9b8cff`), no overflow at 375px, no server errors.
+      **Found and fixed during verification, my own bug:** the drift column fell back to the *ask*
+      band when a reference had no sold band — an ask-derived number in an unlabelled column, the
+      exact failure this page exists to prevent. Now SOLD-only, header relabelled "Dérive (ventes)".
+      Demo comp data left in place deliberately, same precedent as every other module's seed.
 - [ ] **S31 — Platform: entity-scoped `StageDefinition`** · S — the one **non-additive** change in
       the whole plan; needs a backfill + explicit `dropIndex` (`db push` won't drop the old unique).
 - [ ] **S32 — Kairos sourcing agent** · plan on Opus · M — money category, `maxLevel: 1`, never
