@@ -4,7 +4,7 @@ import {
   distinctDbHosts,
   hostOf,
   isProd,
-  mimirEnv,
+  appEnv,
 } from "./env-identity";
 
 // S28 safety contract. These are three-line functions, but they are the ones
@@ -17,22 +17,22 @@ afterEach(() => {
   process.env = { ...SAVED };
 });
 
-describe("mimirEnv", () => {
+describe("appEnv", () => {
   it("defaults to dev when unset — prod is never implicit", () => {
     delete process.env.MIMIR_ENV;
-    expect(mimirEnv()).toBe("dev");
+    expect(appEnv()).toBe("dev");
     expect(isProd()).toBe(false);
   });
 
   it("treats an empty value as dev", () => {
     process.env.MIMIR_ENV = "";
-    expect(mimirEnv()).toBe("dev");
+    expect(appEnv()).toBe("dev");
   });
 
   it("accepts prod and production, case- and space-insensitively", () => {
     for (const v of ["prod", "PROD", "  Production  ", "production"]) {
       process.env.MIMIR_ENV = v;
-      expect(mimirEnv()).toBe("prod");
+      expect(appEnv()).toBe("prod");
       expect(isProd()).toBe(true);
     }
   });
@@ -40,15 +40,15 @@ describe("mimirEnv", () => {
   it("throws on an unrecognised value rather than guessing", () => {
     // "staging" silently falling back to dev would disarm every guard.
     process.env.MIMIR_ENV = "staging";
-    expect(() => mimirEnv()).toThrow(EnvIdentityError);
+    expect(() => appEnv()).toThrow(EnvIdentityError);
   });
 });
 
 describe("hostOf", () => {
   it("returns the host and never the credentials", () => {
-    const uri = "mongodb+srv://someuser:sup3rs3cret@mimir-dev.abc12.mongodb.net/crm_demo?retryWrites=true";
+    const uri = "mongodb+srv://someuser:sup3rs3cret@chronos-dev.abc12.mongodb.net/crm_demo?retryWrites=true";
     const host = hostOf(uri);
-    expect(host).toBe("mimir-dev.abc12.mongodb.net");
+    expect(host).toBe("chronos-dev.abc12.mongodb.net");
     expect(host).not.toContain("sup3rs3cret");
     expect(host).not.toContain("someuser");
   });

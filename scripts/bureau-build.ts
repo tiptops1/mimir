@@ -24,7 +24,7 @@ const webviewDir = path.join(vendorRoot, "webview-ui");
 const distWebview = path.join(vendorRoot, "dist", "webview");
 const outDir = path.join(repoRoot, "public", "bureau");
 
-// The Mimir agents: id + display name + the AgentEvent.module key each maps to.
+// The Chronos agents: id + display name + the AgentEvent.module key each maps to.
 const BUREAU_AGENTS: { id: number; name: string; module: string }[] = [
   { id: 1, name: "Heimdallr", module: "heimdallr" },
   { id: 2, name: "Huginn", module: "huginn" },

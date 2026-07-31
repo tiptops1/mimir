@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 // Display serif for the cosmos observatory hero only — never used on body
-// text or CRM working surfaces (see .claude/skills/mimir-cosmos).
+// text or CRM working surfaces (see .claude/skills/chronos-cosmos).
 const fraunces = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],

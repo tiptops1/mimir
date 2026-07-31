@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { PrismaClient as ControlClient } from "../src/generated/control";
 import { decrypt } from "../src/lib/crypto";
 import { assertProdAllowed } from "./lib/guard";
-import { hostOf, mimirEnv } from "../src/lib/env-identity";
+import { hostOf, appEnv } from "../src/lib/env-identity";
 
 assertProdAllowed({ label: "backup:dump" });
 
@@ -18,7 +18,7 @@ assertProdAllowed({ label: "backup:dump" });
  * WHY THIS EXISTS, in plain terms: the production cluster runs on Atlas M0,
  * which has **no backups of any kind** — no snapshots, no point-in-time
  * recovery, nothing to restore from. That was a deliberate, cost-driven choice
- * (see docs/mimir/ops.md), and this script plus a scheduled run of it IS the
+ * (see docs/chronos/ops.md), and this script plus a scheduled run of it IS the
  * recovery story. If it is not being run, there is no backup.
  *
  * Writes to ./backups/<env>-<timestamp>/<db>/ (git-ignored). Requires
@@ -84,7 +84,7 @@ async function main() {
   }
 
   const root = arg("out") ?? join(process.cwd(), "backups");
-  const outDir = join(root, `${mimirEnv()}-${stamp()}`);
+  const outDir = join(root, `${appEnv()}-${stamp()}`);
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
   console.log(`\nBackup -> ${outDir}\n`);

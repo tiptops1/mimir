@@ -15,7 +15,7 @@ assertProdAllowed();
  * brand-new tenants; this is the same mechanic for an EXISTING one, so an
  * additive schema change can be rolled out per tenant.
  *
- * Run the mimir-env-guard skill first — this writes indexes to a live DB.
+ * Run the chronos-env-guard skill first — this writes indexes to a live DB.
  * Requires CLUSTER_BASE_URL (a base connection string whose DB-name path is
  * swapped for the tenant slug), exactly as provision-tenant.ts derives it.
  */

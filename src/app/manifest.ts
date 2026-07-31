@@ -11,10 +11,13 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: DEFAULT_BRAND_NAME,
     description: DEFAULT_BRAND_TAGLINE,
     lang: "fr",
-    start_url: "/dashboard",
+    start_url: "/chronos",
     display: "standalone",
-    background_color: "#f7f8fa",
-    theme_color: "#4f46e5",
+    // Literals, not tokens: the OS paints the splash and the title bar before
+    // any CSS loads, so these must mirror --background / --brand from
+    // globals.css by hand. Change them together (docs/chronos/BRAND.md §2).
+    background_color: "#05070f",
+    theme_color: "#4b39c4",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

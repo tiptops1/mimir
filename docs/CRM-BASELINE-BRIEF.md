@@ -1,6 +1,6 @@
 # CRM baseline — consolidated brief
 
-> **Purpose.** Single source of truth for the CRM/Lead One/Outreach baseline Mimir was built on top
+> **Purpose.** Single source of truth for the CRM/Lead One/Outreach baseline Chronos was built on top
 > of: architecture, data model, feature surface, and the hard-won gotchas. Everything here is
 > **current state + the reasoning behind it**, describing the inherited structure — not a
 > chronological log.
@@ -13,13 +13,13 @@
 
 | | |
 |---|---|
-| **What this is** | A multi-tenant, config-driven CRM for French insurance-brokerage prospecting, inherited as Mimir's baseline substrate |
+| **What this is** | A multi-tenant, config-driven CRM for French insurance-brokerage prospecting, inherited as Chronos's baseline substrate |
 | **Language** | The UI is **French**. Copy, labels, enum labels, emails — all French. |
 | **Market** | French insurance brokers, NAF code `66.22Z` |
 
-This baseline has **no production tenant in Mimir** — everything here is a staging/demo
-environment. `mimir-env-guard` enforces that nothing in this repo can reach the original prod
-cluster. Demo tenants only (see `docs/mimir/roadmap.md` S6).
+This baseline has **no production tenant in Chronos** — everything here is a staging/demo
+environment. `chronos-env-guard` enforces that nothing in this repo can reach the original prod
+cluster. Demo tenants only (see `docs/chronos/roadmap.md` S6).
 
 ---
 
@@ -39,7 +39,7 @@ cluster. Demo tenants only (see `docs/mimir/roadmap.md` S6).
 | Cold outreach engine | ✅ present, **dormant by default** — needs an OUTREACH credential to send |
 | Lead One — lead-gen pipeline | ✅ present; needs API keys set to run at full strength |
 
-This is the baseline Mimir builds new agentic modules on top of (`docs/mimir/roadmap.md` Phase 1+).
+This is the baseline Chronos builds new agentic modules on top of (`docs/chronos/roadmap.md` Phase 1+).
 
 ---
 
@@ -86,7 +86,7 @@ Prisma fights this (it wants a fixed typed schema), hence the split:
 
 Credentials live encrypted in the control plane (`Integration`), and ingestion routes to the right
 tenant DB via `lib/tenant-cron.ts`. (Legacy env-var fallback paths for a single hardcoded tenant
-were stripped from Mimir at S0b — every tenant connects its own OAuth credential now.)
+were stripped from Chronos at S0b — every tenant connects its own OAuth credential now.)
 
 AI keys (Gemini/Claude) stay **env-based by design** — they're the platform's own provider account,
 not a tenant credential.
@@ -103,10 +103,10 @@ These are non-negotiable. Violating them is the rebuild this platform is designe
 2. **Tenant data only through the DB router.** All tenant access resolves `tenantId → connection`
    via `await getTenantDb()`. Never hardcode a DB or connection string.
 3. **Never point this repo at the prod cluster.** There is no production tenant here — the
-   constraint that replaces "don't break the live app." Run `mimir-env-guard` before anything
+   constraint that replaces "don't break the live app." Run `chronos-env-guard` before anything
    data-touching.
 4. **Push to `main` only on an explicit "push".** When the user does say it, run the whole
-   `mimir-ship` chain without asking turn-by-turn.
+   `chronos-ship` chain without asking turn-by-turn.
 5. **This is Next.js 16** — it post-dates model training data. Read `node_modules/next/dist/docs/`
    before writing Next code. Note `middleware.ts` is renamed **`proxy.ts`**.
 
@@ -247,7 +247,7 @@ into `FINANCE` Tasks (deduped by `financeEntryId`) → `/todo` + bell + digest f
 
 ---
 
-## 9. Deployment & ops (baseline pattern — Mimir has its own project, see `docs/mimir/decisions.md`)
+## 9. Deployment & ops (baseline pattern — Chronos has its own project, see `docs/chronos/decisions.md`)
 
 **GitHub → Vercel**, auto-deploy from `main`.
 
@@ -266,10 +266,10 @@ cron-job.org, kept off-host):
 
 Response shape is `{ ranAt, tenants: [...] }`. Manual run = open the URL with `?key=`.
 
-### Ship ritual (the `mimir-ship` skill)
+### Ship ritual (the `chronos-ship` skill)
 
 `npm run lint` → `npm run build` → commit → `git push` → `npm run db:push` **only if `prisma/`
-changed** → update `docs/mimir/roadmap.md`. No smoke tests, no status checks, no dev server unless
+changed** → update `docs/chronos/roadmap.md`. No smoke tests, no status checks, no dev server unless
 asked.
 
 ### Atlas
@@ -280,7 +280,7 @@ InternalError". Prisma requires a **replica set** — Atlas provides one by defa
 **Atlas Search** powers the global top-bar search (`$search` via Prisma `aggregateRaw`,
 `lib/search.ts`, `/api/search`); dynamic-mapping "default" indexes created by `npm run
 search:indexes`. Free on all tiers (M0 ≤3 indexes) — the 3-index cap becomes the binding constraint
-once per-tenant vector search lands (Mimir S12).
+once per-tenant vector search lands (Chronos S12).
 
 **Two-tier search model:** the top bar = "jump to a known record" (Atlas, fuzzy, navigates away).
 Per-page boxes = "narrow the list I'm working" (regex `contains`, composes with structured filters +
@@ -407,4 +407,4 @@ hourly `/api/cron/outreach` schedule — all business/ops setup, not code.
 - One session per task. Finish → commit → `/clear`.
 - Start each phase in plan mode, then execute.
 - Reference files by path; don't paste them. Let subagents do broad searches.
-- `docs/mimir/roadmap.md` is the cross-session memory — tick boxes as you go.
+- `docs/chronos/roadmap.md` is the cross-session memory — tick boxes as you go.

@@ -1,19 +1,19 @@
 ---
-name: mimir-ship
-description: Ship the Mimir platform — lint, build, commit, push to the Mimir Vercel project, db:push against the Mimir cluster only if prisma/ changed, tick the roadmap. Use when the user says "push", "ship it", or "deploy" while working in the mimir repo. Never use for avelior-analytics (that's /ship).
+name: chronos-ship
+description: Ship the Chronos platform — lint, build, commit, push to the Chronos Vercel project, db:push against the Chronos cluster only if prisma/ changed, tick the roadmap. Use when the user says "push", "ship it", or "deploy" while working in this repo. Only for this repo.
 ---
 
-# Mimir ship ritual
+# Chronos ship ritual
 
 Run this exact sequence from inside the `mimir/` repo, only after the user explicitly says "push"
 (or equivalent). Once they say it, run the whole chain without asking turn-by-turn.
 
 ## Pre-flight (mandatory)
 
-1. Run the `mimir-env-guard` skill's check first (`npm run env:check` + the `crm-railway` grep).
+1. Run the `chronos-env-guard` skill's check first (`npm run env:check` + the `crm-railway` grep).
    If it fails, STOP — do not push, do not db:push.
 2. Confirm you are in `mimir/` (`git remote get-url origin` → `tiptops1/mimir`), not
-   `avelior-analytics`.
+   `chronos`.
 3. **Confirm which environment your `.env` is.** The chain's schema-push steps write to whatever
    it points at. A dev `.env` (the default) is what you want for an ordinary ship.
 
@@ -31,7 +31,7 @@ npm run db:push:control  # ONLY if prisma/control/schema.prisma changed
 
 ## Two environments now deploy from `main`
 
-Since S28 there is a Mimir **production** Vercel project (the Chronos customer) alongside dev.
+Since S28 there is a Chronos **production** Vercel project (the Chronos customer) alongside dev.
 Both track `main`, so one `git push` deploys both. Consequences for this chain:
 
 - A tenant-schema change must be **additive**, or both environments break at once.
@@ -46,13 +46,13 @@ process holds the query-engine DLL and causes EPERM rename failures (OneDrive ma
 
 ## After the push
 
-1. Tick the session's checkbox in `docs/mimir/roadmap.md` (the roadmap is the cross-session
+1. Tick the session's checkbox in `docs/chronos/roadmap.md` (the roadmap is the cross-session
    memory — an unticked box means the work didn't happen).
-2. If a decision was closed this session, append it to `docs/mimir/decisions.md`.
+2. If a decision was closed this session, append it to `docs/chronos/decisions.md`.
 
 ## Never
 
-- Never run this chain against `avelior-analytics` or with a `.env` pointing at `crm-railway`.
+- Never run this chain against `chronos` or with a `.env` pointing at `crm-railway`.
 - Never push without the literal user "push" — mid-session commits are fine, pushes are not.
 - Never run the chain's `db:push` steps from a `MIMIR_ENV=prod` shell. Production schema rollout
-  is a separate, per-tenant, explicitly-flagged operation — see `docs/mimir/ops.md` §6.
+  is a separate, per-tenant, explicitly-flagged operation — see `docs/chronos/ops.md` §6.

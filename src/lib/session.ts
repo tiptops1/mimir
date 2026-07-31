@@ -24,7 +24,7 @@ const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
  * silently encodes `undefined` into a valid-looking key: every sign succeeds,
  * every verify fails, and the only symptom is that the whole app bounces
  * everyone to /login with nothing in the logs. That is a plausible first day on
- * a fresh Vercel project, so it must be loud (see docs/mimir/ops.md).
+ * a fresh Vercel project, so it must be loud (see docs/chronos/ops.md).
  */
 function signingKey(): Uint8Array {
   const secret = process.env.SESSION_SECRET;

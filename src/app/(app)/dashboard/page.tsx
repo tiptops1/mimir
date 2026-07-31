@@ -178,7 +178,7 @@ export default async function DashboardPage({
       href: "/finances",
     },
     {
-      slug: "mimir",
+      slug: "agents",
       // Matches the sidebar realm heading (src/lib/realms.ts). Labelled by
       // function, not product — the hub at the centre carries the brand name.
       label: "Agents",

@@ -10,14 +10,19 @@
  * Modules a tenant can be entitled to. The DB column is open-vocab `String[]`,
  * so adding a vertical here is a type change, not a migration.
  *
- * - "core"    — every tenant has it (dashboard, settings, approvals). Never gated.
- * - "crm"     — the inherited CRM: companies, contacts, pipeline, lead-gen, outreach.
- * - "chronos" — the buy/restore/resell inventory vertical (S27+).
+ * - "core"    — every tenant has it (settings, approvals). Never gated.
+ * - "chronos" — the watch buy/restore/resell trade. The product.
+ * - "crm"     — the inherited generic-CRM surfaces (companies, contacts,
+ *               pipeline, lead-gen, outreach). RETIRED: no tenant is entitled
+ *               to it any more and it appears in no nav. The value is kept in
+ *               the union only so the `requireModule("crm")` guards on those
+ *               legacy routes keep type-checking while they redirect everyone
+ *               away. Do not grant it; do not add surfaces to it.
  */
 export type TenantModule = "core" | "crm" | "chronos";
 
 /** What a tenant gets when nothing else is specified. */
-export const DEFAULT_MODULES: TenantModule[] = ["crm"];
+export const DEFAULT_MODULES: TenantModule[] = ["chronos"];
 
 /** Is this set of modules entitled to `mod`? "core" is implicit. */
 export function hasModule(modules: string[], mod: TenantModule): boolean {
@@ -25,16 +30,15 @@ export function hasModule(modules: string[], mod: TenantModule): boolean {
 }
 
 /**
- * Where "home" is for this tenant. /dashboard is the CRM's home — it reads
- * companies, contacts, the stage funnel and the finance cockpit — so a tenant
- * without the CRM must land somewhere else, and redirect targets must agree
- * with the page guards or they loop.
+ * Where "home" is for this tenant — the inventory, for anyone with the trade.
  *
- * Invariant: a tenant always has at least one module (provisioning enforces it),
- * so the final fallback is unreachable in practice.
+ * Redirect targets must agree with the page guards or they loop: /dashboard is
+ * a retired CRM surface behind requireModule("crm"), so it can never be a
+ * fallback. A tenant with neither module is left at the approvals inbox, which
+ * is "core" and therefore always reachable.
  */
 export function homePathFor(modules: string[]): string {
-  if (hasModule(modules, "crm")) return "/dashboard";
   if (hasModule(modules, "chronos")) return "/chronos";
-  return "/dashboard";
+  if (hasModule(modules, "crm")) return "/dashboard";
+  return "/heimdallr/inbox";
 }

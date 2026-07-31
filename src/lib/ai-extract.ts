@@ -55,7 +55,7 @@ export function aiEnabled(): boolean {
 // Stages are config data (StageDefinition), so the prompt is built per-call
 // from the tenant's actual stage keys instead of a hardcoded list.
 function buildSystemPrompt(stageKeys: string[]): string {
-  return `Tu es l'assistant CRM d'un courtier en assurances B2B (Avelior).
+  return `Tu es l’assistant CRM d’un courtier en assurances B2B.
 On te donne le contenu d'un email, d'une réunion ou d'un compte-rendu d'appel
 avec un prospect. Tu en extrais le signal commercial utile au suivi.
 

@@ -89,7 +89,7 @@ export default async function HeimdallrInboxPage({
       />
       <div className="p-6">
         <p className="mb-4 max-w-2xl text-sm text-muted">
-          Propositions générées par les agents Mimir, en attente de validation humaine.
+          Propositions générées par les agents, en attente de validation humaine.
           Approuvez, modifiez puis approuvez, ou rejetez.
         </p>
 

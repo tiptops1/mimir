@@ -1,7 +1,7 @@
-# Mimir — operations runbook
+# Chronos — operations runbook
 
 > Written at **S28** (2026-07-30), when the platform stopped being demo-only. Companion to
-> `docs/mimir/roadmap.md` §0.5 (the environment model) and `decisions.md` D6 (the isolation
+> `docs/chronos/roadmap.md` §0.5 (the environment model) and `decisions.md` D6 (the isolation
 > charter). If you are about to run a command that writes to a database, this is the file.
 
 ---
@@ -11,11 +11,11 @@
 Three independent environments. Nothing is shared between them — not a cluster, not a secret,
 not a queue.
 
-| | **CRM baseline (prod)** | **Mimir dev** | **Mimir prod** |
+| | **CRM baseline (prod)** | **Chronos dev** | **Chronos prod** |
 |---|---|---|---|
 | Repo | the baseline repo | this repo, `main` | this repo, `main` |
-| Atlas | `crm-railway` (legacy name) | project *mimir*, cluster `mimir-dev` (M0, EU) | **its own Atlas project**, own M0 cluster (EU) |
-| Control DB | baseline's | `mimir-dev` cluster | prod cluster — never reachable from a dev machine |
+| Atlas | `crm-railway` (legacy name) | project *mimir*, cluster `chronos-dev` (M0, EU) | **its own Atlas project**, own M0 cluster (EU) |
+| Control DB | baseline's | `chronos-dev` cluster | prod cluster — never reachable from a dev machine |
 | Host | baseline's Vercel project | — (local only) | **its own Vercel project**, own domain |
 | Crons | cron-job.org | none | cron-job.org, own `CRON_SECRET` |
 | Secrets | baseline `.env` | dev `.env` | Vercel env vars only, all fresh |
@@ -39,12 +39,12 @@ footnotes; they change what operating this system means.
 - **There are no backups. None.** No snapshots, no point-in-time recovery, no restore button.
   M0 does not have the feature. The *entire* recovery story is `npm run backup:dump` (§5) actually
   being run. If nobody runs it, a dropped collection is gone.
-- **One M0 cluster per Atlas *project*.** `mimir-dev` already occupies the free slot in its
+- **One M0 cluster per Atlas *project*.** `chronos-dev` already occupies the free slot in its
   project, so production needs a **new Atlas project**, not just a new cluster in the old one.
   This is also what D6 wanted anyway (separate project = separate access control).
 - **512 MB storage.** Chronos inventory is small (thousands of units, tens of thousands of cost
   lines) so this is not near-term binding, but it is not monitored automatically either.
-- **3 Atlas Search indexes per cluster.** `mimir-dev` is at 3/3 already. The prod cluster starts
+- **3 Atlas Search indexes per cluster.** `chronos-dev` is at 3/3 already. The prod cluster starts
   at 0/3, and `SearchIndexBudget` is a **control-plane singleton**, so each environment counts its
   own — correct by construction, since each control plane sits on its own cluster.
 - **No private networking.** Network access must be `0.0.0.0/0` for Vercel to connect. The
@@ -152,7 +152,7 @@ return 400 without it rather than guessing.
 ### 3.6 Go-live checklist
 
 - [ ] `npm run env:check` clean against prod
-- [ ] Login works on the real domain; wordmark and logo are Chronos, not Mimir
+- [ ] Login works on the real domain; wordmark and logo are Chronos, not Chronos
 - [ ] `/companies` and `/dashboard` redirect (CRM module withheld)
 - [ ] `ChronosConfig` carries his real fee percentages and VAT rate
 - [ ] Cron entries created with the Bearer header, one test fire each returns 200
@@ -220,7 +220,7 @@ dump nobody has restored is not a backup — it is a file.
 
 ## 6. Deploying a change
 
-Use the `mimir-ship` skill. It runs lint → test → build → commit → push, and pushes schema only
+Use the `chronos-ship` skill. It runs lint → test → build → commit → push, and pushes schema only
 when `prisma/` changed. Two environment-specific notes:
 
 - Pushing `main` deploys **both** Vercel projects if both track `main`. That is intended (one

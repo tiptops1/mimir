@@ -8,7 +8,7 @@ import type { PrismaClient } from "@prisma/client";
 
 export type Provider = "gemini" | "anthropic";
 
-// $/MTok, from docs/mimir/AGENTIC-PLATFORM-DECISION-MEMO.md (snapshot 2026-07,
+// $/MTok, from docs/chronos/AGENTIC-PLATFORM-DECISION-MEMO.md (snapshot 2026-07,
 // verify at https://docs.claude.com before relying on this for real billing).
 // Gemini 2.5 Flash is priced at 0: the enrichment path only runs on the free
 // tier (see ai-extract.ts), so it is genuinely $0 cost to us — tokens/calls

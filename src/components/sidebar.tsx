@@ -3,26 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  CheckSquare,
-  ClipboardList,
-  Users,
-  KanbanSquare,
-  Radar,
-  BarChart3,
-  Inbox,
-  Send,
   Wallet,
   Settings,
   LogOut,
   ShieldCheck,
-  ShieldAlert,
-  BookOpen,
-  Gauge,
-  HeartPulse,
-  Megaphone,
   Watch,
   Scale,
+  PackageOpen,
+  SlidersHorizontal,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
@@ -35,30 +23,21 @@ import { cn, initialsFromName } from "@/lib/utils";
 // verticals it bought (src/lib/modules.ts). "core" = every tenant gets it.
 // NOTE: hiding an entry is not access control — the route stays reachable by
 // URL, so module-scoped pages also call requireModule().
+//
+// Labels are trade vocabulary, never internal codenames and never generic-CRM
+// vocabulary ("société", "prospect", "deal") — docs/chronos/BRAND.md §7.
 const NAV: Array<{
   href: string;
   label: string;
   icon: typeof Settings;
   module: TenantModule;
 }> = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, module: "crm" },
-  { href: "/todo", label: "À faire", icon: CheckSquare, module: "crm" },
-  { href: "/companies", label: "Suivi", icon: ClipboardList, module: "crm" },
-  { href: "/contacts", label: "Contacts", icon: Users, module: "crm" },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare, module: "crm" },
-  { href: "/leadone", label: "Lead One", icon: Radar, module: "crm" },
-  { href: "/outreach", label: "Outreach", icon: Send, module: "crm" },
-  { href: "/inbox", label: "Boîte de réception", icon: Inbox, module: "crm" },
-  { href: "/finances", label: "Finances", icon: Wallet, module: "crm" },
-  { href: "/analytics", label: "Analytique", icon: BarChart3, module: "crm" },
-  { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck, module: "core" },
-  { href: "/mimisbrunnr", label: "Mímisbrunnr", icon: BookOpen, module: "crm" },
-  { href: "/nornir", label: "Nornir", icon: Gauge, module: "crm" },
-  { href: "/forseti", label: "Forseti", icon: ShieldAlert, module: "crm" },
-  { href: "/thor", label: "Thor", icon: HeartPulse, module: "crm" },
-  { href: "/freyja", label: "Freyja", icon: Megaphone, module: "crm" },
   { href: "/chronos", label: "Inventaire", icon: Watch, module: "chronos" },
+  { href: "/chronos/import", label: "Ventes", icon: PackageOpen, module: "chronos" },
   { href: "/chronos/reconciliation", label: "Rapprochement", icon: Scale, module: "chronos" },
+  { href: "/chronos/finance", label: "Finances", icon: Wallet, module: "chronos" },
+  { href: "/chronos/settings", label: "Réglages métier", icon: SlidersHorizontal, module: "chronos" },
+  { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck, module: "core" },
 ];
 
 /**
@@ -71,27 +50,41 @@ function groupsFor(modules: string[]) {
     realm,
     items: NAV.filter(
       (item) =>
-        realm.routes.includes(item.href.split("/")[1]) &&
-        hasModule(modules, item.module),
+        // realmForPath, not a segment lookup: realms now own two-segment routes
+        // (/chronos/finance is Trésor, not Atelier), and only that function
+        // knows the precedence between them.
+        realmForPath(item.href) === realm.slug && hasModule(modules, item.module),
     ),
   })).filter((g) => g.items.length > 0);
 }
 
+/**
+ * The nav entry a path belongs to: the LONGEST href that prefixes it.
+ *
+ * A plain `startsWith` would light up both "Inventaire" (/chronos) and
+ * "Finances" (/chronos/finance) on the finance page, since every Chronos
+ * surface is nested under the same segment. Longest-match makes the deepest
+ * entry win and leaves /chronos/[id] correctly on "Inventaire".
+ */
+function activeHref(pathname: string, hrefs: string[]): string | undefined {
+  return hrefs
+    .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
 function NavItem({
   item,
-  pathname,
+  active,
   badge,
   realmSlug,
   currentRealm,
 }: {
   item: { href: string; label: string; icon: typeof Settings };
-  pathname: string;
+  active: boolean;
   badge: number;
   realmSlug?: RealmSlug;
   currentRealm?: RealmSlug;
 }) {
-  const active =
-    pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
   const crossesRealm =
     realmSlug !== undefined &&
@@ -135,9 +128,7 @@ export type SidebarProps = {
   brandName: string;
   /** The tenant's logo, replacing the default glyph tile. Null = built-in mark. */
   brandLogoUrl?: string | null;
-  pendingCount?: number;
-  todoCount?: number;
-  leadOneCount?: number;
+  /** Agent proposals awaiting a human decision. The only nav badge left. */
   heimdallrPendingCount?: number;
   className?: string;
 };
@@ -147,26 +138,19 @@ export function Sidebar({
   modules,
   brandName,
   brandLogoUrl = null,
-  pendingCount = 0,
-  todoCount = 0,
-  leadOneCount = 0,
   heimdallrPendingCount = 0,
   className,
 }: SidebarProps) {
   const pathname = usePathname();
   const currentRealm = realmForPath(pathname);
   const groups = groupsFor(modules);
+  const current = activeHref(
+    pathname,
+    groups.flatMap((g) => g.items.map((i) => i.href)),
+  );
 
   const badgeFor = (href: string) =>
-    href === "/inbox"
-      ? pendingCount
-      : href === "/todo"
-        ? todoCount
-        : href === "/leadone"
-          ? leadOneCount
-          : href === "/heimdallr/inbox"
-            ? heimdallrPendingCount
-            : 0;
+    href === "/heimdallr/inbox" ? heimdallrPendingCount : 0;
 
   return (
     <aside
@@ -193,7 +177,7 @@ export function Sidebar({
                 <NavItem
                   key={item.href}
                   item={item}
-                  pathname={pathname}
+                  active={current === item.href}
                   badge={badgeFor(item.href)}
                   realmSlug={realm.slug}
                   currentRealm={currentRealm}
@@ -206,7 +190,7 @@ export function Sidebar({
           <div className="mt-4 border-t border-border pt-3">
             <NavItem
               item={{ href: "/settings", label: "Paramètres", icon: Settings }}
-              pathname={pathname}
+              active={pathname === "/settings" || pathname.startsWith("/settings/")}
               badge={0}
             />
           </div>

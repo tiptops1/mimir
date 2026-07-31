@@ -1,4 +1,4 @@
-# Mimir — decisions log
+# Chronos — decisions log
 
 > Companion to `roadmap.md` and `AGENTIC-PLATFORM-DECISION-MEMO.md`. One entry per closed decision,
 > newest last. When this file and the memo disagree, this file wins (it's more recent by
@@ -18,21 +18,21 @@ Why clone over squash/fresh-init:
 
 Accepted caveat, recorded consciously **at the time this was a private repo**: the inherited history
 contains the baseline owner's prospect CSVs (`data/crm-chris-*.csv`, deleted from the working tree
-in the first Mimir commit) and a committed 21 MB Prisma query-engine DLL under
+in the first Chronos commit) and a committed 21 MB Prisma query-engine DLL under
 `src/generated/control/`. Both remain reachable in git history. **⚠ Superseded 2026-07-15: this repo
 is now public (discovered during S1's push).** The original "acceptable because private" rationale no
 longer holds — the CSVs are real client prospect data. Needs `git filter-repo` to purge them from
 history, or the repo needs to go back to private, before this is actually resolved.
 
-**Infrastructure isolation (D6):** own Atlas project/cluster (M0 `mimir-dev`, EU region), own
+**Infrastructure isolation (D6):** own Atlas project/cluster (M0 `chronos-dev`, EU region), own
 Vercel project, own cron-job.org schedules, fresh `ENCRYPTION_KEY` / `SESSION_SECRET` /
 `CRON_SECRET`. Nothing in this environment can reach the `crm-railway` prod cluster — `.env` never
-contains its host; the `mimir-env-guard` skill enforces the check before every script/db:push.
+contains its host; the `chronos-env-guard` skill enforces the check before every script/db:push.
 
 **M0 tier note:** free tier is fine for S0–S11. The 3-search-index cap on M0 becomes the binding
 constraint at **S12** (per-tenant vector indexes) — plan the Flex/M10 upgrade there, not before.
 
-## 2026-07-15 — Mimir is a permanent parallel platform (§0.5 open decision, closed)
+## 2026-07-15 — Chronos is a permanent parallel platform (§0.5 open decision, closed)
 
 **Decision: permanent parallel platform, not a proving ground that merges back.**
 
@@ -42,8 +42,8 @@ Consequences, so nobody re-litigates them implicitly:
   keep the baseline in sync.
 - Roadmap bug-rule 7's merge-back rationale ("additive-only keeps merge-back cheap") is void.
   **Additive-only schema stays anyway** — as discipline, and because it keeps cherry-picks clean.
-- The inherited Vision RM feature surface (CRM, outreach, Lead One, Finances) is Mimir's substrate,
-  not a product Mimir maintains for the baseline's users. The baseline's original customer stays on
+- The inherited Vision RM feature surface (CRM, outreach, Lead One, Finances) is Chronos's substrate,
+  not a product Chronos maintains for the baseline's users. The baseline's original customer stays on
   the baseline repo.
 
 ## 2026-07-15 — S1: docs refactor executed
@@ -56,8 +56,8 @@ public-repo caveat now attached to that rationale, above).
 `docs/VISION-RM-BRIEF.md` was **renamed to `docs/CRM-BASELINE-BRIEF.md`** and genericized in place
 (tenant-slug/domain examples, customer-name/product-branding framing removed) — it keeps its role as
 the baseline architecture reference, just describing the CRM/Lead One/Outreach structure generically
-instead of the specific customer it was built for. `CLAUDE.md` fully rewritten for Mimir (points at
-`docs/mimir/*`, drops the old "don't break the live app" framing for "never point this repo at the
+instead of the specific customer it was built for. `CLAUDE.md` fully rewritten for Chronos (points at
+`docs/chronos/*`, drops the old "don't break the live app" framing for "never point this repo at the
 prod cluster"). `README.md`, `INTEGRATIONS.md`, `docs/architecture.md` genericized; while in there,
 also fixed factual drift the S0b code strip left behind — these docs still referenced `npm run
 seed`, `npm run sync:email/calendar/all`, `npm run clean:inbox`, IMAP setup steps, and Railway cron
@@ -76,7 +76,7 @@ config, not bundled into a docs pass.
 
 ## 2026-07-15 — S0b: baseline strip-down executed
 
-Ran the `docs/mimir/strip-list.md` punch list end to end. Runtime: the tenant-#1 IMAP/ICS/
+Ran the `docs/chronos/strip-list.md` punch list end to end. Runtime: the tenant-#1 IMAP/ICS/
 `FIREFLIES_API_KEY` fallback branches in `tenant-cron.ts` and both `/api/cron` routes are gone —
 email/calendar sync now runs only when a tenant has connected Google OAuth; Fireflies only via the
 per-tenant `Integration` key. Deleted `imap-sync.ts` and `resolveTenant1Google()`; trimmed
@@ -95,7 +95,7 @@ baseline's real customer domains repo-wide now only hit docs (S1 scope).
 
 ## 2026-07-15 — S2: event schema + core data model designed (no code)
 
-Design doc: `docs/mimir/events.md` — the reviewed artifact S3 implements verbatim. Decisions
+Design doc: `docs/chronos/events.md` — the reviewed artifact S3 implements verbatim. Decisions
 closed there, recorded here so they don't get re-litigated at implementation time:
 
 - **Taxonomy is the triple module × category × action**, stored as three indexed string columns
@@ -229,7 +229,7 @@ a different platform — the memo planned the first seven realms of it. Four dec
    one narrow exception: a barely-perceptible ambient drift (starfield/aura) in the realm
    atmosphere layer only — never behind text-dense surfaces, transform/opacity only, fully
    disabled under `prefers-reduced-motion`. Full dynamic backgrounds rejected (readability,
-   battery, reads as flashy not premium). `mimir-cosmos` skill amended.
+   battery, reads as flashy not premium). `chronos-cosmos` skill amended.
 
 Also closed: **the business pilot dashboard ("whole company at a glance") + token-usage UI are
 Nornir's hero surface** — S17's scope now says so explicitly (the S5 `AiUsage`/`AiBudget` data
@@ -358,14 +358,14 @@ different limit — memo is stale here, this file wins per the header rule).
 
 **Consequence, not hypothetical:** 2 of 3 were already spent by the inherited `Company`/`Contact`
 text-search indexes before S12 wrote a line of code. Provisioning `crm_demo`'s
-`KnowledgeChunk` vector index spent the 3rd. **`mimir-dev` is now at the M0 cap (3/3).**
+`KnowledgeChunk` vector index spent the 3rd. **`chronos-dev` is now at the M0 cap (3/3).**
 Onboarding a second tenant with a knowledge base is blocked until the cluster is upgraded to
 Flex/M10 — a billing action Nicolas does himself in the Atlas console, not something this repo's
 scripts do automatically. `checkAndReserveIndexSlot` (`src/lib/rag/index-budget.ts`) hard-blocks
 at the cap (`IndexBudgetExceededError`) rather than silently skipping, so this surfaces loudly at
 the next `tenant:provision` run rather than being rediscovered as a mystery failure at S13/onboarding.
 
-Commit — see S12 entry, `docs/mimir/roadmap.md`.
+Commit — see S12 entry, `docs/chronos/roadmap.md`.
 
 ## 2026-07-17 — S13b: import commits are human actions (no Heimdallr ledger), quarantine at field granularity
 
@@ -393,7 +393,7 @@ synthetic fixture: 10 created / 2 skipped / 1 error / 1 quarantined).
 
 **Accepted: tested against synthetic exports only** — no real customer export exists yet; the
 mapping synonym table and coercers will need a revision pass at the first real onboarding
-(flagged in `docs/mimir/onboarding.md`, itself a draft for the same reason).
+(flagged in `docs/chronos/onboarding.md`, itself a draft for the same reason).
 
 **Operational note:** `tenant:provision` gained `--no-vector-index` — the M0 cap being 3/3 (see
 S12 entry) would otherwise hard-block provisioning any new tenant; demo/import tenants without a
@@ -436,7 +436,7 @@ insufficient (pure santé, which genuinely needs HDS certification).
    health text is provably never persisted (recall 100 %, hash-only quarantine), so no *hébergement
    de données de santé* occurs in this environment.
 3. **A pure-santé/prévoyance tenant is out of scope for this cluster.** Onboarding one requires a
-   separate HDS-certified environment — never ingest their health-heavy email into `mimir-dev`.
+   separate HDS-certified environment — never ingest their health-heavy email into `chronos-dev`.
    `checkAndReserveIndexSlot`-style hard-blocks, not silent skips, are the pattern if this is ever
    enforced in code.
 
@@ -447,7 +447,7 @@ classify → retrieve → draft).
 
 **Caveat recorded consciously:** the health *fraction* (14 %) is a property of the assumed vertical
 and this synthetic corpus, not a real client's traffic. At the first real onboarding, re-run the
-G2 inventory (`docs/mimir/onboarding.md` §2) against real volumes and re-confirm the fraction; the
+G2 inventory (`docs/chronos/onboarding.md` §2) against real volumes and re-confirm the fraction; the
 *decision* (exclusion posture, no HDS for multi-line, certified env for pure-santé) stands
 regardless.
 
@@ -459,7 +459,7 @@ adopt either framework as a dependency or a second runtime.**
 Evaluated on request against the S20 orchestration-layer need (hierarchical directive cascade).
 Both rejected on the same two grounds:
 
-- **Language/runtime mismatch.** Mimir is Next.js/TypeScript on Vercel + Inngest, chosen at S4
+- **Language/runtime mismatch.** Chronos is Next.js/TypeScript on Vercel + Inngest, chosen at S4
   specifically so agent steps are resumable sub-60s invocations against the DB router. Both
   frameworks are Python-first (MetaGPT: one-shot CLI/library, `Node`+`pnpm` build tooling but
   Python 3.9–3.11 runtime; AutoGen: Python/.NET Core API, notebook/script-oriented). Adopting
@@ -467,7 +467,7 @@ Both rejected on the same two grounds:
   Trigger.dev ("task code executes on their managed infra, so the DB router, encrypted connection
   strings and env would live in a second deployment target") — plus a new sub-processor on the
   compliance list (memo §5.4) for no architectural gain.
-- **No ledger/autonomy primitive.** Mimir's actual differentiator is D5 (one ledger, every
+- **No ledger/autonomy primitive.** Chronos's actual differentiator is D5 (one ledger, every
   side-effectful action) + D2 (per-category graduated autonomy, circuit breaker). Neither framework
   has an approval-gate, undo, or autonomy-level concept — MetaGPT's roles execute straight to a
   repo with no human gate; AutoGen's Core API is in-memory conversational orchestration with no
@@ -490,7 +490,7 @@ reasonable prior art to skim before S20 designs Odin's directive schema — but 
 
 ## 2026-07-19 — S20: Odin design closed (no code)
 
-Design doc: `docs/mimir/odin.md` — the reviewed artifact S21 implements verbatim, same
+Design doc: `docs/chronos/odin.md` — the reviewed artifact S21 implements verbatim, same
 S2/S3 relationship as `events.md`. Decisions closed there, recorded here so they don't
 get re-litigated at implementation time:
 
@@ -694,7 +694,7 @@ incidents on a real one.
 
 **Atlas tier: M0 (free), by explicit choice, customer informed.** This means **zero backups exist
 at the platform level** — no snapshots, no PITR. `scripts/backup-tenant.ts` (`npm run backup:dump`,
-wrapping `mongodump`) plus a documented weekly cadence in `docs/mimir/ops.md` is not a nice-to-have
+wrapping `mongodump`) plus a documented weekly cadence in `docs/chronos/ops.md` is not a nice-to-have
 alongside the "real" backup system — it **is** the backup system. Flagged explicitly in the go-live
 checklist that `mongodump` itself isn't installed on the dev machine yet, so the recovery path is
 not actually armed until that's done.

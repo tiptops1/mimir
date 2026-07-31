@@ -1,15 +1,15 @@
 @AGENTS.md
 
-# Mimir — orientation
+# Chronos — orientation
 
-Mimir is an **agentic platform** built on top of an inherited multi-tenant, config-driven CRM
+Chronos is an **agentic platform** built on top of an inherited multi-tenant, config-driven CRM
 baseline (companies/contacts/pipeline/tasks/deals/finances, plus a **Lead One** lead-gen pipeline
 and a cold-outreach engine). See `docs/CRM-BASELINE-BRIEF.md` for what the inherited baseline
 actually is.
 
 **Since S28 there is a production environment** (the Chronos customer) on its own Atlas project,
 control DB and Vercel project. Your local `.env` is a *dev* environment and must stay one —
-`docs/mimir/ops.md` is the runbook.
+`docs/chronos/ops.md` is the runbook.
 
 **`crm_demo`** is the default dev/demo tenant, seeded with synthetic French-broker (courtier)
 data — 20 companies across all 8 pipeline stages, contacts, deals, activities, tasks, finance
@@ -17,13 +17,13 @@ entries. Reseed (idempotent) with `npm run tenant:seed-demo`. It's the default t
 feature work and demos.
 
 **Before any architecture/session work, read:**
-- `docs/mimir/roadmap.md` — the session plan and **cross-session memory** (which session is current)
-- `docs/mimir/AGENTIC-PLATFORM-DECISION-MEMO.md` — the platform decisions (D1–D5) and open gates (G1/G2)
-- `docs/mimir/decisions.md` — the closed-decisions log (newest entries win over the memo)
+- `docs/chronos/roadmap.md` — the session plan and **cross-session memory** (which session is current)
+- `docs/chronos/AGENTIC-PLATFORM-DECISION-MEMO.md` — the platform decisions (D1–D5) and open gates (G1/G2)
+- `docs/chronos/decisions.md` — the closed-decisions log (newest entries win over the memo)
 - `docs/CRM-BASELINE-BRIEF.md` — the inherited CRM/Lead One/Outreach structure: architecture, data
   model, feature surface, gotchas
 - `docs/architecture.md` — the multi-tenant target design + the decisions behind it
-- `docs/mimir/ops.md` — the operations runbook: environments, guards, provisioning, crons, backups
+- `docs/chronos/ops.md` — the operations runbook: environments, guards, provisioning, crons, backups
 - `README.md` / `INTEGRATIONS.md` — the inherited CRM app + its integrations, how to run it
 
 ## Rules that protect the goal (don't violate these)
@@ -36,7 +36,7 @@ feature work and demos.
   fields need no migration).
 - **A shell's `.env` must match the environment the command intends.** `MIMIR_ENV` declares it
   (`dev` by default). Prod operations require an explicit `--prod`; demo seeders refuse to run
-  against prod at all. Run the `mimir-env-guard` skill before anything data-touching, and
+  against prod at all. Run the `chronos-env-guard` skill before anything data-touching, and
   `npm run env:check` when in any doubt. Never edit a dev `.env` to point at the prod cluster
   "just to check something" — that is the one manoeuvre every guard exists to stop.
 - **One bridge for side effects.** From Heimdallr (S7) on, every side-effectful agent action goes
@@ -53,13 +53,13 @@ writing Next code. Note `middleware.ts` is renamed **`proxy.ts`**.
 - **One session per task.** Finish → commit → `/clear`. Don't carry a session's history into the next.
 - **Start each phase in plan mode**, then execute.
 - **Reference files by path; don't paste them.** Let subagents do broad searches.
-- **`docs/mimir/roadmap.md` is the cross-session memory** — tick boxes / update status as you go.
+- **`docs/chronos/roadmap.md` is the cross-session memory** — tick boxes / update status as you go.
 - **Push to `main` only when I explicitly say so.** When I do say "push" / "ship it", use the
-  `mimir-ship` skill and run the whole chain without asking again turn-by-turn.
+  `chronos-ship` skill and run the whole chain without asking again turn-by-turn.
 
-## Ship ritual (when I say push — use the `mimir-ship` skill)
+## Ship ritual (when I say push — use the `chronos-ship` skill)
 `npm run lint` → `npm run build` → commit → `git push` → `npm run db:push` **only if** `prisma/`
-changed → tick `docs/mimir/roadmap.md`. No smoke tests, no status checks, no dev server unless asked.
+changed → tick `docs/chronos/roadmap.md`. No smoke tests, no status checks, no dev server unless asked.
 
 ## UI conventions (re-stated too many times — just follow them)
 - Every list page gets **comprehensive filters**, and the filter bar is in the **same order

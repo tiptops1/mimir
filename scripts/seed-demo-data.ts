@@ -405,7 +405,7 @@ async function main() {
 
   await prisma.financeEntry.create({
     data: {
-      direction: "OUT", kind: "SUBSCRIPTION", label: "Abonnement CRM interne", vendor: "Mimir",
+      direction: "OUT", kind: "SUBSCRIPTION", label: "Abonnement CRM interne", vendor: "Chronos",
       category: "Logiciels", amount: 4900, recurrence: "MONTHLY", status: "ACTIVE",
       startDate: daysAgo(180), renewsAt: daysAgo(-10),
     },

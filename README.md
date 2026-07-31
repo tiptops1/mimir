@@ -67,7 +67,7 @@ Log in with the account created by `tenant:provision`.
 
 ## Deployment
 
-**See [`docs/mimir/ops.md`](docs/mimir/ops.md)** — the operations runbook. It covers standing up an
+**See [`docs/chronos/ops.md`](docs/chronos/ops.md)** — the operations runbook. It covers standing up an
 environment (Atlas project, Vercel project, fresh secrets), the free-tier constraints that shape
 how this is operated, provisioning the first tenant, the full cron schedule, backups and restores,
 and what each safety guard will refuse.

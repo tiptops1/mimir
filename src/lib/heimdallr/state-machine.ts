@@ -1,4 +1,4 @@
-// Pure guard logic for the AgentAction lifecycle (docs/mimir/events.md §2). No
+// Pure guard logic for the AgentAction lifecycle (docs/chronos/events.md §2). No
 // I/O here on purpose — ledger.ts is the only caller, and this file is what S7
 // unit-tests directly. Keep it that way: any DB/Date.now() dependency belongs
 // in ledger.ts, not here.

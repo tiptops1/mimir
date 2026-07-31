@@ -1,20 +1,20 @@
 ---
-name: mimir-conventions
-description: Non-negotiable engineering rules for the Mimir repo (agentic platform on the Vision RM baseline). ALWAYS consult before writing code, running db:push, or writing a Mongo/Prisma query in the mimir repo. Supersedes the global vision-rm-conventions skill here — this repo has no production user, but must never touch the prod cluster. Trigger on any work in mimir/ or mention of Heimdallr, Mimisbrunnr, Huginn, Muninn, Nornir, Bragi, Forseti.
+name: chronos-conventions
+description: Non-negotiable engineering rules for the Chronos repo (agentic platform on the Vision RM baseline). ALWAYS consult before writing code, running db:push, or writing a Mongo/Prisma query in this repo. Supersedes the global vision-rm-conventions skill here — this repo has no production user, but must never touch the prod cluster. Trigger on any work in this repo or mention of Heimdallr, Mimisbrunnr, Huginn, Muninn, Nornir, Bragi, Forseti.
 ---
 
-# Mimir conventions
+# Chronos conventions
 
-This repo is the **Mimir agentic platform**, seeded from Vision RM (`avelior-analytics` @
-`719f842`) as a baseline. Key docs: `docs/mimir/roadmap.md` (session plan, cross-session memory),
-`docs/mimir/AGENTIC-PLATFORM-DECISION-MEMO.md` (decisions D1–D5, gates G1/G2),
-`docs/mimir/decisions.md` (decision log), `docs/VISION-RM-BRIEF.md` (what the baseline is).
+This repo is the **Chronos agentic platform**, seeded from Vision RM (`chronos` @
+`719f842`) as a baseline. Key docs: `docs/chronos/roadmap.md` (session plan, cross-session memory),
+`docs/chronos/AGENTIC-PLATFORM-DECISION-MEMO.md` (decisions D1–D5, gates G1/G2),
+`docs/chronos/decisions.md` (decision log), `docs/VISION-RM-BRIEF.md` (what the baseline is).
 
 ## What replaces "don't break the live app"
 
 There is **no production user here**. The top constraint is instead:
 **never point this repo at the prod cluster** (host contains `crm-railway`). Run the
-`mimir-env-guard` skill before anything data-touching. Everything else is a staging environment —
+`chronos-env-guard` skill before anything data-touching. Everything else is a staging environment —
 experiments are cheap, that's the point of the split.
 
 ## The standing rules (memo §7 — agentic modules will test every one)
@@ -29,7 +29,7 @@ experiments are cheap, that's the point of the split.
    No module ships its own approval flow (D5).
 5. **Events from day one.** Emit structured events immediately; dashboards later. Events cannot be
    backfilled.
-6. **Additive-only schema changes** — kept as discipline even though Mimir is a permanent parallel
+6. **Additive-only schema changes** — kept as discipline even though Chronos is a permanent parallel
    platform (see decisions.md); it keeps Vision RM cherry-picks clean.
 
 ## Inherited invariants (unchanged from the baseline)
@@ -44,11 +44,11 @@ experiments are cheap, that's the point of the split.
   code. `middleware.ts` is renamed **`proxy.ts`**.
 - **Zod at every boundary:** agent tool inputs, ledger transitions, queue payloads.
 - **Windows/OneDrive:** stop the dev server before `prisma generate` or `npm run build` (EPERM
-  DLL rename). Dev server runs on **port 3001** (`mimir-dev` in launch.json).
+  DLL rename). Dev server runs on **port 3001** (`chronos-dev` in launch.json).
 
 ## Session ritual
 
 Plan mode → approve → execute → `npm run lint` → `npm run build` → commit → tick the checkbox in
-`docs/mimir/roadmap.md` → `/clear`. Push to `main` only on an explicit "push" (then use
-`mimir-ship`). One module slice per session. Runtime agent reasoning is API-billed, never the
+`docs/chronos/roadmap.md` → `/clear`. Push to `main` only on an explicit "push" (then use
+`chronos-ship`). One module slice per session. Runtime agent reasoning is API-billed, never the
 Pro/Max subscription.

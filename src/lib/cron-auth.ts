@@ -15,7 +15,7 @@ import { isProd } from "@/lib/env-identity";
  *    convenience for cron schedulers that can't set headers; the cost is the
  *    secret landing in cron-job.org's stored URL, in Vercel's access logs, and
  *    in any proxy in between. cron-job.org supports custom headers, so the
- *    Bearer form is always available — see docs/mimir/ops.md.
+ *    Bearer form is always available — see docs/chronos/ops.md.
  */
 export function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;

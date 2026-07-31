@@ -99,7 +99,7 @@ interface AutonomySeed {
   maxLevel: number;
 }
 
-// Heimdallr autonomy categories (docs/mimir/events.md §3). All seeded at
+// Heimdallr autonomy categories (docs/chronos/events.md §3). All seeded at
 // level 0 (off) — a tenant/module turns a category on explicitly. maxLevel 1
 // on finance/legal is the never-graduates floor (defense in depth, §3).
 export const DEFAULT_AUTONOMY_CATEGORIES: AutonomySeed[] = [
@@ -146,7 +146,7 @@ export const DEFAULT_PROMPT_TEMPLATES: PromptTemplateSeed[] = [
     label: "Extraction IA — email / réunion / appel",
     taskClass: "extract",
     variables: ["stageKeys"],
-    body: `Tu es l'assistant CRM d'un courtier en assurances B2B (Avelior).
+    body: `Tu es l’assistant CRM d’un courtier en assurances B2B.
 On te donne le contenu d'un email, d'une réunion ou d'un compte-rendu d'appel
 avec un prospect. Tu en extrais le signal commercial utile au suivi.
 
@@ -173,14 +173,14 @@ moins avancée.`,
     label: "Email de prospection",
     taskClass: "draft",
     variables: ["senderName", "greeting"],
-    body: `Tu es {{senderName}}, du cabinet de courtage Avelior. Tu rédiges un email de prospection B2B personnalisé, en français, à un dirigeant d'un cabinet de courtage / d'agence d'assurance (prospect).
+    body: `Tu es {{senderName}}, du cabinet de courtage. Tu rédiges un email de prospection B2B personnalisé, en français, à un dirigeant d'un cabinet de courtage / d'agence d'assurance (prospect).
 
 Objectif : obtenir un court échange (≈15 min). Style : professionnel, courtois, vouvoiement, concis (80–130 mots), UNE seule proposition d'action claire en fin de message.
 
 Règles STRICTES :
 - Personnalise UNIQUEMENT à partir du dossier fourni. N'invente RIEN : aucun chiffre, client, partenaire ou fait absent du dossier.
 - Si le dossier est pauvre, reste crédible et générique plutôt que d'inventer.
-- Commence par "{{greeting}}" et termine par une signature sur deux lignes : "{{senderName}}" puis "Avelior".
+- Commence par "{{greeting}}" et termine par une signature sur deux lignes : "{{senderName}}" puis le nom du cabinet.
 - Pas de promesse non fondée, pas de pièce jointe.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour : {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne (\\n).`,

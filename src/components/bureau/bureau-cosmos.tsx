@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { BUREAU_AGENTS } from "@/lib/bureau/agents";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface BureauEvent {
@@ -47,7 +48,7 @@ function Astronaut() {
 
 /**
  * Le Bureau — the cosmos reskin (replaces the vendored pixel-office SPA). Each
- * Mimir agent is a small astronaut walking on its own perch, orbiting the sun;
+ * agent is a small astronaut walking on its own perch, orbiting the sun;
  * polls /api/bureau/state and speeds an astronaut's walk + pops a tool-status
  * speech bubble when its module logs a ledger event, rings it amber while a
  * proposal awaits approval. Read-only diorama, same as the scene it replaced.
@@ -215,7 +216,7 @@ export function BureauCosmos() {
           })}
 
           <div className="bur-sun" aria-hidden="true">
-            <span className="bur-sun-caps">Mimir</span>
+            <span className="bur-sun-caps">{DEFAULT_BRAND_NAME}</span>
             <span className="bur-sun-role">Cœur du cosmos</span>
           </div>
         </div>

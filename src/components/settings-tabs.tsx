@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+// "Doublons" is gone: it de-duplicated companies, and there are none. SKUs are
+// unique at the schema level, so the inventory can't grow the same problem.
 const TABS = [
   { href: "/settings/fields", label: "Champs" },
   { href: "/settings/stages", label: "Étapes" },
   { href: "/settings/integrations", label: "Intégrations" },
-  { href: "/settings/duplicates", label: "Doublons" },
   { href: "/settings/import", label: "Import" },
   { href: "/settings/audit", label: "Audit" },
 ];

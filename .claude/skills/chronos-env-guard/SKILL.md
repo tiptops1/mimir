@@ -1,9 +1,9 @@
 ---
-name: mimir-env-guard
-description: Environment pre-flight for the mimir repo — confirm this shell's .env is the environment the command intends before running any script, db:push, or ship. Mimir now has a production environment with a paying customer's data, plus the legacy Vision RM prod cluster. Use before every data-touching command, and whenever .env changes.
+name: chronos-env-guard
+description: Environment pre-flight for this repo — confirm this shell's .env is the environment the command intends before running any script, db:push, or ship. Chronos now has a production environment with a paying customer's data, plus the legacy Vision RM prod cluster. Use before every data-touching command, and whenever .env changes.
 ---
 
-# Mimir environment guard
+# Chronos environment guard
 
 Until S28 this repo had no production environment, so the check was simply "is anything pointing
 at the Vision RM prod cluster (`crm-railway`)". That is no longer the whole question.
@@ -13,8 +13,8 @@ at the Vision RM prod cluster (`crm-railway`)". That is no longer the whole ques
 | Cluster | What it is | May a dev shell touch it? |
 |---|---|---|
 | `crm-railway` | Vision RM baseline production (legacy name) | **Never.** Different repo, different product. |
-| `mimir-dev` | Mimir development/demo (M0) | Yes — this is the default. |
-| Mimir production | The Chronos customer's real inventory and money (M0, own Atlas project) | Only from a shell that declares `MIMIR_ENV=prod`, and only for operations that accept `--prod`. |
+| `chronos-dev` | Chronos development/demo (M0) | Yes — this is the default. |
+| Chronos production | The Chronos customer's real inventory and money (M0, own Atlas project) | Only from a shell that declares `MIMIR_ENV=prod`, and only for operations that accept `--prod`. |
 
 So the question this skill answers is no longer "does prod exist" but:
 
@@ -58,9 +58,9 @@ to say never to use it. A check that flags its own documentation trains you to i
 - Hostnames only in any output — never `.env` values, never credentials.
 - `--dry` first for any script that writes.
 - Run before: `npm run db:push`, `db:push:control`, `db:push:tenant`, `tenant:provision`,
-  `backup:dump`, any writing `npx tsx scripts/...`, and as step 1 of `mimir-ship`.
+  `backup:dump`, any writing `npx tsx scripts/...`, and as step 1 of `chronos-ship`.
 - **Never edit `.env` to point at production "just to check something."** If you need to inspect
   prod, use a read-only path and the runbook. Rewriting `.env` mid-session is how both of the
   accidents this guard exists to prevent actually happen.
 
-Full context, including what each in-code guard refuses and why: `docs/mimir/ops.md`.
+Full context, including what each in-code guard refuses and why: `docs/chronos/ops.md`.

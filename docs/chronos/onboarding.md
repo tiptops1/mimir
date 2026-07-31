@@ -1,4 +1,4 @@
-# Onboarding client — parcours d'intégration Mimir (brouillon S13b)
+# Onboarding client — parcours d'intégration Chronos (brouillon S13b)
 
 > Document côté client : ce que le cabinet (courtier ou autre vertical) doit préparer et
 > valider avant et pendant son intégration sur la plateforme. Rédigé au stade S13b — aucun

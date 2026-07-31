@@ -12,6 +12,9 @@ import {
   PieChart,
   Pie,
   Legend,
+  ComposedChart,
+  Line,
+  CartesianGrid,
 } from "recharts";
 
 export interface ChartDatum {
@@ -116,7 +119,7 @@ export function HorizontalBars({ data }: { data: ChartDatum[] }) {
     </ResponsiveContainer>
     {clickable && (
       <p className="mt-1 text-center text-xs text-muted">
-        Cliquez sur une barre pour filtrer les sociétés.
+        Cliquez sur une barre pour filtrer la liste.
       </p>
     )}
     </div>
@@ -157,6 +160,73 @@ export function DualBars({ data }: { data: DualDatum[] }) {
   );
 }
 
+export interface PnlDatum {
+  name: string;
+  /** Whole units of currency, not cents — the caller divides. */
+  revenue: number;
+  cost: number;
+  net: number;
+}
+
+const EUR_COMPACT = new Intl.NumberFormat("fr-FR", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const EUR = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+/**
+ * Monthly P&L: money in, money out, and what survived.
+ *
+ * Colours are semantic and fixed rather than realm-derived — revenue, cost and
+ * net margin mean the same thing on any surface, so they must not drift with
+ * the realm you happen to be standing in (same rule as DualBars above). They
+ * come from the chart-series tokens, in the order docs/chronos/BRAND.md §2.4
+ * sets: sapphire for money in, amber for money out, the realm's own hue for the
+ * line, since "what's left" IS the Trésor question.
+ *
+ * The net line carries the meaning here, so it draws ON TOP of the bars, and
+ * the axis is compact ("12 k€") — a monthly P&L is read as a shape first.
+ */
+export function PnlChart({ data }: { data: PnlDatum[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <ComposedChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 8 }}>
+        <CartesianGrid stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="name" tick={AXIS} interval="preserveStartEnd" />
+        <YAxis tick={AXIS} tickFormatter={(v: number) => EUR_COMPACT.format(v)} />
+        <Tooltip
+          cursor={CURSOR}
+          {...TOOLTIP}
+          // Recharts types the value as possibly-undefined; a bar with no datum
+          // must render as "—", not "NaN €".
+          formatter={(v) => (v == null ? "—" : EUR.format(Number(v)))}
+        />
+        <Legend iconType="circle" wrapperStyle={LEGEND} />
+        <Bar
+          dataKey="revenue"
+          name="Chiffre d'affaires"
+          fill="var(--chart-3)"
+          radius={[6, 6, 0, 0]}
+        />
+        <Bar dataKey="cost" name="Coûts" fill="var(--chart-5)" radius={[6, 6, 0, 0]} />
+        <Line
+          type="monotone"
+          dataKey="net"
+          name="Marge nette"
+          stroke="var(--realm)"
+          strokeWidth={2}
+          dot={{ r: 3, fill: "var(--realm)", strokeWidth: 0 }}
+          activeDot={{ r: 5 }}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function Donut({ data }: { data: ChartDatum[] }) {
   const drill = useDrill();
   const clickable = data.some((d) => d.href);
@@ -184,7 +254,7 @@ export function Donut({ data }: { data: ChartDatum[] }) {
     </ResponsiveContainer>
     {clickable && (
       <p className="mt-1 text-center text-xs text-muted">
-        Cliquez sur un segment pour filtrer les sociétés.
+        Cliquez sur un segment pour filtrer la liste.
       </p>
     )}
     </div>

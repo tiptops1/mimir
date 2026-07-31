@@ -21,21 +21,13 @@ export default async function AppLayout({
   // Shares the router's cached control-plane lookup — no extra query.
   const profile = await getTenantProfile();
 
-  // "todo" badge = what needs attention now: open tasks overdue or due today.
-  const startOfTomorrow = new Date();
-  startOfTomorrow.setHours(0, 0, 0, 0);
-  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-
-  const [pendingCount, todoCount, leadOneCount, heimdallrPendingCount, notifications] =
-    await Promise.all([
-      prisma.pendingContact.count({ where: { status: "PENDING" } }),
-      prisma.task.count({
-        where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
-      }),
-      prisma.leadCandidate.count({ where: { status: "VALIDATED" } }),
-      prisma.agentAction.count({ where: { status: "PROPOSED" } }),
-      getNotificationSummary(prisma),
-    ]);
+  // One nav badge left — agent proposals awaiting a human decision. The
+  // retired CRM surfaces took their inbox/todo/lead counts with them, and
+  // counting rows nothing links to is pure per-request cost.
+  const [heimdallrPendingCount, notifications] = await Promise.all([
+    prisma.agentAction.count({ where: { status: "PROPOSED" } }),
+    getNotificationSummary(prisma),
+  ]);
 
   const user = {
     name: session.name,
@@ -48,9 +40,6 @@ export default async function AppLayout({
       <div className="flex h-screen overflow-hidden">
         <Sidebar
           className="hidden lg:flex"
-          pendingCount={pendingCount}
-          todoCount={todoCount}
-          leadOneCount={leadOneCount}
           heimdallrPendingCount={heimdallrPendingCount}
           user={user}
           modules={profile.modules}
@@ -63,9 +52,6 @@ export default async function AppLayout({
             className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/70 sm:px-6"
           >
             <MobileSidebar
-              pendingCount={pendingCount}
-              todoCount={todoCount}
-              leadOneCount={leadOneCount}
               heimdallrPendingCount={heimdallrPendingCount}
               user={user}
               modules={profile.modules}

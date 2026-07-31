@@ -1,7 +1,7 @@
 import {
   dbHostSummary,
   distinctDbHosts,
-  mimirEnv,
+  appEnv,
 } from "../../src/lib/env-identity";
 
 /**
@@ -9,7 +9,7 @@ import {
  *
  * Every script in this repo is `import "dotenv/config"` with no environment
  * selector, so each one silently inherits whatever `.env` happens to say. That
- * was survivable while `mimir-dev` was the only cluster. With a paying
+ * was survivable while `chronos-dev` was the only cluster. With a paying
  * customer's production environment in existence it is the single largest
  * hazard in the repo, so scripts that touch data now declare their intent.
  *
@@ -65,14 +65,14 @@ function scriptLabel(label?: string): string {
  */
 export function assertProdAllowed(opts: GuardOptions = {}): void {
   assertHostsAgree();
-  const env = mimirEnv();
+  const env = appEnv();
   const label = scriptLabel(opts.label);
 
   if (env !== "prod") return;
 
   if (!process.argv.includes("--prod")) {
     fail([
-      `GUARD: MIMIR_ENV=prod — refusing to run ${label} without an explicit --prod flag.`,
+      `GUARD: environment is PROD — refusing to run ${label} without an explicit --prod flag.`,
       dbHostSummary(),
       "",
       "This is a PRODUCTION environment with a real customer's data. If that is",
@@ -98,10 +98,10 @@ export function assertProdAllowed(opts: GuardOptions = {}): void {
  */
 export function refuseInProd(opts: GuardOptions = {}): void {
   assertHostsAgree();
-  if (mimirEnv() !== "prod") return;
+  if (appEnv() !== "prod") return;
 
   fail([
-    `GUARD: MIMIR_ENV=prod — ${scriptLabel(opts.label)} is a demo/scratch script and will not run against production.`,
+    `GUARD: environment is PROD — ${scriptLabel(opts.label)} is a demo/scratch script and will not run against production.`,
     dbHostSummary(),
     "",
     "There is no override flag. Point your .env at a development environment.",

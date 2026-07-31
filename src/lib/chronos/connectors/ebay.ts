@@ -31,7 +31,7 @@ import type {
  *
  * Field names below follow eBay's documented shapes but are read defensively —
  * every access tolerates absence. Verify against a real payload on the first
- * live run (docs/mimir/ops.md); anything that drifts is contained to this file,
+ * live run (docs/chronos/ops.md); anything that drifts is contained to this file,
  * because everything downstream consumes the normalised ConnectorOrder.
  */
 

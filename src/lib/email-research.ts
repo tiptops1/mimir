@@ -37,7 +37,7 @@ async function fetchPlainText(url: string): Promise<string | null> {
   try {
     const base = url.startsWith("http") ? url : `https://${url}`;
     const res = await fetch(base, {
-      headers: { "user-agent": "Mozilla/5.0 (Mimir research)" },
+      headers: { "user-agent": "Mozilla/5.0 (Chronos research)" },
       signal: AbortSignal.timeout(7000),
     });
     if (!res.ok) return null;
@@ -223,14 +223,14 @@ export async function composeProspectingEmail(
   },
 ): Promise<ComposedEmail | null> {
   const greeting = args.contactFirstName ? `Bonjour ${args.contactFirstName},` : "Bonjour,";
-  const system = `Tu es ${args.senderName}, du cabinet de courtage Avelior. Tu rédiges un email de prospection B2B personnalisé, en français, à un dirigeant d'un cabinet de courtage / d'agence d'assurance (prospect).
+  const system = `Tu es ${args.senderName}, du cabinet de courtage. Tu rédiges un email de prospection B2B personnalisé, en français, à un dirigeant d'un cabinet de courtage / d'agence d'assurance (prospect).
 
 Objectif : obtenir un court échange (≈15 min). Style : professionnel, courtois, vouvoiement, concis (80–130 mots), UNE seule proposition d'action claire en fin de message.
 
 Règles STRICTES :
 - Personnalise UNIQUEMENT à partir du dossier fourni. N'invente RIEN : aucun chiffre, client, partenaire ou fait absent du dossier.
 - Si le dossier est pauvre, reste crédible et générique plutôt que d'inventer.
-- Commence par "${greeting}" et termine par une signature sur deux lignes : "${args.senderName}" puis "Avelior".
+- Commence par "${greeting}" et termine par une signature sur deux lignes : "${args.senderName}" puis le nom du cabinet.
 - Pas de promesse non fondée, pas de pièce jointe.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour : {"subject": "...", "body": "..."}. Dans "body", utilise de vrais sauts de ligne (\\n).`;

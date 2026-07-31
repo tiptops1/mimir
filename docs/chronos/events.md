@@ -1,4 +1,4 @@
-# Mimir — event schema + core data model (S2 design)
+# Chronos — event schema + core data model (S2 design)
 
 > Designed 2026-07-15 (S2). This doc is the reviewed artifact; **S3 implements these models
 > verbatim** in `prisma/tenant/schema.prisma`. Companion to the decision memo (D2/D3/D5) and
@@ -323,7 +323,7 @@ model PromptTemplate {
 ## 5. What S3 does with this doc
 
 1. Add the four models above, verbatim, to `prisma/tenant/schema.prisma` (additive-only).
-2. `db:push` **against the mimir-dev cluster only** (run `mimir-env-guard` first).
+2. `db:push` **against the chronos-dev cluster only** (run `chronos-env-guard` first).
 3. Extend `seedTenantConfig()` with the §3 seed categories (all `level: 0`) and an initial
    prompt-pack skeleton (keys only where prompts already exist in code — the ai-extract /
    email-research migration is its own small session).

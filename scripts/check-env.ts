@@ -3,7 +3,7 @@ import {
   DB_URL_VARS,
   dbHosts,
   distinctDbHosts,
-  mimirEnv,
+  appEnv,
 } from "../src/lib/env-identity";
 
 /**
@@ -15,7 +15,7 @@ import {
  * without ever printing a secret. There is no env-validation module in the app
  * itself (every consumer either throws or silently falls back), so this is the
  * one place that looks at the whole surface at once. Step 1 of the deploy
- * runbook — see docs/mimir/ops.md.
+ * runbook — see docs/chronos/ops.md.
  *
  * Exits 1 on any FAIL so it can gate a script or a CI step.
  */
@@ -74,28 +74,32 @@ const OPTIONAL = [
 ] as const;
 
 function main() {
-  let env: ReturnType<typeof mimirEnv>;
+  let env: ReturnType<typeof appEnv>;
   try {
-    env = mimirEnv();
+    env = appEnv();
   } catch (e) {
     console.error(`FAIL  ${(e as Error).message}`);
     process.exit(1);
   }
 
-  const declared = process.env.MIMIR_ENV?.trim();
-  console.log(`\nEnvironment: ${env.toUpperCase()}${declared ? "" : "  (MIMIR_ENV unset — defaulting to dev)"}`);
+  // CHRONOS_ENV is the name; MIMIR_ENV is the legacy fallback still set in the
+  // deployed projects (see src/lib/env-identity.ts). Report whichever declared it.
+  const legacy = process.env.MIMIR_ENV?.trim();
+  const declared = process.env.CHRONOS_ENV?.trim() || legacy;
+  const varName = process.env.CHRONOS_ENV?.trim() ? "CHRONOS_ENV" : legacy ? "MIMIR_ENV" : "CHRONOS_ENV";
+  console.log(`\nEnvironment: ${env.toUpperCase()}${declared ? "" : "  (CHRONOS_ENV unset — defaulting to dev)"}`);
   console.log("\nDatabase hosts");
   for (const { name, host } of dbHosts()) {
     console.log(`  ${name.padEnd(22)} ${host ?? "(unset)"}`);
   }
   console.log("");
 
-  // MIMIR_ENV must be explicit in prod — "I forgot to set it" and "this is dev"
+  // The env var must be explicit in prod — "I forgot to set it" and "this is dev"
   // are the same state otherwise, and the guard would wave prod work through.
   if (env === "prod" && !declared) {
-    add("fail", "MIMIR_ENV", "must be set explicitly to 'prod' in a production environment");
+    add("fail", varName, "must be set explicitly to 'prod' in a production environment");
   } else {
-    add("ok", "MIMIR_ENV", declared ?? "dev (default)");
+    add("ok", varName, declared ?? "dev (default)");
   }
 
   for (const name of CORE) {
@@ -105,7 +109,7 @@ function main() {
 
   for (const name of PROD_ONLY) {
     if (present(name)) add("ok", name);
-    else if (env === "prod") add("fail", name, "required when MIMIR_ENV=prod");
+    else if (env === "prod") add("fail", name, "required in a production environment");
     else add("warn", name, "unset (fine in dev; required in prod)");
   }
 

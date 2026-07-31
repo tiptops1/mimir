@@ -4,7 +4,7 @@
 // multirisque, flotte auto, cyber) and a secondary collective health &
 // protection line (santé collective / prévoyance).
 //
-// Purpose (see docs/mimir/decisions.md, G2 entry): stand in for the "ask the
+// Purpose (see docs/chronos/decisions.md, G2 entry): stand in for the "ask the
 // client what a typical month of client email contains" gate that G2 could not
 // otherwise close without a real client. Every row carries a GROUND-TRUTH
 // `containsHealthData` label so the S11 health classifier can be MEASURED

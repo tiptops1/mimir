@@ -3,21 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Users, Radar, Wallet, Bot } from "lucide-react";
-import type { RealmSlug } from "@/lib/realms";
 import { splitBrand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 /**
- * The observatory hero is the CRM cosmos: a hand-tuned four-point stage whose
- * positions and thread curves are drawn for exactly these realms. Verticals
- * with their own realm (chronos) get their own landing surface instead of a
- * fifth orb, so this stays a closed subset of RealmSlug rather than growing
- * with every realm added to src/lib/realms.ts.
+ * The observatory hero is a hand-tuned four-point stage whose positions and
+ * thread curves are drawn for exactly these four orbs.
+ *
+ * These slugs are the STAGE's own, deliberately no longer derived from
+ * RealmSlug: they name the retired generic-CRM sections this hero was built
+ * for, and tying them to the live realm map would either break when a realm is
+ * retired or force the map to keep dead entries alive to satisfy a hero nobody
+ * reaches. They still stamp data-realm; an unknown slug resolves to the neutral
+ * brand accent, which is the correct look here.
  */
-export type ObservatorySlug = Extract<
-  RealmSlug,
-  "relation" | "chasse" | "tresor" | "mimir"
->;
+export type ObservatorySlug = "relation" | "chasse" | "tresor" | "agents";
 
 export type ObservatoryRealm = {
   slug: ObservatorySlug;
@@ -46,17 +46,17 @@ const ICONS: Record<ObservatorySlug, typeof Users> = {
   relation: Users,
   chasse: Radar,
   tresor: Wallet,
-  mimir: Bot,
+  agents: Bot,
 };
 
 // Percent positions on the 1180x620 stage. Not a symmetric diamond: the
 // instrument panel occupies the bottom-right corner (right:28px, bottom:26px,
-// width 308px), so nothing can sit there — mimir goes bottom-center instead.
+// width 308px), so nothing can sit there — agents goes bottom-center instead.
 const POSITIONS: Record<ObservatorySlug, { left: string; top: string }> = {
   relation: { left: "18%", top: "20%" },
   chasse: { left: "82%", top: "20%" },
   tresor: { left: "18%", top: "80%" },
-  mimir: { left: "50%", top: "90%" },
+  agents: { left: "50%", top: "90%" },
 };
 
 // Thread paths in the 1180x620 viewBox, endpoints matching POSITIONS above,
@@ -65,7 +65,7 @@ const THREADS: Record<ObservatorySlug, string> = {
   relation: "M212,124 Q420,170 590,329",
   chasse: "M968,124 Q760,170 590,329",
   tresor: "M212,496 Q420,440 590,329",
-  mimir: "M590,558 Q590,450 590,329",
+  agents: "M590,558 Q590,450 590,329",
 };
 
 export function Observatory({
@@ -76,8 +76,8 @@ export function Observatory({
 }: ObservatoryProps) {
   const { head: brandHead, tail: brandTail } = splitBrand(brandName);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pinned, setPinned] = useState<RealmSlug | null>(null);
-  const [hovered, setHovered] = useState<RealmSlug | null>(null);
+  const [pinned, setPinned] = useState<ObservatorySlug | null>(null);
+  const [hovered, setHovered] = useState<ObservatorySlug | null>(null);
   const [clock, setClock] = useState("");
 
   const activeSlug = pinned ?? hovered ?? realms[0]?.slug ?? null;

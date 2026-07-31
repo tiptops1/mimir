@@ -1,9 +1,9 @@
 ---
-name: mimir-design-system
-description: The Mimir/Vision RM design system — semantic tokens, ui.tsx primitives, canonical table/filter/popover markup, dark-mode rules, and the product's hard UI laws. ALWAYS consult before writing or restyling ANY UI in the mimir repo — a new page, a component, a table, a filter bar, a badge, a dashboard, a form, an agent-facing surface — even a "quick" visual tweak or a single className change. Also use when reviewing UI, choosing colors, or debugging dark-mode rendering.
+name: chronos-design-system
+description: The Chronos/Vision RM design system — semantic tokens, ui.tsx primitives, canonical table/filter/popover markup, dark-mode rules, and the product's hard UI laws. ALWAYS consult before writing or restyling ANY UI in this repo — a new page, a component, a table, a filter bar, a badge, a dashboard, a form, an agent-facing surface — even a "quick" visual tweak or a single className change. Also use when reviewing UI, choosing colors, or debugging dark-mode rendering.
 ---
 
-# Mimir design system
+# Chronos design system
 
 The visual identity is **Linear-refined**: border-first elevation (hairlines carry structure,
 shadows are garnish), one accent per context used sparingly, high information density, quiet
@@ -11,11 +11,11 @@ motion. High-end here means *restraint + consistency*, not decoration. When in d
 color, remove shadow, tighten spacing.
 
 The experience direction on top of this system — realms with their own accent hue, view
-transitions between routes, header auras — is the `mimir-cosmos` skill. Consult it for anything
+transitions between routes, header auras — is the `chronos-cosmos` skill. Consult it for anything
 touching navigation, sections, or route-level motion; it extends these rules, never breaks them.
 
 **UI copy is French** — every label, placeholder, empty state, and button the demo tenant sees
-is French (the vocabulary itself is tenant config, per mimir-conventions rule 2). Don't ship
+is French (the vocabulary itself is tenant config, per chronos-conventions rule 2). Don't ship
 English strings on product surfaces.
 
 ## Tokens — the only colors that exist
@@ -92,7 +92,7 @@ Quiet and fast: `duration-100` transitions on interactive elements, `active:tran
 buttons (built into the primitive), `animate-pop` (120ms) for anything that floats in,
 `animate-drawer` for the mobile sidebar. In-page element motion stays ≤ ~180ms and nothing
 animates spontaneously at rest. *Route-level* motion (view-transition morphs, realm shifts,
-Suspense reveals, up to 400ms) is governed by the `mimir-cosmos` skill — don't hand-roll it.
+Suspense reveals, up to 400ms) is governed by the `chronos-cosmos` skill — don't hand-roll it.
 
 ## Hard product laws (violating these = rework, not opinion)
 
@@ -109,4 +109,4 @@ Before calling UI work finished: it uses tokens + primitives only (grep your dif
 `gray-`, `white`, `black` — hits outside badge data are bugs); it reads correctly in **both
 themes** (toggle is in the topbar); the table/filter/popover markup matches the canonical
 patterns; keyboard focus is visible (`focus-visible` ring is global — don't suppress it); and
-mobile (~375px) doesn't overflow horizontally. Verify visually with the `mimir-verify` skill.
+mobile (~375px) doesn't overflow horizontally. Verify visually with the `chronos-verify` skill.

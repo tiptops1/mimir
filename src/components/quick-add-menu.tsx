@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, CheckSquare, UserPlus, Building2 } from "lucide-react";
+import { Plus, Watch, PackageOpen } from "lucide-react";
 
 const ITEMS = [
-  { href: "/todo", label: "Nouvelle tâche", icon: CheckSquare },
-  { href: "/contacts/new", label: "Nouveau contact", icon: UserPlus },
-  { href: "/companies/new", label: "Nouvelle société", icon: Building2 },
+  { href: "/chronos", label: "Nouvelle unité", icon: Watch },
+  { href: "/chronos/import", label: "Importer des ventes", icon: PackageOpen },
 ];
 
 /** Global "+ Nouveau" dropdown in the top bar — fast access to create flows. */

@@ -1,6 +1,6 @@
 // S10 — embedding spike: Gemini (gemini-embedding-001) vs Voyage (voyage-4) on
 // ~50 synthetic French insurance-broker chunks. No DB touched, no tenant
-// involved — pure API comparison to close the docs/mimir/roadmap.md S10
+// involved — pure API comparison to close the docs/chronos/roadmap.md S10
 // decision. Run:
 //
 //   npx tsx scripts/rag/embedding-spike.ts

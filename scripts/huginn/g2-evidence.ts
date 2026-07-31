@@ -16,7 +16,7 @@ refuseInProd();
 // G2 evidence — quantify what a "typical month" of client email contains for
 // the platform's assumed vertical (multi-line FR insurance brokerage), and
 // MEASURE the S11 health classifier against it. This is the artifact that lets
-// docs/mimir/decisions.md close G2 without a real client: the health-data
+// docs/chronos/decisions.md close G2 without a real client: the health-data
 // fraction is a computed number over a labeled corpus, and the classifier's
 // recall on that health slice is measured, not assumed.
 //

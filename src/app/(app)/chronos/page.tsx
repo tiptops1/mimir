@@ -12,7 +12,7 @@ import { loadUnitsWithMargins, loadVatConfig } from "@/lib/chronos/inventory";
 import { buildUnitWhere, filterUnitRows, sortUnitRows } from "@/lib/chronos/list";
 import { summarizeMargins } from "@/lib/chronos/margin";
 import { readMarketplaces, readTargetMarginPct } from "@/lib/chronos/config";
-import { formatCents } from "@/lib/display";
+import { formatCents, formatPct } from "@/lib/display";
 import { str } from "@/lib/list-filters";
 
 /**
@@ -133,7 +133,7 @@ export default async function ChronosPage({
                     : "text-foreground"
                 }`}
               >
-                {summary.marginPct === null ? "—" : `${summary.marginPct} %`}
+                {formatPct(summary.marginPct)}
               </p>
               <p className="text-xs text-muted">Marge %</p>
               <p className="mt-1 text-xs text-faint tnum">

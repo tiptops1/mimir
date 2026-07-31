@@ -10,7 +10,7 @@ import {
 } from "@/lib/nornir/queries";
 import { listAutonomyConfigs } from "@/lib/heimdallr/queries";
 
-// Odin's review pipeline (S20/S21, docs/mimir/odin.md §5) — domain logic for
+// Odin's review pipeline (S20/S21, docs/chronos/odin.md §5) — domain logic for
 // the daily synthesis: build a compact JSON snapshot of platform state, ask
 // Sonnet whether a directive is worth proposing, parse fail-closed. No
 // multi-step pipeline (no Inngest) — a single model call over aggregates

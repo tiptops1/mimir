@@ -4,6 +4,7 @@ import type { GoogleOAuthClient } from "@/lib/google-oauth";
 import { isAutomatedSender } from "@/lib/email-sync";
 import { sendGmail } from "@/lib/gmail-send";
 import { appUrl } from "@/lib/app-url";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 
 // Stop-on-reply + bounce detection for the OUTREACH inbox. Deliberately NOT the
 // heavy runGmailSync pipeline (that would turn every prospect reply into
@@ -241,7 +242,7 @@ export async function runOutreachReplySync(
       try {
         const doSend = opts.send ?? sendGmail;
         await doSend(main.client, {
-          fromName: "Mimir",
+          fromName: DEFAULT_BRAND_NAME,
           fromEmail: main.accountEmail,
           to: main.accountEmail,
           subject: `Réponse cold email — ${companyLabel}`,

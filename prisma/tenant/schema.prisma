@@ -1,4 +1,4 @@
-// Avelior Analytics — TENANT-DATA schema (MongoDB, one DB per tenant).
+// Chronos — TENANT-DATA schema (MongoDB, one DB per tenant).
 // Models map the "CRM Chris" prospecting spreadsheet (French insurance brokers).
 //
 // This client keeps the DEFAULT @prisma/client output so existing imports
@@ -627,7 +627,7 @@ model SavedView {
 }
 
 // ── Heimdallr — agentic platform foundation (S2/S3) ─────────────────────────
-// Designed in docs/mimir/events.md; implemented verbatim here. Four models:
+// Designed in docs/chronos/events.md; implemented verbatim here. Four models:
 // AgentEvent (append-only stream), AgentAction (the one ledger, D5),
 // AutonomyConfig (per-category autonomy level + breaker, D2), PromptTemplate
 // (prompts as tenant config, Path C rule 1). See events.md for the full
@@ -1029,7 +1029,7 @@ model QuarantineItem {
 
 // --- Odin (S20/S21) — orchestration layer -----------------------------------
 // A directive is a versioned objective the top-level agent sets for itself
-// (scope: tenant) or a module/category (docs/mimir/odin.md §2). Same
+// (scope: tenant) or a module/category (docs/chronos/odin.md §2). Same
 // versioned-artifact shape as RcaDocument/ContentPiece: approving a new
 // version supersedes the prior ACTIVE row for the same key. Directive-setting
 // is itself ledger-gated (odin.directive category) — no exception for Odin.

@@ -4,6 +4,7 @@ import type { GoogleOAuthClient } from "./google-oauth";
 import { sendGmail } from "./gmail-send";
 import { getTenantConfig } from "./tenant-config";
 import { appUrl } from "./app-url";
+import { DEFAULT_BRAND_NAME } from "./brand";
 
 // Daily email digest: "X prospects à relancer / Y tâches aujourd'hui", emailed to
 // the owner's own mailbox via the connected Gmail account. Guarded by a per-day
@@ -63,14 +64,14 @@ export async function sendDailyDigest(
     "",
     `Agir maintenant : ${appUrl()}/todo`,
     "",
-    "— Mimir",
+    `— ${DEFAULT_BRAND_NAME}`,
   ].join("\n");
 
   await sendGmail(google.client, {
-    fromName: "Mimir",
+    fromName: DEFAULT_BRAND_NAME,
     fromEmail: google.accountEmail,
     to: google.accountEmail,
-    subject: `Mimir — ${summary.taskCount} tâche(s), ${summary.staleCount} relance(s)`,
+    subject: `${DEFAULT_BRAND_NAME} — ${summary.taskCount} tâche(s), ${summary.staleCount} relance(s)`,
     body,
   });
 

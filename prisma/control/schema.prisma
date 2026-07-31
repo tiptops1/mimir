@@ -1,4 +1,4 @@
-// Avelior Analytics — CONTROL-PLANE schema (MongoDB, one shared DB).
+// Chronos — CONTROL-PLANE schema (MongoDB, one shared DB).
 //
 // The control plane is the stable, typed spine of the platform: it owns tenants,
 // the auth identities (users) and their memberships, and the tenant -> connection
@@ -35,7 +35,7 @@ model Tenant {
   name String
 
   // Product name rendered in this tenant's shell (wordmark, <title>, PWA
-  // manifest). Null = the platform default, "Mimir". Lives here rather than in
+  // manifest). Null = the platform default, "Chronos". Lives here rather than in
   // the tenant DB because src/app/layout.tsx and src/app/manifest.ts render
   // OUTSIDE the (app) group: they have no session, so they can never resolve a
   // tenant-DB value. See src/lib/tenant-profile.ts.
@@ -53,7 +53,7 @@ model Tenant {
   // the customer through a server action, and a tenant must not be able to grant
   // itself a module it didn't pay for. Entitlement is a commercial fact, not
   // tenant config. Legacy rows are stamped by scripts/backfill-tenant-modules.ts.
-  modules String[] @default(["crm"])
+  modules String[] @default(["chronos"])
 
   // Full connection string to this tenant's data DB, AES-256-GCM encrypted at
   // rest (see src/lib/crypto.ts). Stored whole — not derived — so a large tenant

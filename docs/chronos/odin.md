@@ -1,4 +1,4 @@
-# Mimir — Odin: orchestration layer (S20 design)
+# Chronos — Odin: orchestration layer (S20 design)
 
 > Designed 2026-07-19 (S20). This doc is the reviewed artifact; **S21 implements
 > these decisions verbatim** (`prisma/tenant/schema.prisma` additive model,
@@ -237,7 +237,7 @@ Not every module gains directive-reading at once. Priority, and why:
 ## 9. What S21 does with this doc
 
 1. Add `OdinDirective` (§2) verbatim, additive, to `prisma/tenant/schema.prisma`.
-   `db:push` against `mimir-dev` only (`mimir-env-guard` first).
+   `db:push` against `chronos-dev` only (`chronos-env-guard` first).
 2. Seed the `odin.directive` category (§4) in `DEFAULT_AUTONOMY_CATEGORIES` +
    the `odin.review.propose_directive` `PromptTemplate` skeleton (§5).
 3. `src/lib/odin/draft.ts` (pure: builds the review input, calls the model, parses

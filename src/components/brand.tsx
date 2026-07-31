@@ -35,19 +35,49 @@ export function BrandMark({
           className="h-8 w-8 shrink-0 rounded-lg object-cover shadow-sm ring-1 ring-inset ring-white/15"
         />
       ) : (
+        // The built-in mark, for a tenant that supplied no logo: the emblem
+        // reduced to its three ideas — the case, one orbit, the comet hand
+        // (docs/chronos/BRAND.md §1). Stroked in currentColor so it inverts
+        // with the tile and needs no per-theme variant.
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm ring-1 ring-inset ring-white/15">
           <svg
             viewBox="0 0 24 24"
             fill="none"
-            className="h-[18px] w-[18px]"
+            className="h-[19px] w-[19px]"
             aria-hidden="true"
           >
-            <path
-              d="M4 19V11m5 8V6m5 13v-9m5 9V8"
+            <circle
+              cx="12"
+              cy="12"
+              r="8.4"
               stroke="currentColor"
-              strokeWidth="2.4"
+              strokeWidth="1.6"
+              opacity="0.55"
+            />
+            <ellipse
+              cx="12"
+              cy="12"
+              rx="10.6"
+              ry="4.1"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              opacity="0.45"
+              transform="rotate(-35 12 12)"
+            />
+            <path
+              d="M12 12 18.8 5.7"
+              stroke="currentColor"
+              strokeWidth="2"
               strokeLinecap="round"
             />
+            <path
+              d="M12 12V7.4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
           </svg>
         </div>
       )}

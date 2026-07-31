@@ -16,7 +16,7 @@ import {
 // Note this route's URL must be the one registered under the RuName in the eBay
 // developer portal — eBay redirects to the RuName's configured URL, not to a
 // `redirect_uri` we send. In production that URL must be public https, so
-// exercising this locally needs a tunnel (docs/mimir/ops.md).
+// exercising this locally needs a tunnel (docs/chronos/ops.md).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

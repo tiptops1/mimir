@@ -4,7 +4,7 @@ import { executeAction } from "@/lib/heimdallr/ledger";
 import { MUNINN_ACTION_TYPE } from "./draft";
 
 // S16 — Muninn is the first module to call `executeAction` for real (Phase 1
-// checkpoint gap #1, docs/mimir/decisions.md 2026-07-17): "execute" here is a
+// checkpoint gap #1, docs/chronos/decisions.md 2026-07-17): "execute" here is a
 // plain DB write (persist the versioned RcaDocument), not an external side
 // effect, so there's no reason to leave it stubbed. This is a Muninn-specific
 // executor/reverter, not the generic dispatcher other modules will eventually

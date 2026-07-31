@@ -1,201 +1,246 @@
 @import "tailwindcss";
 
 /*
- * Mimir — design tokens (Linear-refined, light).
+ * Chronos — design tokens. See docs/chronos/BRAND.md, which is the source of
+ * truth for every value below; change it there first.
+ *
+ * The whole palette is lifted off the emblem (assets/brands/chronos/logo-source.png):
+ * a polished steel case floating in an indigo nebula, ringed in cyan orbits,
+ * with a sapphire crown. Light theme = brushed steel; dark theme = the void.
+ *
  * Everything is a semantic CSS variable so a dark theme is a token swap:
- * add `[data-theme="dark"] { ... }` overriding the same names and nothing
- * downstream needs to change. Component code references these via the
- * @theme map below (bg-card, border-border, text-muted, text-brand, …).
+ * `[data-theme="dark"] { ... }` overrides the same names and nothing downstream
+ * changes. Component code references these via the @theme map at the bottom
+ * (bg-card, border-border, text-muted, text-brand, …).
+ *
+ * NOTE: no neutral here is a true grey — every one is pulled slightly blue.
+ * That is what stops the shell reading as generic SaaS (BRAND.md §2.2).
  */
 :root {
-  /* Surfaces */
-  --background: #f7f8fa; /* app canvas */
+  /* Surfaces — brushed steel */
+  --background: #f6f7fb; /* app canvas */
   --surface: #ffffff; /* cards, panels */
-  --surface-2: #f1f3f6; /* subtle raised / hover fill */
+  --surface-2: #eef0f6; /* subtle raised / hover fill */
   --card: var(--surface);
 
   /* Text */
-  --foreground: #15181e; /* primary content */
-  --muted: #6b7280; /* secondary text */
-  --faint: #9aa1ad; /* tertiary / placeholders */
+  --foreground: #141827; /* primary content */
+  --muted: #66708a; /* secondary text */
+  --faint: #98a1b8; /* tertiary / placeholders */
 
   /* Lines */
-  --border: #e7e9ee; /* default 1px hairline */
-  --border-strong: #d6dae1; /* dividers that need to read */
+  --border: #e5e8f0; /* default 1px hairline */
+  --border-strong: #d3d8e5; /* dividers that need to read */
 
-  /* Accent (single, used sparingly) */
-  --brand: #4f46e5;
-  --brand-hover: #4338ca;
-  --brand-active: #3730a3;
-  --brand-subtle: #eef2ff; /* tinted fill for active nav / selection */
+  /* Nebula — the primary accent (the emblem's violet disc) */
+  --brand: #4b39c4;
+  --brand-hover: #3d2ea8;
+  --brand-active: #32248c;
+  --brand-subtle: #eeebff; /* tinted fill for active nav / selection */
   --on-brand: #ffffff;
-  --ring: rgba(79, 70, 229, 0.4);
+  --ring: rgba(75, 57, 196, 0.4);
+
+  /*
+   * The emblem's other two colours. `orbit` (the cyan rings) is the second
+   * information-bearing accent — the one a chart reaches for when it needs a
+   * series distinguishable from the brand. `crown` (the sapphire) is decorative
+   * only: auras, halos, gradients. Never encode meaning in crown.
+   */
+  --accent-orbit: #0e8ea6;
+  --accent-crown: #3b6fd4;
 
   /* Semantic — each pairs a saturated fg with a subtle fill */
-  --success: #15803d;
-  --success-subtle: #dcfce7;
-  --warning: #b45309;
-  --warning-subtle: #fef3c7;
-  --danger: #e11d48;
-  --danger-subtle: #ffe4e6;
-  --info: #0369a1;
-  --info-subtle: #e0f2fe;
+  --success: #0f7a45;
+  --success-subtle: #dcfce9;
+  --warning: #a55a06;
+  --warning-subtle: #fdf1d6;
+  --danger: #d32054;
+  --danger-subtle: #ffe3ea;
+  --info: #0e6fa8;
+  --info-subtle: #e2f1fd;
 
-  /* Radii */
+  /*
+   * Chart series, in the one sanctioned order (BRAND.md §2.4): nebula → orbit →
+   * sapphire → success → warning → danger. A chart NEVER picks its own colours;
+   * it indexes into this list, which is what keeps every visualisation in the
+   * app reading as one system across both themes.
+   */
+  --chart-1: #4b39c4;
+  --chart-2: #0e8ea6;
+  --chart-3: #3b6fd4;
+  --chart-4: #0f7a45;
+  --chart-5: #a55a06;
+  --chart-6: #d32054;
+
+  /* Radii — watchmaking is angular; nothing rounder than 12px */
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
 
   /* Elevation — border-first; shadows stay subtle on light */
-  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.04);
-  --shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.1), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
-  --shadow-lg: 0 16px 40px -8px rgba(16, 24, 40, 0.16);
+  --shadow-xs: 0 1px 2px rgba(20, 24, 39, 0.04);
+  --shadow-sm: 0 1px 2px rgba(20, 24, 39, 0.06), 0 1px 1px rgba(20, 24, 39, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(20, 24, 39, 0.1), 0 2px 6px -2px rgba(20, 24, 39, 0.06);
+  --shadow-lg: 0 16px 40px -8px rgba(20, 24, 39, 0.16);
 
   /* Scrollbars (swapped per theme) */
-  --scrollbar: #c7ccd4;
-  --scrollbar-hover: #aeb4bf;
+  --scrollbar: #c5cbda;
+  --scrollbar-hover: #aab2c6;
 }
 
 /*
- * Dark theme — same semantic names, swapped values. Activated by the toggle in
- * the topbar (persisted in localStorage, applied pre-paint by the inline script
- * in the root layout).
+ * Dark theme — the void. This is where Chronos actually lives (BRAND.md §2):
+ * light is supported and must stay impeccable, but the brand is at home here.
+ * Activated by the toggle in the topbar (persisted in localStorage, applied
+ * pre-paint by the inline script in the root layout).
  */
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Abyss/bone/brass — the cosmic palette (source: docs/mimir-architecture.html). */
-  --background: #060913; /* abyss */
-  --surface: #111a30; /* panel */
-  --surface-2: #0e1628; /* panel-2 */
+  --background: #05070f; /* void */
+  --surface: #0f1426; /* panel */
+  --surface-2: #0b1020; /* panel-2 */
   --card: var(--surface);
 
-  --foreground: #e9e3d3; /* bone */
-  --muted: #8f9cb3; /* mist */
-  --faint: #5c6a85; /* dim */
+  --foreground: #e8ecf7; /* starlight */
+  --muted: #95a1bd;
+  --faint: #5d6883;
 
-  --border: #1b2540; /* line-soft */
-  --border-strong: #26314d; /* line */
+  --border: #1a2138;
+  --border-strong: #27314f;
 
-  --brand: #c9a44c; /* brass */
-  --brand-hover: #d9b768;
-  --brand-active: #e6c988;
-  --brand-subtle: rgba(201, 164, 76, 0.14);
-  --on-brand: #060913; /* brass is light — needs a dark ink on top */
-  --ring: rgba(201, 164, 76, 0.45);
+  --brand: #9b8cff; /* nebula, pre-brightened for the void */
+  --brand-hover: #b5aaff;
+  --brand-active: #c9c1ff;
+  --brand-subtle: rgba(155, 140, 255, 0.14);
+  --on-brand: #05070f; /* the brightened nebula is light — dark ink on top */
+  --ring: rgba(155, 140, 255, 0.45);
 
-  --success: #34d399;
-  --success-subtle: rgba(16, 185, 129, 0.15);
-  --warning: #fbbf24;
-  --warning-subtle: rgba(245, 158, 11, 0.15);
-  --danger: #fb7185;
-  --danger-subtle: rgba(244, 63, 94, 0.15);
-  --info: #38bdf8;
-  --info-subtle: rgba(14, 165, 233, 0.14);
+  --accent-orbit: #4fd1e0;
+  --accent-crown: #7da9ff;
+
+  --success: #4ade9b;
+  --success-subtle: rgba(74, 222, 155, 0.15);
+  --warning: #fbbf5c;
+  --warning-subtle: rgba(251, 191, 92, 0.15);
+  --danger: #fb7191;
+  --danger-subtle: rgba(251, 113, 145, 0.15);
+  --info: #5cc4f5;
+  --info-subtle: rgba(92, 196, 245, 0.14);
+
+  --chart-1: #9b8cff;
+  --chart-2: #4fd1e0;
+  --chart-3: #7da9ff;
+  --chart-4: #4ade9b;
+  --chart-5: #fbbf5c;
+  --chart-6: #fb7191;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.6);
 
-  --scrollbar: #26314d; /* line */
-  --scrollbar-hover: #364052;
+  --scrollbar: #27314f;
+  --scrollbar-hover: #3a4569;
 }
 
 /*
- * Realm accents — the cosmos layer (see .claude/skills/mimir-cosmos).
+ * Realm accents — the cosmos layer (see src/lib/realms.ts, BRAND.md §3).
  * RealmScope stamps data-realm on the app shell per route section; these
  * swap a small accent-token set the same way data-theme swaps the theme.
  * No attribute (settings, auth) = neutral brand fallback. Dark values are
  * pre-brightened for contrast; data-theme lives on <html> ABOVE the realm
  * wrapper, hence descendant (not compound) selectors.
+ *
+ * Four realms, all drawn out of the emblem: atelier (nebula, the default),
+ * marche (orbit cyan), tresor (sapphire→green, money), agents (comet amber).
  */
 :root {
   --realm: var(--brand);
   --realm-hover: var(--brand-hover);
   --realm-subtle: var(--brand-subtle);
   --realm-ring: var(--ring);
-  --realm-2: #0891b2;
+  --realm-2: var(--accent-orbit);
 }
 /*
- * --realm-2 is the realm's SECOND accent, for the rare surface that needs two
- * distinguishable series in one chart (today: only the Chronos margin
- * waterfall). Realms that don't need one inherit this neutral. It is a literal,
- * not `var(--realm)`, for the substitution reason documented further down.
+ * --realm-2 is the realm's SECOND accent, for a surface that needs two
+ * distinguishable series in one chart (the margin waterfall, the P&L bars).
+ * Realms that don't need their own inherit the orbit cyan above.
  * This generic dark rule sits ABOVE the realm blocks so the two-attribute
  * `[data-theme="dark"] [data-realm="…"]` selectors still outrank it.
  */
 [data-theme="dark"] {
-  --realm-2: #5eb6d6;
-}
-[data-realm="chasse"] {
-  --realm: #0891b2;
-  --realm-hover: #0e7490;
-  --realm-subtle: #ecfeff;
-  --realm-ring: rgba(8, 145, 178, 0.4);
-}
-[data-realm="tresor"] {
-  --realm: #059669;
-  --realm-hover: #047857;
-  --realm-subtle: #ecfdf5;
-  --realm-ring: rgba(5, 150, 105, 0.4);
-}
-[data-realm="mimir"] {
-  --realm: #d97706;
-  --realm-hover: #b45309;
-  --realm-subtle: #fffbeb;
-  --realm-ring: rgba(217, 119, 6, 0.4);
-}
-/* Tuned to the customer's own emblem (public/brands/chronos/mark.png): the
- * disc's blue-violet as the primary, the orbit rings' cyan as the second. */
-[data-realm="chronos"] {
-  --realm: #5b45d6;
-  --realm-hover: #4a35c0;
-  --realm-subtle: #f1eeff;
-  --realm-ring: rgba(91, 69, 214, 0.4);
-  --realm-2: #0e8ea6;
-}
-[data-theme="dark"] [data-realm="chasse"] {
-  --realm: #4fd8c4; /* well */
-  --realm-hover: #7de8d9;
-  --realm-subtle: rgba(79, 216, 196, 0.16);
-  --realm-ring: rgba(79, 216, 196, 0.45);
-}
-[data-theme="dark"] [data-realm="tresor"] {
-  --realm: #6fbf83; /* live */
-  --realm-hover: #8fd39c;
-  --realm-subtle: rgba(111, 191, 131, 0.16);
-  --realm-ring: rgba(111, 191, 131, 0.45);
-}
-[data-theme="dark"] [data-realm="mimir"] {
-  --realm: #c05b47; /* ember — brass now belongs to neutral --brand */
-  --realm-hover: #d97a63;
-  --realm-subtle: rgba(192, 91, 71, 0.16);
-  --realm-ring: rgba(192, 91, 71, 0.45);
-}
-[data-theme="dark"] [data-realm="chronos"] {
-  --realm: #9b8cff; /* pre-brightened blue-violet — the vertical's own sky */
-  --realm-hover: #b5aaff;
-  --realm-subtle: rgba(155, 140, 255, 0.16);
-  --realm-ring: rgba(155, 140, 255, 0.45);
-  --realm-2: #4fd1e0;
+  --realm-2: var(--accent-orbit);
 }
 /*
- * relation has no fixed hue (brand fallback, see :root above) — but var()
- * substitution inside a custom property happens once, at the element that
- * declares it, then inherits as an already-resolved value. Since :root's
- * `--realm: var(--brand)` resolves using *:root's own* theme, a nested
- * dark scope below :root (the cosmos observatory forces data-theme="dark"
- * on an inner element, not <html>) never gets picked up without this
- * explicit re-declaration re-triggering resolution at the actual element.
+ * atelier — the inventory heartland. Deliberately identical to the neutral
+ * brand: this is the realm the operator lives in, so "no accent shift" IS the
+ * correct signal. Declared explicitly rather than omitted for the var()
+ * substitution reason documented at the bottom of this block.
  */
-[data-theme="dark"] [data-realm="relation"] {
+[data-realm="atelier"] {
   --realm: var(--brand);
   --realm-hover: var(--brand-hover);
   --realm-subtle: var(--brand-subtle);
   --realm-ring: var(--ring);
+  --realm-2: var(--accent-orbit);
 }
+[data-realm="marche"] {
+  --realm: #0e8ea6; /* orbit */
+  --realm-hover: #0b7688;
+  --realm-subtle: #e5f7fb;
+  --realm-ring: rgba(14, 142, 166, 0.4);
+  --realm-2: #4b39c4;
+}
+[data-realm="tresor"] {
+  --realm: #0f7a45;
+  --realm-hover: #0b6238;
+  --realm-subtle: #e6f8ee;
+  --realm-ring: rgba(15, 122, 69, 0.4);
+  --realm-2: #3b6fd4;
+}
+[data-realm="agents"] {
+  --realm: #a55a06; /* the comet hand */
+  --realm-hover: #874905;
+  --realm-subtle: #fdf1d6;
+  --realm-ring: rgba(165, 90, 6, 0.4);
+}
+[data-theme="dark"] [data-realm="atelier"] {
+  --realm: var(--brand);
+  --realm-hover: var(--brand-hover);
+  --realm-subtle: var(--brand-subtle);
+  --realm-ring: var(--ring);
+  --realm-2: var(--accent-orbit);
+}
+[data-theme="dark"] [data-realm="marche"] {
+  --realm: #4fd1e0;
+  --realm-hover: #7ee0eb;
+  --realm-subtle: rgba(79, 209, 224, 0.16);
+  --realm-ring: rgba(79, 209, 224, 0.45);
+  --realm-2: #9b8cff;
+}
+[data-theme="dark"] [data-realm="tresor"] {
+  --realm: #4ade9b;
+  --realm-hover: #7aeab8;
+  --realm-subtle: rgba(74, 222, 155, 0.16);
+  --realm-ring: rgba(74, 222, 155, 0.45);
+  --realm-2: #7da9ff;
+}
+[data-theme="dark"] [data-realm="agents"] {
+  --realm: #fbbf5c;
+  --realm-hover: #fdd489;
+  --realm-subtle: rgba(251, 191, 92, 0.16);
+  --realm-ring: rgba(251, 191, 92, 0.45);
+}
+/*
+ * Why atelier re-declares the brand fallback instead of inheriting :root's:
+ * var() substitution inside a custom property happens once, at the element
+ * that declares it, then inherits as an already-resolved value. Since :root's
+ * `--realm: var(--brand)` resolves using *:root's own* theme, a nested dark
+ * scope below :root (a surface that forces data-theme="dark" on an inner
+ * element rather than on <html>) would never pick the dark value up without
+ * the explicit re-declaration re-triggering resolution at the actual element.
+ */
 
 /* Inside a realm, the light follows you: focus + selection take the realm hue. */
 [data-realm] :focus-visible {
@@ -215,7 +260,7 @@
  * card is literally invisible, while color-mix gives the same faintness in both
  * themes from one declaration.
  *
- * This carries the ONE sanctioned ambient loop (mimir-cosmos law 3): a slow
+ * This carries the ONE sanctioned ambient loop (chronos-cosmos law 3): a slow
  * drift, transform/opacity only so it stays on the compositor (the blur is
  * rasterised once into the layer, not re-run per frame), well away from the
  * text-dense surfaces the law rules out. Reduced motion removes it — the aura
@@ -271,7 +316,7 @@
 }
 
 /*
- * Cosmos motion (C2, see .claude/skills/mimir-cosmos/references/mechanics.md).
+ * Cosmos motion (C2, see .claude/skills/chronos-cosmos/references/mechanics.md).
  * Sidebar/topbar are anchored view-transition groups (fixed stars, never
  * animate); realm-shift is the crossfade+rise applied to routed content when
  * a sidebar link crosses realms. prefers-reduced-motion collapses everything
@@ -386,7 +431,7 @@
 
 /*
  * Cosmos observatory — the orbital home surface (src/components/observatory.tsx).
- * Ported from the approved concept artifact ("Mimir — Le Cosmos"). Always
+ * Ported from the approved concept artifact ("Chronos — Le Cosmos"). Always
  * dark/cosmic regardless of the app theme: the component sets data-theme="dark"
  * on the wrapper itself, which is enough to resolve --background/--surface/
  * --foreground/--brand etc to the existing abyss/bone/brass dark values — no
@@ -826,7 +871,7 @@
 /*
  * Le Bureau — cosmos scene (src/components/bureau/bureau-cosmos.tsx). Same
  * grammar as .observatory (starfield canvas, always-dark well/hub) but the
- * 8 Mimir agents orbit as planets instead of sitting on fixed realm nodes —
+ * 8 Chronos agents orbit as planets instead of sitting on fixed realm nodes —
  * one hue per agent (--agent), set via data-agent, since 8 bodies need more
  * variety than the 4-realm palette. The orbit itself is the classic
  * rotate/translateX/counter-rotate trick sized in cqw so radii scale with the
@@ -1308,6 +1353,16 @@
   --color-realm-hover: var(--realm-hover);
   --color-realm-subtle: var(--realm-subtle);
   --color-realm-2: var(--realm-2);
+
+  --color-orbit: var(--accent-orbit);
+  --color-crown: var(--accent-crown);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);

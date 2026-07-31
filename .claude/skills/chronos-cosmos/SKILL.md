@@ -1,16 +1,16 @@
 ---
-name: mimir-cosmos
-description: The Mimir experience direction — the app as one cosmos of distinct realms (module universes with their own accent identity) connected by continuous motion (view transitions, shared-element morphs, persistent shell) instead of rigid page-per-page cuts. Consult whenever building navigation, page transitions, a new module/section, the sidebar, dashboards, or anything where "how it feels to move through the app" matters; whenever the user says vibrant, flow, continuity, cosmos, universe, realm, alive, or immersive; and before adding any route-level animation.
+name: chronos-cosmos
+description: The Chronos experience direction — the app as one cosmos of distinct realms (module universes with their own accent identity) connected by continuous motion (view transitions, shared-element morphs, persistent shell) instead of rigid page-per-page cuts. Consult whenever building navigation, page transitions, a new module/section, the sidebar, dashboards, or anything where "how it feels to move through the app" matters; whenever the user says vibrant, flow, continuity, cosmos, universe, realm, alive, or immersive; and before adding any route-level animation.
 ---
 
-# Mimir cosmos — one universe, many realms
+# Chronos cosmos — one universe, many realms
 
 The target feeling: the CRM is not a stack of pages, it is **one cosmos you move through**.
 Each module is a **realm** — a universe with its own light — and navigation is **travel**, not
 replacement. Nothing hard-cuts; things morph, slide, and shift hue. The Norse module names
 (Heimdallr, Huginn, Nornir, Bragi, Forseti…) aren't just labels — realms make them felt.
 
-This *extends* `mimir-design-system`; it never overrides it. Shared physics stay absolute:
+This *extends* `chronos-design-system`; it never overrides it. Shared physics stay absolute:
 same tokens, spacing, radii, type scale, density in every realm. Realms differ in **hue and
 atmosphere only**. Vibrancy comes from light and motion, not from decoration or louder
 components. If a realm change makes a button look different, that's a physics violation.
@@ -53,7 +53,7 @@ by sprinkling colors in components. Suggested starting map (adjust with the user
 | **Relation** (the core) | dashboard, todo, companies, contacts, pipeline | indigo — the existing brand |
 | **Chasse** (the hunt) | leadone, outreach, inbox | cyan — radar, signal, pursuit |
 | **Trésor** | finances, analytics | emerald — value, growth |
-| **Mimir** (agent realms, S7+) | heimdallr, huginn, … | amber — vigilance, the watchman's fire; each module may later earn its own hue |
+| **Chronos** (agent realms, S7+) | heimdallr, huginn, … | amber — vigilance, the watchman's fire; each module may later earn its own hue |
 
 Sidebar renders nav **grouped by realm** (small `text-faint` uppercase realm labels), and the
 active item's accent bar/icon take the realm hue instead of flat `--brand`.

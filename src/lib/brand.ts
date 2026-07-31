@@ -11,25 +11,24 @@
 
 /** Deployment-wide product name. Overridden per tenant by Tenant.brandName. */
 export const DEFAULT_BRAND_NAME =
-  process.env.NEXT_PUBLIC_BRAND_NAME?.trim() || "Mimir";
+  process.env.NEXT_PUBLIC_BRAND_NAME?.trim() || "Chronos";
 
 /**
  * One-line product description for <meta> and the PWA manifest. Env-overridable
- * for the same reason as the name: these render pre-auth, and the default is
- * vertical-specific ("courtage en assurance") — wrong for any non-CRM tenant.
+ * so a differently-branded deployment can state its own trade without a code
+ * change — the default is the watch buy/restore/resell trade this product is for.
  */
 export const DEFAULT_BRAND_TAGLINE =
   process.env.NEXT_PUBLIC_BRAND_TAGLINE?.trim() ||
-  "CRM de prospection pour le courtage en assurance.";
+  "Achat, restauration, revente — le poste de pilotage horloger.";
 
 /**
  * Split a wordmark into a neutral head and an accented tail.
  *
- * The original wordmark was hardcoded as `Mi<span>mir</span>`; splitting at
- * floor(len/2) reproduces that exactly for "Mimir" and generalises to any name
- * ("Chronos" → "Chr" + "onos"). Kept as one function so the wordmark can never
- * drift from the split again — a naive grep for the product name missed this
- * mid-word split during the Vision RM → Mimir rebrand (see C3).
+ * Splitting at floor(len/2) gives "Chronos" → "Chr" + "onos" and generalises to
+ * any tenant's own name. Kept as one function so the wordmark can never drift
+ * from the split: a naive grep for the product name has already missed this
+ * mid-word split once during an earlier rebrand.
  */
 export function splitBrand(name: string): { head: string; tail: string } {
   const clean = name.trim() || DEFAULT_BRAND_NAME;

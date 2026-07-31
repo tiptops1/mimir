@@ -1,12 +1,12 @@
 ---
 name: design-review
-description: Visual QA pass for Mimir UI work — screenshot every changed surface in light + dark and desktop + mobile, grade it against a concrete pass/fail checklist (tokens, states, density, canonical markup, contrast, focus), fix failures, and re-check. Use whenever UI work is about to be called done in the mimir repo, when the user says "design review", "polish this", "does it look right/high-end", "check the UI", or before shipping any change that renders something. Not for non-UI changes.
+description: Visual QA pass for Chronos UI work — screenshot every changed surface in light + dark and desktop + mobile, grade it against a concrete pass/fail checklist (tokens, states, density, canonical markup, contrast, focus), fix failures, and re-check. Use whenever UI work is about to be called done in this repo, when the user says "design review", "polish this", "does it look right/high-end", "check the UI", or before shipping any change that renders something. Not for non-UI changes.
 ---
 
-# Design review — Mimir
+# Design review — Chronos
 
 Turns "looks fine to me" into a graded pass/fail list with screenshot proof. Run it after the
-feature works, before calling it done. The grading criteria come from the `mimir-design-system`
+feature works, before calling it done. The grading criteria come from the `chronos-design-system`
 skill — load that first if it isn't already in context.
 
 ## 1. Scope the review
@@ -17,7 +17,7 @@ the whole app.
 
 ## 2. Get eyes on it
 
-Follow the `mimir-verify` skill: `preview_start {name: "mimir-dev"}` (port 3001), log in as the
+Follow the `chronos-verify` skill: `preview_start {name: "chronos-dev"}` (port 3001), log in as the
 crm_demo admin at `/login`. One login per session — the cookie persists.
 
 **Theme flipping:** the app themes off `data-theme` on `<html>`, NOT `prefers-color-scheme`, so
@@ -57,7 +57,7 @@ in the browser where pixels are the evidence.
 
 **Structure & idiom**
 - [ ] Uses `ui.tsx` primitives — no ad-hoc `<button>`/`<input>` styling.
-- [ ] Tables/filters/popovers match the canonical markup in `mimir-design-system` `references/patterns.md` (11px uppercase `text-faint` table headers on `bg-surface-2/60`, `animate-pop` popovers, etc.).
+- [ ] Tables/filters/popovers match the canonical markup in `chronos-design-system` `references/patterns.md` (11px uppercase `text-faint` table headers on `bg-surface-2/60`, `animate-pop` popovers, etc.).
 - [ ] Filter bar order: contact name, company, email, then the rest. City appears nowhere.
 - [ ] One primary button per view; the rest secondary/ghost.
 

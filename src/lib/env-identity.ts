@@ -1,22 +1,30 @@
 /**
  * Which environment is this process talking to?
  *
- * Until S28 there was exactly one legitimate cluster (`mimir-dev`) and the rule
- * was "never point this repo at a prod cluster". A paying customer now has a
- * production environment of his own, so the question changes shape: not "does a
- * prod cluster exist" but "does this process's env match the environment the
- * command intends".
+ * There was once exactly one legitimate cluster and the rule was "never point
+ * this repo at a prod cluster". A paying customer now has a production
+ * environment of his own, so the question changes shape: not "does a prod
+ * cluster exist" but "does this process's env match the environment the command
+ * intends".
  *
- * Intent is DECLARED via MIMIR_ENV, never sniffed from a hostname. Sniffing
+ * Intent is DECLARED via CHRONOS_ENV, never sniffed from a hostname. Sniffing
  * fails exactly when it matters — a copy-pasted prod URI in a dev `.env` would
  * "correctly" identify itself as prod and sail through, when the whole point is
  * to catch that the shell is not what the operator thinks it is.
+ *
+ * MIMIR_ENV is still read as a fallback. That name is set in the deployed
+ * Vercel projects and in existing `.env` files; dropping it during the rebrand
+ * would silently reclassify a prod shell as dev, which is precisely the failure
+ * this module exists to prevent. CHRONOS_ENV wins when both are set.
  *
  * No `server-only` guard: `scripts/lib/guard.ts` imports this from tsx, same as
  * `src/lib/crypto.ts`.
  */
 
-export type MimirEnv = "dev" | "prod";
+export type AppEnv = "dev" | "prod";
+
+/** @deprecated Legacy alias of AppEnv, kept so existing imports keep compiling. */
+export type MimirEnv = AppEnv;
 
 export class EnvIdentityError extends Error {
   constructor(message: string) {
@@ -26,17 +34,23 @@ export class EnvIdentityError extends Error {
 }
 
 /** Declared environment. Absent means dev — prod must always be explicit. */
-export function mimirEnv(): MimirEnv {
-  const raw = (process.env.MIMIR_ENV ?? "dev").trim().toLowerCase();
+export function appEnv(): AppEnv {
+  const legacy = process.env.MIMIR_ENV;
+  const declared = process.env.CHRONOS_ENV ?? legacy;
+  const varName = process.env.CHRONOS_ENV != null ? "CHRONOS_ENV" : "MIMIR_ENV";
+  const raw = (declared ?? "dev").trim().toLowerCase();
   if (raw === "prod" || raw === "production") return "prod";
   if (raw === "dev" || raw === "development" || raw === "") return "dev";
   throw new EnvIdentityError(
-    `MIMIR_ENV is "${raw}" — expected "dev" or "prod". Refusing to guess which cluster this is.`,
+    `${varName} is "${raw}" — expected "dev" or "prod". Refusing to guess which cluster this is.`,
   );
 }
 
+/** @deprecated Renamed to appEnv. Kept so any stale import keeps compiling. */
+export const mimirEnv = appEnv;
+
 export function isProd(): boolean {
-  return mimirEnv() === "prod";
+  return appEnv() === "prod";
 }
 
 /** The DB vars whose hosts must agree with each other. */

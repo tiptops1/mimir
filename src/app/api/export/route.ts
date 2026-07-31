@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 import { getOptionalSession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
 import { buildCompanyWhere, buildContactWhere } from "@/lib/list-filters";
@@ -27,12 +28,24 @@ function toCsv(rows: Cell[][]): string {
 const day = (d: Date | null | undefined) =>
   d ? new Date(d).toISOString().slice(0, 10) : "";
 
+/**
+ * Download filename prefix — the product name, lowercased and stripped of
+ * anything a filesystem would object to, so a rebranded deployment's exports
+ * carry its own name rather than a hardcoded one.
+ */
+const slug =
+  DEFAULT_BRAND_NAME.toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "export";
+
 function csvResponse(rows: Cell[][], name: string): NextResponse {
   const today = new Date().toISOString().slice(0, 10);
   return new NextResponse(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="mimir-${name}-${today}.csv"`,
+      "Content-Disposition": `attachment; filename="${slug}-${name}-${today}.csv"`,
     },
   });
 }

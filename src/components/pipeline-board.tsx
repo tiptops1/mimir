@@ -365,7 +365,7 @@ export function PipelineBoard({
         )}
       </div>
       <DndContext
-        id="avelior-pipeline"
+        id="pipeline-board"
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={onDragStart}

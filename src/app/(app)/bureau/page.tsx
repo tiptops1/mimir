@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 
 import { BureauCosmos } from "@/components/bureau/bureau-cosmos";
 
-export const metadata: Metadata = { title: "Le Bureau — Mimir" };
+export const metadata: Metadata = { title: `Le Bureau — ${DEFAULT_BRAND_NAME}` };
 
 /**
  * C5 easter egg — hidden route (not in REALMS/NAV; reached via the sidebar
- * glyph egg). The Mimir agents orbit as planets around the sun, lit up by
+ * glyph egg). The agents orbit as planets around the sun, lit up by
  * live ledger activity. The scene is always dark, like the observatory hero.
  */
 export default function BureauPage() {
@@ -24,7 +25,7 @@ export default function BureauPage() {
             Le Bureau
           </h1>
           <p className="text-xs text-muted">
-            Les agents de Mimir au travail — vous avez trouvé l&apos;œuf.
+            Les agents au travail — vous avez trouvé l&apos;œuf.
           </p>
         </div>
         <div className="min-h-[480px] flex-1">

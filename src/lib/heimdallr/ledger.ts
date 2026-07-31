@@ -17,7 +17,7 @@ import {
 // AgentAction between states. Every transition below is one Prisma
 // interactive transaction — read current state, guard it, apply the update,
 // write the paired AgentEvent — so the ledger (current state) and the event
-// stream (history) can never drift (docs/mimir/events.md §1/§2).
+// stream (history) can never drift (docs/chronos/events.md §1/§2).
 //
 // Every function takes the tenant PrismaClient as its first argument, same
 // convention as lib/ai/meter.ts / lib/outreach/guardrails.ts — never import

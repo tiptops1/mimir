@@ -1,13 +1,13 @@
-# Mimir — dev roadmap, Claude Code session plan
+# Chronos — dev roadmap, Claude Code session plan
 
 > Companion to `AGENTIC-PLATFORM-DECISION-MEMO.md`. This is the execution plan: one checkbox ≈ one
-> Claude Code session. Tick as you go — this file is **Mimir's** cross-session memory, in the same
-> spirit as the earlier CRM baseline roadmaps. Lives at `docs/mimir/roadmap.md` **in the Mimir repo**.
+> Claude Code session. Tick as you go — this file is **Chronos's** cross-session memory, in the same
+> spirit as the earlier CRM baseline roadmaps. Lives at `docs/chronos/roadmap.md` **in the Chronos repo**.
 >
 > Ritual per session (unchanged from the brief): **plan mode → approve → execute → lint → build →
 > commit → update this file → `/clear`.** Push to `main` only on an explicit "push".
 >
-> **Revised 2026-07-15 — D6: separate environment.** Mimir is no longer built inside the baseline
+> **Revised 2026-07-15 — D6: separate environment.** Chronos is no longer built inside the baseline
 > repo. It gets its **own repo, own Atlas cluster, own Vercel project, own cron schedules, own
 > secrets**, seeded from a duplicate of the CRM baseline at its current commit. See §0.5 and
 > S0. Everything below assumes that split.
@@ -44,14 +44,14 @@ the memo's rate snapshot is dated 2026-07 and explicitly says verify before quot
 
 ## 0.5 Environment model — read this before anything else
 
-> **Revised again 2026-07-30 at S28.** This started as a two-environment table. Mimir now has a
+> **Revised again 2026-07-30 at S28.** This started as a two-environment table. Chronos now has a
 > production environment of its own (the Chronos customer), so it is three. The operational
-> detail lives in **`docs/mimir/ops.md`**; this table is the map.
+> detail lives in **`docs/chronos/ops.md`**; this table is the map.
 
-| | **CRM baseline (prod)** | **Mimir dev** | **Mimir prod** *(S28)* |
+| | **CRM baseline (prod)** | **Chronos dev** | **Chronos prod** *(S28)* |
 |---|---|---|---|
 | Repo | the baseline repo | this repo, seeded from the baseline @ `719f842` | this repo, same `main` |
-| Atlas | `crm-railway` (legacy name), prod data | project *mimir*, cluster `mimir-dev` (M0, EU) | **its own Atlas project** + M0 cluster (EU) |
+| Atlas | `crm-railway` (legacy name), prod data | project *mimir*, cluster `chronos-dev` (M0, EU) | **its own Atlas project** + M0 cluster (EU) |
 | Host | existing Vercel project | local only | **its own Vercel project**, own domain |
 | Crons | cron-job.org, 4 routes ✅ | none | own schedules, own `CRON_SECRET` |
 | Secrets | existing `.env` | dev `.env` | Vercel env vars, **all fresh** |
@@ -59,25 +59,25 @@ the memo's rate snapshot is dated 2026-07 and explicitly says verify before quot
 | `MIMIR_ENV` | n/a | `dev` (default) | `prod` |
 
 **What the dev/prod split buys:** a real staging environment. The brief's standing constraint
-("local `.env` points at prod Atlas — every script run is production") **does not apply to Mimir
-dev**. It still applies in the baseline repo, and it now applies to Mimir prod too — which is why
+("local `.env` points at prod Atlas — every script run is production") **does not apply to Chronos
+dev**. It still applies in the baseline repo, and it now applies to Chronos prod too — which is why
 S28 put the guards in code rather than trusting the rule to be remembered.
 
 **What this costs — accept it consciously:** the D4/D5 reuse story now means *inheriting a copy* of
 `/inbox`, `AuditLog`, the outreach ledger and the DB router, not extending the live ones. The two
 codebases will drift.
 
-**Open decision — record in `decisions.md` at S0:** is Mimir a *permanent parallel platform*, or a
+**Open decision — record in `decisions.md` at S0:** is Chronos a *permanent parallel platform*, or a
 proving ground whose modules get **merged back** into the baseline repo once validated? This
 changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 
 **Baseline discipline (new standing rules):**
 - The duplicated baseline code is a **baseline, not a fork to improve**. Bug fixes that belong to
-  the baseline product go in the baseline repo and get pulled across — not fixed only in Mimir.
+  the baseline product go in the baseline repo and get pulled across — not fixed only in Chronos.
 - Anything gated to tenant #1 in the baseline (legacy IMAP/ICS/`FIREFLIES_API_KEY` fallbacks,
   `TENANT1_SLUG` assumptions, hardcoded single-tenant seed config) is **dead weight on day one** —
   identify it at S0, strip or neutralize it before building on top.
-- The Mimir repo has **no production user**. "Don't break the live app" is replaced by "never point
+- The Chronos repo has **no production user**. "Don't break the live app" is replaced by "never point
   this repo at the prod cluster."
 
 ---
@@ -86,7 +86,7 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 
 **Human/business track (runs in parallel, not Claude Code work):**
 - [ ] **G1** — start Google OAuth Production + CASA process now. Longest external lead time.
-      *Note: the Mimir environment needs its own OAuth client too — G1 work should account for it.*
+      *Note: the Chronos environment needs its own OAuth client too — G1 work should account for it.*
       *Not a blocker for S14: a Testing-mode client (own client ID, test users added manually,
       per `INTEGRATIONS.md` §1) fully exercises the draft pipeline. CASA only required before a
       real, unaffiliated tenant goes live (Testing mode caps at 100 test users, tokens expire ~7d).*
@@ -100,8 +100,8 @@ changes how hard you work to keep the baseline in sync. Don't leave it implicit.
 - [x] ~~Record the prod Vercel URL~~ — done.
 - [x] ~~Verify all four cron routes are scheduled on cron-job.org~~ — **verified 2026-07-15, all
       four successful.**
-- [x] Record the **new** Mimir Vercel URL + Atlas cluster name once S0 lands (same trap, new env).
-      *S0 done 2026-07-15: Atlas = `mimir-dev` cluster (EU M0 free). Vercel + cron-job.org setup deferred to later (not blocking development).*
+- [x] Record the **new** Chronos Vercel URL + Atlas cluster name once S0 lands (same trap, new env).
+      *S0 done 2026-07-15: Atlas = `chronos-dev` cluster (EU M0 free). Vercel + cron-job.org setup deferred to later (not blocking development).*
 
 **Accounts/infra ready before S0:** Atlas org access (to create a new project), Vercel account (new
 project), GitHub (new repo).
@@ -130,7 +130,7 @@ into the next phase on autopilot either.
   cluster; identify and flag every tenant-#1-specific / prod-specific artifact that shouldn't carry
   over; bootstrap one demo tenant so the baseline provably runs.
   *Exit:* new repo builds + runs against the new cluster, one demo tenant logs in, prod untouched,
-  the permanent-parallel-vs-merge-back decision written to `docs/mimir/decisions.md`, and the manual
+  the permanent-parallel-vs-merge-back decision written to `docs/chronos/decisions.md`, and the manual
   Atlas/Vercel steps you must do by hand listed out.
 
 - [x] **S0b — Baseline strip-down** · Sonnet · S · ✅ 2026-07-15
@@ -142,9 +142,9 @@ into the next phase on autopilot either.
 ### Phase 0 — Groundwork (no gates block this)
 
 - [x] **S1 — Docs + CLAUDE.md refactor** · Sonnet · S · ✅ 2026-07-15
-  `CLAUDE.md` rewritten for this repo (Mimir identity, pointers to `docs/mimir/*`, the standing
-  rules, `mimir-ship`/`mimir-env-guard` ritual, no baseline-only content). `docs/roadmap.md` +
-  `docs/product-roadmap.md` (the baseline's own dated build logs) deleted — not Mimir's history.
+  `CLAUDE.md` rewritten for this repo (Chronos identity, pointers to `docs/chronos/*`, the standing
+  rules, `chronos-ship`/`chronos-env-guard` ritual, no baseline-only content). `docs/roadmap.md` +
+  `docs/product-roadmap.md` (the baseline's own dated build logs) deleted — not Chronos's history.
   `docs/VISION-RM-BRIEF.md` renamed to `docs/CRM-BASELINE-BRIEF.md` and genericized in place
   (tenant-slug/domain examples, dead script references removed) as the baseline architecture
   reference. `README.md`/`INTEGRATIONS.md`/`docs/architecture.md` genericized + corrected for
@@ -157,14 +157,14 @@ into the next phase on autopilot either.
   (proposed → approved/edited/rejected → executed → undone, with source passages + trigger refs),
   `AutonomyConfig` (per-tenant × per-category level 0–3), `PromptTemplate` (config, not code).
   Generic ontology, French labels in config. Events can't be backfilled — this schema is the one
-  thing worth over-thinking. *Exit met:* `docs/mimir/events.md` written (four Prisma model drafts,
+  thing worth over-thinking. *Exit met:* `docs/chronos/events.md` written (four Prisma model drafts,
   state-machine guard table, graduation-math inputs, seed category list with never-graduates
   flags, GDPR-erasure posture); design decisions logged in `decisions.md`. No code pushed —
   S3 implements the doc verbatim.
 
 - [x] **S3 — Schema implementation + seed** · Sonnet · S · ✅ 2026-07-16
   Implemented S2's four models (`AgentEvent`, `AgentAction`, `AutonomyConfig`, `PromptTemplate`)
-  verbatim in `prisma/tenant/schema.prisma`, `db:push`'d against `mimir-dev`. Extended
+  verbatim in `prisma/tenant/schema.prisma`, `db:push`'d against `chronos-dev`. Extended
   `seedTenantConfig()` with the 7 seed autonomy categories (all `level: 0`, finance/legal capped
   at `maxLevel: 1`) and a 2-row `PromptTemplate` skeleton (`crm.ai_extract.system`,
   `outreach.email_draft.system`) mirroring the prompts already hardcoded in `ai-extract.ts` /
@@ -223,7 +223,7 @@ into the next phase on autopilot either.
   `$transaction` (read → guard → update → paired `AgentEvent`) so ledger and event stream can't
   drift; every function takes the tenant `PrismaClient` first arg (meter.ts/guardrails.ts
   convention), no `getTenantDb()` import, stays callable from Inngest jobs. Zod-validated inputs.
-  `vitest` added (`npm run test`); wired into the `mimir-ship` chain after lint, before build.
+  `vitest` added (`npm run test`); wired into the `chronos-ship` chain after lint, before build.
   *Exit met:* tests green; `npm run test` in the ship chain; `npm run lint`/`npm run build` clean.
 
 - [x] **S8 — Approval inbox UI** · Sonnet · M · ✅ 2026-07-17
@@ -352,7 +352,7 @@ into the next phase on autopilot either.
   *Exit met:* 13-row synthetic export landed E2E in fresh `import_demo` tenant (10 created /
   2 dupes skipped / 1 bad-SIRET error / 1 health row quarantined at 0.99 confidence, notes
   stripped); re-commit and re-upload both converged with zero new writes; both themes + 375px
-  verified; `docs/mimir/onboarding.md` drafted (approver, OAuth/G1, G2 inventory, DPA, export
+  verified; `docs/chronos/onboarding.md` drafted (approver, OAuth/G1, G2 inventory, DPA, export
   format, autonomy ramp, go-live checklist).
 
 - [x] **Checkpoint — Phase 2 wrap** · reflection, no code · XS · ✅ 2026-07-17
@@ -364,11 +364,11 @@ into the next phase on autopilot either.
 
 ### Phase 3 — Huginn, module 2 · ✅ G2 closed 2026-07-18 · G1 (OAuth prod/CASA) only gates real tenant go-live, not S14 build
 
-- [x] **S14a — Mimir OAuth client setup** · **human, no Claude Code model needed** · XS · ✅ 2026-07-18
+- [x] **S14a — Chronos OAuth client setup** · **human, no Claude Code model needed** · XS · ✅ 2026-07-18
   Fresh Google Cloud project + OAuth client in Testing mode, test user added, consent screen not
-  published. `mimir/.env` (repo root, this repo's own file — not `avelior-analytics/`) has
+  published. `mimir/.env` (repo root, this repo's own file — not `chronos/`) has
   `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_OAUTH_REDIRECT_URI` all set, redirect URI
-  `http://localhost:3001/api/integrations/google/callback` matching Mimir's dev port (3001, not
+  `http://localhost:3001/api/integrations/google/callback` matching Chronos's dev port (3001, not
   the baseline's 3000) — confirmed also registered as an Authorized redirect URI on the Google Cloud
   client itself. Actual OAuth-flow completion (clicking through consent) deferred to S14b as its
   first functional check, since that's real code exercise rather than config verification.
@@ -386,7 +386,7 @@ into the next phase on autopilot either.
   Verified on 30 fixture/demo emails: 10 DRAFTED (PROPOSED AgentActions, 8 sources each, prompt
   pinned, expires +7d), 6/6 health emails QUARANTINED (hash+verdict only), 14 skipped, re-scan
   idempotent. **OAuth click-through (S14a completion): done 2026-07-18.** The initial
-  `redirect_uri_mismatch` was a stale Google client in `.env`; once the correct Mimir-project OAuth
+  `redirect_uri_mismatch` was a stale Google client in `.env`; once the correct Chronos-project OAuth
   client was wired in and its Authorized redirect URI confirmed, consent completed cleanly —
   control-plane `Integration` row is `ACTIVE` for `nt.nicolas.toppo@gmail.com` with all expected
   scopes (gmail.readonly, gmail.send, calendar.readonly/events). **Parked, not blocking:** a full
@@ -474,8 +474,8 @@ into the next phase on autopilot either.
   pilot KPIs matched live counts (45 sociétés, 57 contacts, 1 453 900 € pipeline, 10 en attente),
   the activity feed rendered real S14b/S16 `AgentEvent` rows (Huginn draft/quarantine events,
   system queue events), token usage showed real S5-metered spend ($0.4692 / $20 this month across
-  draft/classify/embed task classes); dashboard's Mimir orb confirmed "en production" with the
-  same live stats and a working `/nornir` link; sidebar shows Nornir grouped under the Mimir
+  draft/classify/embed task classes); dashboard's Chronos orb confirmed "en production" with the
+  same live stats and a working `/nornir` link; sidebar shows Nornir grouped under the Chronos
   realm heading; both themes confirmed (dark background token verified via computed style — the
   in-browser theme toggle click didn't register through the automation layer, confirmed instead
   by setting `data-theme` directly and reading computed styles), no horizontal overflow at 375px.
@@ -542,7 +542,7 @@ bypasses D2. Deliberately sequenced after Phase 4 so it's designed against real 
 not guesses.
 
 - [x] **S20 — Odin design (no code)** · Opus, plan mode · M · ✅ 2026-07-19
-  Design doc: `docs/mimir/odin.md` (S2/`events.md`-tier, S21 implements verbatim).
+  Design doc: `docs/chronos/odin.md` (S2/`events.md`-tier, S21 implements verbatim).
   Hierarchy ships **2-tier** (Odin → module agents), not the checkpoint's literal
   CEO→Directors→Managers→Employees framing — `OdinDirective.scope` stays an open
   string key so an intermediate tier is additive later, not a schema change. New
@@ -565,7 +565,7 @@ not guesses.
   docs only, per S2's precedent.
 - [x] **S21 — Odin implementation** · Sonnet · M · ✅ 2026-07-19
   Implemented odin.md verbatim. `OdinDirective` added to `prisma/tenant/schema.prisma`
-  (additive, `db:push`'d against `mimir-dev`/`crm_demo`). Seeded `odin.directive`
+  (additive, `db:push`'d against `chronos-dev`/`crm_demo`). Seeded `odin.directive`
   autonomy category (maxLevel 3, level 0) and the `odin.review.propose_directive`
   `PromptTemplate`. `src/lib/odin/draft.ts` (pure: `buildReviewInput` assembles a
   JSON snapshot from `getPilotStats`/`getTokenUsageSnapshot`/`listAutonomyConfigs`/
@@ -772,15 +772,15 @@ not guesses.
 
 ### Cosmos UI track (parallel, can run alongside Heimdallr phases)
 
-The Mimir UI pivoted to a dark-first cosmic universe design (one realm per agent module, orbital
+The Chronos UI pivoted to a dark-first cosmic universe design (one realm per agent module, orbital
 home surface, abyss/bone/brass palette). Phase 1 (realm tokens + grouped sidebar) shipped in commit
 `e740bcd` but is still on the light theme — these sessions reconcile dark-first theming and build
-the continuity/motion layer. Reference the `mimir-cosmos` skill and approved concept prototype for
+the continuity/motion layer. Reference the `chronos-cosmos` skill and approved concept prototype for
 the full design system.
 
 - [x] **C1 — Dark theme + realm layer reconciliation** · **Sonnet** · S · ✅ 2026-07-17
   Reconciled dark `[data-theme="dark"]` tokens in `globals.css` with the abyss/bone/brass/well/
-  ember/live palette from `docs/mimir-architecture.html`: brand → brass (was indigo), surfaces →
+  ember/live palette from `docs/architecture-concept.html`: brand → brass (was indigo), surfaces →
   abyss/panel/panel-2, text → bone/mist/dim, realm accents reassigned (chasse → well teal,
   tresor → live green, mimir → ember, since brass moved to neutral `--brand`). Light theme and
   the light-default toggle behavior left untouched — confirmed with Nicolas to defer the
@@ -798,7 +798,7 @@ the full design system.
 
 - [x] **C2.5 — Cosmos observatory (orbital home surface)** · **Sonnet** · M · ✅ 2026-07-17
   Not originally scoped in C1–C4 — added mid-session per Nicolas's request for the full visual
-  reinvention from the approved concept artifact ("Mimir — Le Cosmos"), not just accent theming.
+  reinvention from the approved concept artifact ("Chronos — Le Cosmos"), not just accent theming.
   Replaced `/dashboard`'s greeting header with `src/components/observatory.tsx`: starfield canvas,
   SVG light-threads, a real-data hub + four realm orbs (relation/chasse/tresor live with real
   counts; mimir shown as "planifié" — no fake Heimdallr/Mímisbrunnr stats), hover/pin instrument
@@ -844,12 +844,12 @@ the full design system.
   serving clean 200s and `read_page`/console/computed-style checks stayed correct throughout —
   same class of automation-layer friction logged at S17/S18/S21/S22b, not app-related; verified via
   `read_page`/`get_page_text`/computed styles instead where screenshots wouldn't return.
-  **Folded into this session:** a full "Vision RM" → "Mimir" rebrand across every user-facing
+  **Folded into this session:** a full "Vision RM" → "Chronos" rebrand across every user-facing
   string (page titles, PWA manifest, login/register copy, the sidebar/login/register `BrandMark`
   — which had `Vision RM` split across two JSX nodes and didn't show up in a naive grep, the
   Observatory hub label, digest/reply-sync outbound email sender names, CSV export filename,
   offline-page copy, service-worker cache version) — the baseline duplication at S0 had left the
-  client product's name on every screen. `docs/mimir/*.md` and `.claude/skills/*` deliberately
+  client product's name on every screen. `docs/chronos/*.md` and `.claude/skills/*` deliberately
   left alone (dev-facing history, not what a user sees in the app).
 
 - [x] **C4 — Atmosphere + final polish** · **Sonnet** · S · ✅ 2026-07-30
@@ -908,14 +908,14 @@ the full design system.
   Norse sprite art is still stock — hand-drop into `vendor/.../webview-ui/public/assets/` +
   rebuild (see VENDOR.md); Freyja joins after S25.
   *(original scope — proposed at the Phase 3 checkpoint 2026-07-18)* A hidden tab in the cosmos that renders
-  the Mimir agents as **pixel-art characters working in an office** — Heimdallr, Huginn, Muninn,
+  the Chronos agents as **pixel-art characters working in an office** — Heimdallr, Huginn, Muninn,
   Nornir, Bragi, Forseti, Odin (and Freyja once S25 lands) each a little Norse pixel character that
   walks around, sits at its desk, and animates what it's doing (typing = drafting, reading =
   retrieving, waiting = a pending ledger proposal). Pure delight surface; not on the main nav —
-  unlocked by an egg (e.g. a Konami sequence or clicking the Mimir well glyph N times).
+  unlocked by an egg (e.g. a Konami sequence or clicking the Chronos well glyph N times).
   **Source repo:** vendor **https://github.com/pixel-agents-hq/pixel-agents** — it visualizes Claude
   Code agents as pixel characters in an office via the Claude Code Hooks API (React 19 + Vite +
-  Canvas 2D webview, Fastify server). Reskin it into the Mimir cosmos: abyss/bone/brass palette,
+  Canvas 2D webview, Fastify server). Reskin it into the Chronos cosmos: abyss/bone/brass palette,
   Norse-character sprites, the office framed as the realms' shared "bureau." Decide the vendor
   mechanic at plan time — embed the `webview-ui` as a route vs. run its standalone CLI/server behind
   the egg — and record it in `decisions.md` (don't fork-to-improve; treat it as a vendored dep).
@@ -935,7 +935,7 @@ the full design system.
   the format in the repo's **`docs/external-assets.md`**. Map each Norse agent → its realm accent so
   the pixel character's palette matches its cosmos hue.
   *Exit:* egg unlocks the hidden tab; the seven+ agents render and animate; at least one agent
-  visibly reacts to a real Mimir event (a pending Heimdallr proposal → that agent shows "waiting");
+  visibly reacts to a real Chronos event (a pending Heimdallr proposal → that agent shows "waiting");
   reskinned to the cosmos palette; both themes sane; documented in `decisions.md` (vendor mechanic +
   where custom art goes).
 
@@ -971,7 +971,7 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       `NEXT_PUBLIC_BRAND_NAME` so pre-auth surfaces (login, `<title>`, manifest) brand correctly on
       a single-customer deployment. `splitBrand` at `floor(len/2)` reproduces the old hardcoded
       `Mi<span>mir</span>` exactly and generalises ("Chr"+"onos") — that mid-word split defeated a
-      naive grep during the Vision RM → Mimir rebrand (C3).
+      naive grep during the Vision RM → Chronos rebrand (C3).
       Gating: NAV entries tagged `core|crm|chronos`, `GROUPS` → `groupsFor(modules)`, plus a
       5-line `requireModule` **layout guard per top-level CRM route folder** (covers nested routes;
       hiding nav is not access control). `/dashboard` is CRM-gated — it reads companies, contacts,
@@ -980,7 +980,7 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       French broker stages / ~30 broker fields / broker prompts / French sequence from a non-CRM
       tenant (verified: **0 stages, 0 field definitions** on `chronos_demo`).
       **Two defects found and fixed during verification:** (1) the agent realm's sidebar heading was
-      literally `"Mimir"`, leaking the platform name into a rebranded shell → relabelled **"Agents"**
+      literally `"Chronos"`, leaking the platform name into a rebranded shell → relabelled **"Agents"**
       by function (slug stays `mimir`; also aligned the observatory orb). This is a deliberate,
       visible change to `crm_demo`'s sidebar. (2) `Observatory` keys three maps by `RealmSlug`, so
       adding a realm broke its types → narrowed to an `ObservatorySlug` subset, since the hero is
@@ -1057,7 +1057,7 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       wordmark-free `public/brands/chronos/mark.png` cut via new
       `scripts/chronos/build-brand-assets.mjs`. *Exit met:* lint 0 errors (3 pre-existing warnings
       elsewhere) · **341 tests** (17 new) · build clean, both `/chronos` routes compiled · both
-      schemas already in sync on `mimir-dev`. **Not deployed** — Chronos stays demo-tenant-only
+      schemas already in sync on `chronos-dev`. **Not deployed** — Chronos stays demo-tenant-only
       until S28.
 - [x] **S28 — Production launch (safety half)** · M · ✅ 2026-07-31
       Pointing at a second cluster needed **zero application-code change** (control client + tenant
@@ -1079,11 +1079,11 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       `scripts/backup-tenant.ts` (`npm run backup:dump`, wraps `mongodump`) — the free-tier M0
       choice means **no snapshots exist at all**, so this script plus a documented cadence *is* the
       recovery story; `mongodump` itself isn't installed on this machine yet, flagged in the go-live
-      checklist. New `docs/mimir/ops.md` runbook (environment matrix, M0 constraints — one free
+      checklist. New `docs/chronos/ops.md` runbook (environment matrix, M0 constraints — one free
       cluster per Atlas *project*, not per cluster — provisioning, cron schedule, restore drill,
       go-live checklist); README deploy section rewritten (used to instruct running provisioning
-      locally against prod URLs — the exact manoeuvre the guard exists to catch); `mimir-env-guard`
-      skill rewritten for three clusters (and its stale worktree copies refreshed);  `mimir-ship`
+      locally against prod URLs — the exact manoeuvre the guard exists to catch); `chronos-env-guard`
+      skill rewritten for three clusters (and its stale worktree copies refreshed);  `chronos-ship`
       gained the environment question; `CLAUDE.md` + roadmap §0.5 updated. *Exit met:* `npm run
       env:check` clean; 16 new tests (357 total) pin the safety contract including the prod `?key=`
       refusal, which can't be exercised against a running dev server; verified live — demo seeder
@@ -1156,6 +1156,48 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       **Not verified**: real eBay OAuth consent (needs a public https tunnel under the registered
       RuName) and a real order sync against his actual account — first real-account check is
       pending his production keyset going live against a deployed (not local) environment.
+- [x] **B1 — Chronos rebrand: one product, one universe** · L — the platform stops being a
+      white-label CRM with a watch vertical bolted on and becomes **Chronos**, the buy/restore/resell
+      product, end to end.
+      **Brand.** `docs/chronos/BRAND.md` is the new source of truth (palette, realms, typography,
+      matter, motion, voice, iconography, 6 enforceable rules), derived from the customer's emblem
+      (`assets/brands/chronos/logo-source.png`): nebula violet primary, orbit cyan second, sapphire
+      decorative, no true-grey neutrals. `globals.css` retokenised to it in both themes, plus a new
+      `--chart-1..6` series order and `--accent-orbit`/`--accent-crown`. Built-in brand glyph
+      redrawn (case + orbit + comet hand). PWA manifest colours + `start_url` follow.
+      **Realms.** Collapsed 5 → 4, all drawn out of the emblem: `atelier` (inventory) ·
+      `marche` (sales/reconciliation) · `tresor` (finance) · `agents`. `realmForPath` now matches
+      two-segment routes first, so `/chronos/finance` is Trésor while `/chronos/[id]` stays Atelier.
+      **Generic CRM retired.** `DEFAULT_MODULES` = `["chronos"]`, `homePathFor` → `/chronos`, `/`
+      redirects there, `Tenant.modules` default flipped. Every companies/contacts/pipeline/lead-gen/
+      outreach entry is gone from the sidebar, the command palette and the quick-add menu; the
+      `"crm"` module value survives ONLY so the retired routes' `requireModule` guards keep
+      type-checking while they redirect. Global search repointed from Company/Contact to
+      InventoryUnit/ProductRef (Atlas `$search` + regex fallback, ref hits resolve through to units).
+      **Finance tab (new).** `/chronos/finance` — realised P&L KPIs, monthly revenue/cost bars with a
+      net-margin line, cost-group donut, per-channel performance (fees broken out), best/worst sales,
+      and a cash-ageing table that is deliberately **outside** the period filter. All of it derived
+      from the existing unit cost ledger — no second books-keeping store to drift. Aggregation is
+      pure in `src/lib/chronos/finance.ts`, 20 tests; writing them caught a real overlap bug where
+      `extremes()` listed the same unit as both best and worst under 2n sales.
+      **De-branding.** No "Mimir"/"Avelior"/"Vision RM" left in any user-visible surface, prompt,
+      user-agent, email from-name, export filename or schema comment; `docs/mimir/` → `docs/chronos/`,
+      `.claude/skills/mimir-*` → `chronos-*`, package name → `chronos`. `MIMIR_ENV` → **`CHRONOS_ENV`**,
+      with the old name still read as a fallback *on purpose* — it is set in the deployed Vercel
+      projects, and silently reclassifying a prod shell as dev is exactly what that module exists to
+      prevent. **Three references deliberately kept**, each commented where it lives: the Inngest app
+      id `mimir-${env}` (a registered identity — renaming orphans in-flight jobs), the Atlas cluster
+      hostname `mimir-dev`, and the git remote `tiptops1/mimir`. Historical roadmap/decisions entries
+      keep their original wording; rewriting a log would falsify it.
+      **Also fixed in passing:** the inventory cockpit printed a raw float margin
+      (`6.617790107810316 %`) instead of `formatPct`.
+      Verified in-browser against `chronos_demo` (30 units, 12 sold): shell shows the four Chronos
+      realms and nothing else; finance figures reconcile to the inventory cockpit to the cent
+      (CA 17 784,94 € · marge 1 176,97 € · capital 17 537,70 € = 323,00 + 4 350,60 + 12 864,10);
+      realm resolution correct on all 8 routes; dark tokens resolve to the void palette; no console
+      errors. lint/typecheck/build clean, 413 tests green.
+      **Not verified**: no screenshots — the browser pane could not composite frames in this
+      session, so the visual check is structural (accessibility tree + computed styles), not visual.
 - [ ] **S30 — Comp DB + Argus** · M
 - [ ] **S31 — Platform: entity-scoped `StageDefinition`** · S — the one **non-additive** change in
       the whole plan; needs a backfill + explicit `dropIndex` (`db push` won't drop the old unique).

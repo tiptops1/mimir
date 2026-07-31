@@ -4,18 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Building2,
-  User,
-  LayoutDashboard,
-  CheckSquare,
-  ClipboardList,
-  Users,
-  KanbanSquare,
-  Inbox,
+  Watch,
+  Tag,
   Wallet,
-  BarChart3,
+  Scale,
+  PackageOpen,
+  ShieldCheck,
+  SlidersHorizontal,
   Settings,
-  UserPlus,
   Plus,
   CornerDownLeft,
 } from "lucide-react";
@@ -35,15 +31,15 @@ type Item =
   | { kind: "command"; command: Command }
   | { kind: "hit"; hit: SearchHit };
 
+// Keywords are the un-accented spellings an operator would actually type, so
+// the FR labels stay findable from a plain keyboard.
 const NAV_COMMANDS: Command[] = [
-  { kind: "nav", href: "/dashboard", label: "Tableau de bord", keywords: "dashboard accueil home", icon: LayoutDashboard },
-  { kind: "nav", href: "/todo", label: "À faire", keywords: "taches tasks todo", icon: CheckSquare },
-  { kind: "nav", href: "/companies", label: "Suivi", keywords: "societes companies prospects", icon: ClipboardList },
-  { kind: "nav", href: "/contacts", label: "Contacts", keywords: "personnes people", icon: Users },
-  { kind: "nav", href: "/pipeline", label: "Pipeline", keywords: "kanban etapes deals affaires", icon: KanbanSquare },
-  { kind: "nav", href: "/inbox", label: "Boîte de réception", keywords: "inbox emails courriel", icon: Inbox },
-  { kind: "nav", href: "/finances", label: "Finances", keywords: "couts factures abonnements tresorerie", icon: Wallet },
-  { kind: "nav", href: "/analytics", label: "Analytique", keywords: "analytics rapports stats", icon: BarChart3 },
+  { kind: "nav", href: "/chronos", label: "Inventaire", keywords: "stock unites montres inventory", icon: Watch },
+  { kind: "nav", href: "/chronos/import", label: "Ventes", keywords: "ventes import commandes marketplace ebay", icon: PackageOpen },
+  { kind: "nav", href: "/chronos/reconciliation", label: "Rapprochement", keywords: "rapprochement reconciliation ecarts", icon: Scale },
+  { kind: "nav", href: "/chronos/finance", label: "Finances", keywords: "finances marge tva tresorerie resultat", icon: Wallet },
+  { kind: "nav", href: "/chronos/settings", label: "Réglages métier", keywords: "reglages tva marketplaces marge cible", icon: SlidersHorizontal },
+  { kind: "nav", href: "/heimdallr/inbox", label: "Approbations", keywords: "approbations agents validation", icon: ShieldCheck },
 ];
 
 const ADMIN_COMMANDS: Command[] = [
@@ -51,9 +47,7 @@ const ADMIN_COMMANDS: Command[] = [
 ];
 
 const ACTION_COMMANDS: Command[] = [
-  { kind: "action", href: "/todo", label: "Nouvelle tâche", keywords: "creer ajouter task", icon: Plus },
-  { kind: "action", href: "/contacts/new", label: "Nouveau contact", keywords: "creer ajouter personne", icon: UserPlus },
-  { kind: "action", href: "/companies/new", label: "Nouvelle société", keywords: "creer ajouter entreprise company", icon: Building2 },
+  { kind: "action", href: "/chronos", label: "Nouvelle unité", keywords: "creer ajouter unite montre sku", icon: Plus },
 ];
 
 /** Accent-insensitive, case-insensitive match for FR labels. */
@@ -172,9 +166,7 @@ export function GlobalSearch({ isAdmin = false }: { isAdmin?: boolean }) {
     close();
     inputRef.current?.blur();
     router.push(
-      item.kind === "command"
-        ? item.command.href
-        : `/companies/${item.hit.companyId}`,
+      item.kind === "command" ? item.command.href : `/chronos/${item.hit.unitId}`,
     );
   }
 
@@ -225,7 +217,9 @@ export function GlobalSearch({ isAdmin = false }: { isAdmin?: boolean }) {
         </button>
       );
     }
-    const Icon = item.hit.type === "company" ? Building2 : User;
+    // Both kinds open a unit; the icon says how it was found — by the unit's
+    // own fields, or through its catalogue reference.
+    const Icon = item.hit.type === "unit" ? Watch : Tag;
     return (
       <button
         type="button"
@@ -243,7 +237,7 @@ export function GlobalSearch({ isAdmin = false }: { isAdmin?: boolean }) {
           </span>
         </span>
         <span className="shrink-0 text-[10px] uppercase tracking-wide text-faint">
-          {item.hit.type === "company" ? "Société" : "Contact"}
+          {item.hit.type === "unit" ? "Unité" : "Référence"}
         </span>
       </button>
     );

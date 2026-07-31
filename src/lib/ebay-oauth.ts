@@ -14,7 +14,7 @@ import { getEbayCredential, upsertEbayIntegration } from "@/lib/integrations";
  *     ~18 months, so this module caches access tokens in-process and refreshes
  *     them before expiry.
  *  4. Production RuName redirects must be public https — localhost is refused.
- *     Local consent therefore needs a tunnel; see docs/mimir/ops.md.
+ *     Local consent therefore needs a tunnel; see docs/chronos/ops.md.
  *
  * No control-plane schema change: the `Integration` row's `refreshToken` column
  * is the generic encrypted-secret slot (Fireflies already stores a bare API key

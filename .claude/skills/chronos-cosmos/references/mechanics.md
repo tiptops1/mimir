@@ -21,7 +21,7 @@ export const REALMS: Realm[] = [
   { slug: "relation", label: "Relation", routes: ["dashboard", "todo", "companies", "contacts", "pipeline"] },
   { slug: "chasse",   label: "Chasse",   routes: ["leadone", "outreach", "inbox"] },
   { slug: "tresor",   label: "Trésor",   routes: ["finances", "analytics"] },
-  { slug: "mimir",    label: "Mimir",    routes: ["heimdallr"] },
+  { slug: "mimir",    label: "Chronos",    routes: ["heimdallr"] },
 ];
 
 export function realmForPath(pathname: string): Realm["slug"] | undefined {

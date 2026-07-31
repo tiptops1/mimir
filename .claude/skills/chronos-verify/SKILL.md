@@ -1,14 +1,14 @@
 ---
-name: mimir-verify
-description: Verify a Mimir change in the browser — start the mimir-dev server on port 3001, log in past the auth wall as the crm_demo admin, and check the changed surface. Use when a UI change in the mimir repo needs visual verification.
+name: chronos-verify
+description: Verify a Chronos change in the browser — start the chronos-dev server on port 3001, log in past the auth wall as the crm_demo admin, and check the changed surface. Use when a UI change in this repo needs visual verification.
 ---
 
-# Verify a Mimir change in the browser
+# Verify a Chronos change in the browser
 
 ## Start the server
 
-Use the Browser pane's `preview_start` with `{name: "mimir-dev"}` (defined in `.claude/launch.json`,
-port **3001** — avelior-dev owns 3000; both can run side by side).
+Use the Browser pane's `preview_start` with `{name: "chronos-dev"}` (defined in `.claude/launch.json`,
+port **3001** — another local project may own 3000; both can run side by side).
 
 ## Get past the auth wall
 
@@ -29,6 +29,6 @@ The app redirects everything to `/login` without a session (see `src/proxy.ts` +
 
 ## Rules
 
-- This environment has NO production user — but it must point at the Mimir Atlas cluster only.
+- This environment has NO production user — but it must point at the Chronos Atlas cluster only.
   If anything looks like prod data (French broker companies you didn't seed), STOP and check `.env`.
-- Don't start the dev server for non-UI sessions (token rule 6 in `docs/mimir/roadmap.md`).
+- Don't start the dev server for non-UI sessions (token rule 6 in `docs/chronos/roadmap.md`).

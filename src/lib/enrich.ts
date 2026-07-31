@@ -346,7 +346,7 @@ export function extractPhone(html: string): string | null {
 async function fetchText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": "Mozilla/5.0 (AveliorAnalytics enrichment)" },
+      headers: { "user-agent": "Mozilla/5.0 (Chronos enrichment)" },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;

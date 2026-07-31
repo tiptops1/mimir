@@ -19,7 +19,7 @@
 | `src/lib/calendar-sync.ts` (~150) | legacy iCal path (`GOOGLE_CALENDAR_ICS_URL`, `OWNER_EMAIL`) |
 | `src/lib/fireflies.ts` (~107) | env-key fallback (`FIREFLIES_API_KEY`, `OWNER_EMAIL`) |
 
-In Mimir these are dead on day one: `TENANT1_SLUG=crm_demo` and none of the legacy env vars are
+In Chronos these are dead on day one: `TENANT1_SLUG=crm_demo` and none of the legacy env vars are
 set, so the branches no-op — but they're noise and a foot-gun. Decide per item: delete the legacy
 path (preferred) or leave the per-tenant OAuth path as the only path.
 
@@ -38,7 +38,7 @@ path (preferred) or leave the per-tenant OAuth path as the only path.
   `@get-avelior.com` message-IDs/emails). Neutralize to example.com fixtures.
 - `src/components/connect-outreach-cta.tsx` — example address `chris@get-avelior.com`.
 
-## Dead env vars (never set in Mimir; remove from `.env.example` at S0b)
+## Dead env vars (never set in Chronos; remove from `.env.example` at S0b)
 
 `GOOGLE_CSE_KEY`, `GOOGLE_CSE_CX` (CSE replaced by Tavily+Exa), `SEED_ADMIN_EMAIL/PASSWORD/NAME`
 (admin accounts live in the control plane now), `TENANT`, plus the whole legacy block:
