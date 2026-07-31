@@ -223,13 +223,38 @@ model FieldDefinition {
   @@index([entity])
 }
 
-// Pipeline stage, as config data (Phase-1 follow-up — was a Prisma enum +
+// A lifecycle stage, as config data (Phase-1 follow-up — was a Prisma enum +
 // hardcoded `PIPELINE_STAGES` array in src/lib/constants.ts). `key` is the
-// value stored in Company.stage / Deal.stage; `accentClass`/`badgeClass`/
-// `dotClass` are the Tailwind classes previously baked into StageMeta.
+// value stored on the record (Company.stage / Deal.stage / InventoryUnit.status);
+// `accentClass`/`badgeClass`/`dotClass` are the Tailwind classes previously
+// baked into StageMeta.
+//
+// ENTITY-SCOPED SINCE S31, and this was the ONE non-additive change in the whole
+// Chronos plan. It used to be global — `key @unique`, no entity field, read with
+// no where clause — which is why S27a had to ship a field-for-field
+// `UnitStageDefinition` TWIN rather than adding IN_WORKSHOP/LISTED rows here:
+// those would have injected watch statuses into the broker's kanban and the
+// company stage dropdown. S31 collapsed the twin back in.
+//
+// The migration is NOT something `prisma db push` can do for you: it will
+// happily create the new compound unique but will NOT drop the old
+// `StageDefinition_key_key`, which then rejects the same key existing for two
+// entities. scripts/migrate-stage-entity.ts drops it explicitly and backfills
+// `entity` onto rows written before the field existed (Mongo stores no field
+// until one is written, so a Prisma default does not retroactively apply).
+//
+// `isWon`/`isLost` are kept rather than renamed to something vertical-neutral:
+// they mean "terminal and successful" / "terminal and unsuccessful", the reader
+// in src/lib/chronos/unit-stage-config.ts surfaces them to the workshop UI as
+// isSold/isDead, and renaming a field across two live tenant DBs buys nothing
+// the mapping doesn't already give.
 model StageDefinition {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  key         String   @unique
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  // COMPANY (the sales pipeline) | INVENTORY_UNIT (the workshop lifecycle).
+  // Open vocab, like FieldDefinition.entity, so a new record type needs no
+  // migration.
+  entity      String   @default("COMPANY")
+  key         String
   label       String
   order       Int      @default(0)
   accentClass String   @default("")
@@ -239,6 +264,9 @@ model StageDefinition {
   isLost      Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([entity, key])
+  @@index([entity])
 }
 
 // Multi-touch outreach cadence (config). `steps` is an ordered JSON array of
@@ -1152,7 +1180,8 @@ model InventoryUnit {
   // matches on. Unique so a re-sync can never fork a unit.
   sku    String @unique
   serial String?
-  // A UnitStageDefinition.key — config-driven, not a code enum.
+  // A StageDefinition.key scoped to entity "INVENTORY_UNIT" (S31) —
+  // config-driven, not a code enum.
   status String @default("ACQUIRED")
   condition String @default("") // open vocab
 
@@ -1267,24 +1296,11 @@ model PartConsumption {
   @@index([unitId])
 }
 
-// Field-for-field twin of StageDefinition. A twin rather than a reuse because
-// StageDefinition is GLOBAL (key @unique, no entity field, read with no where
-// clause by src/lib/stage-config.ts) — adding IN_WORKSHOP/LISTED rows there
-// would inject watch columns into the broker's kanban. Entity-scoping the real
-// thing is the one non-additive change in the Chronos plan, quarantined in S31.
-model UnitStageDefinition {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  key         String   @unique
-  label       String
-  order       Int      @default(0)
-  accentClass String   @default("")
-  badgeClass  String   @default("")
-  dotClass    String   @default("")
-  isSold      Boolean  @default(false)
-  isDead      Boolean  @default(false) // written off / returned to supplier
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+// UnitStageDefinition was here. It was a field-for-field twin of
+// StageDefinition, needed only because that model was global and un-scoped.
+// S31 entity-scoped the real thing and migrated these rows across as
+// `entity: "INVENTORY_UNIT"` (isSold → isWon, isDead → isLost), so the twin and
+// its parallel reader/meta pair are gone.
 
 // Tenant config — AiBudget/FreyjaConfig singleton pattern. Config-not-code:
 // fee percentages, labour rate, VAT scheme and rate are all a tenant's own

@@ -28,6 +28,12 @@ type UniqueIndex = {
 /** Uniques every tenant needs, whatever it sells. */
 const CORE_UNIQUE_INDEXES: UniqueIndex[] = [
   { collection: "FieldDefinition", name: "FieldDefinition_entity_key_key", key: { entity: 1, key: 1 } },
+  // S31 made StageDefinition entity-scoped and folded UnitStageDefinition into
+  // it, so BOTH verticals now share this collection — which is what moved it out
+  // of the CRM list and up here. The old single-field `StageDefinition_key_key`
+  // must never be recreated: it rejects a key legitimately shared by two
+  // entities. scripts/migrate-stage-entity.ts drops it on existing tenants.
+  { collection: "StageDefinition", name: "StageDefinition_entity_key_key", key: { entity: 1, key: 1 } },
   { collection: "Setting", name: "Setting_key_key", key: { key: 1 } },
   { collection: "SyncCursor", name: "SyncCursor_source_key", key: { source: 1 } },
 ];
@@ -35,7 +41,6 @@ const CORE_UNIQUE_INDEXES: UniqueIndex[] = [
 /** Uniques the inherited CRM's logic depends on (dedupe keys, upsert targets). */
 const CRM_UNIQUE_INDEXES: UniqueIndex[] = [
   { collection: "Company", name: "Company_siret_key", key: { siret: 1 } },
-  { collection: "StageDefinition", name: "StageDefinition_key_key", key: { key: 1 } },
   { collection: "EmailSyncState", name: "EmailSyncState_mailbox_key", key: { mailbox: 1 } },
   { collection: "BlockedSender", name: "BlockedSender_value_key", key: { value: 1 } },
 ];
@@ -47,7 +52,6 @@ const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
   { collection: "UnitCost", name: "UnitCost_unitId_dedupeKey_key", key: { unitId: 1, dedupeKey: 1 } },
   { collection: "InventoryUnit", name: "InventoryUnit_sku_key", key: { sku: 1 } },
   { collection: "ProductRef", name: "ProductRef_brand_reference_variant_key", key: { brand: 1, reference: 1, variant: 1 } },
-  { collection: "UnitStageDefinition", name: "UnitStageDefinition_key_key", key: { key: 1 } },
   // Must exist before seedTenantConfig runs (step 3 below) for the singleton
   // upsert to be race-safe.
   { collection: "ChronosConfig", name: "ChronosConfig_singleton_key", key: { singleton: 1 } },

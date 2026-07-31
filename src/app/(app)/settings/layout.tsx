@@ -14,7 +14,7 @@ export default async function SettingsLayout({
     <div>
       <PageHeader
         title="Paramètres"
-        subtitle="Personnalisez les champs et le pipeline de votre CRM"
+        subtitle="Personnalisez les champs et les étapes de votre espace"
       />
       <div className="border-b border-border bg-card px-6">
         <SettingsTabs showTenants={isPlatformAdmin(session.email)} />

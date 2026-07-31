@@ -4,7 +4,7 @@ import { COST_KINDS, type CostGroup } from "./margin";
  * Chronos (S27b) — display vocabulary for the cost ledger. Client-safe: no
  * Prisma, no server-only import, so filter bars and inline forms can import it.
  *
- * Unlike unit STATUSES (UnitStageDefinition rows, tenant-editable config), cost
+ * Unlike unit STATUSES (INVENTORY_UNIT stage rows, tenant-editable config), cost
  * kinds are code: COST_GROUPS in margin.ts buckets the waterfall by them, so a
  * tenant renaming one would silently break the margin math. Only their labels
  * live here.

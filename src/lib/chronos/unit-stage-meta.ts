@@ -2,10 +2,11 @@
 // (filters, enum cells, badges) can use these without pulling in the tenant DB
 // router. The actual DB reader lives in unit-stage-config.ts.
 //
-// Twin of src/lib/stage-meta.ts rather than a reuse: StageDefinition is global
-// and un-scoped, so sharing it would inject inventory statuses into the CRM's
-// pipeline kanban and company stage dropdown. See the UnitStageDefinition
-// comment in prisma/tenant/schema.prisma.
+// Kept as the workshop's own vocabulary layer over src/lib/stage-meta.ts. Since
+// S31 the STORAGE is shared (one entity-scoped StageDefinition collection), but
+// the words are not: `isSold`/`isDead` here are the same two terminal flags
+// stage-meta calls `isWon`/`isLost`, renamed at the boundary by
+// unit-stage-config.ts. A watch is sold, not won.
 
 export interface UnitStageDef {
   value: string;
@@ -20,8 +21,9 @@ export interface UnitStageDef {
   isDead: boolean;
 }
 
-// Used only if a tenant DB has no UnitStageDefinition rows yet (shouldn't happen
-// once seedTenantConfig has run) so the UI never renders a statusless unit.
+// Used only if a tenant DB has no INVENTORY_UNIT stage rows yet (shouldn't
+// happen once seedTenantConfig has run) so the UI never renders a statusless
+// unit — and never falls back to the CRM's "À qualifier".
 export const FALLBACK_UNIT_STAGE: UnitStageDef = {
   value: "ACQUIRED",
   label: "Acquise",

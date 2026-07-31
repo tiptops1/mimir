@@ -7,16 +7,24 @@ import {
   type StageConfigResult,
 } from "@/app/actions/stage-config";
 import { Button, Input, Label } from "@/components/ui";
-import type { StageDef } from "@/lib/stage-meta";
+import {
+  STAGE_ENTITY_VOCAB,
+  type StageDef,
+  type StageEntity,
+} from "@/lib/stage-meta";
 
 export function StageDefForm({
   def,
+  entity,
   onDone,
 }: {
   def?: StageDef & { id: string };
+  /** Which lifecycle this stage belongs to (S31). Rides in a hidden field. */
+  entity: StageEntity;
   onDone?: () => void;
 }) {
   const isEdit = Boolean(def);
+  const vocab = STAGE_ENTITY_VOCAB[entity];
   const action = isEdit ? updateStageDef.bind(null, def!.id) : createStageDef;
   const [state, formAction, pending] = useActionState<
     StageConfigResult | undefined,
@@ -34,6 +42,9 @@ export function StageDefForm({
       action={formAction}
       className="space-y-3 rounded-lg border border-border bg-surface-2/60 p-4"
     >
+      {/* The action re-validates this against a whitelist — a hidden field is a
+          convenience for the happy path, never the authority. */}
+      <input type="hidden" name="entity" value={entity} />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="key">Clé</Label>
@@ -42,7 +53,7 @@ export function StageDefForm({
             name="key"
             defaultValue={def?.value}
             disabled={isEdit}
-            placeholder="ex: EN_NEGOCIATION"
+            placeholder={vocab.keyExample}
             required
           />
         </div>
@@ -88,7 +99,7 @@ export function StageDefForm({
             defaultChecked={def?.isWon}
             className="h-4 w-4 accent-[var(--brand)]"
           />
-          Étape gagnée
+          Étape « {vocab.won} »
         </label>
         <label className="flex items-center gap-2">
           <input
@@ -97,7 +108,7 @@ export function StageDefForm({
             defaultChecked={def?.isLost}
             className="h-4 w-4 accent-[var(--brand)]"
           />
-          Étape perdue
+          Étape « {vocab.lost} »
         </label>
       </div>
 

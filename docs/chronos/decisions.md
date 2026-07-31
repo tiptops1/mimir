@@ -808,3 +808,43 @@ that already moved and must be accounted for; a missed ask observation costs one
 client-credentials `appAccessToken()` — Browse reads public data, so asking-price observations
 work for a tenant that has never connected an eBay account. Without it the ASK half would have
 had only the demo connector behind it, which is a stub pretending to be a feature.
+
+## 2026-07-31 — S31: `db push` DOES drop Mongo indexes; the backfill was the real migration
+
+The plan carried this warning from S27a onward: *"the one non-additive change … needs a
+backfill + explicit `dropIndex` (`db push` won't drop the old unique)."* Half of that is
+wrong, and the wrong half was the part we were most careful about.
+
+**`prisma db push` (6.19.3) reconciles MongoDB indexes in both directions.** Pushing the
+entity-scoped schema printed `[-] Unique index StageDefinition_key_key` on all three dev
+tenants without being asked. The explicit `dropIndexes` step in
+`scripts/migrate-stage-entity.ts` is now a **safety net for tenants pushed by an older
+toolchain**, not the load-bearing step — it reports "already absent" everywhere today.
+
+**The step that genuinely could not be automated is the backfill.** MongoDB stores no field
+until one is written, and a Prisma `@default` applies only to new writes — it never applies
+retroactively to existing documents. So every StageDefinition row written before S31 had *no*
+`entity` key at all. Add a scoped `where: { entity: "COMPANY" }` to the reader and those rows
+match nothing: the pipeline, the kanban and the company stage dropdown all silently empty,
+with no error anywhere. This is the same class of trap as the `isSet: false` bug already
+documented in `ai-extract.ts` — Mongo's absent-vs-null distinction biting a Prisma filter —
+and it is worth generalising: **on this stack, adding a scoped field to an existing collection
+is always a two-step change, schema then backfill, even when the schema change looks
+additive.**
+
+**`isWon`/`isLost` kept, not renamed.** They mean "terminal and successful" / "terminal and
+unsuccessful". The workshop reader (`chronos/unit-stage-config.ts`) renames them to
+`isSold`/`isDead` at its own boundary, so each vertical keeps correct trade vocabulary
+(BRAND.md §7) while the storage stays single. Renaming the columns would have touched 46 call
+sites and two live tenant DBs to buy exactly what a five-line adapter already gives.
+
+**Rejected: keeping the twin.** With the generic CRM retired it was tempting to leave
+`UnitStageDefinition` alone and never do this migration at all. But the twin also duplicated
+the reader *and* the client-safe meta module, and every future entity with a lifecycle would
+have cloned all three. The scoping is what makes the next vertical free — which was the
+original S26 argument for the whole config-driven design.
+
+**Consequence worth noting:** `/settings/stages` was broken for the actual paying customer and
+nobody had noticed, because the page could only ever query COMPANY stages while
+`seedChronosConfig` deliberately withholds the broker pipeline. He would have opened "Étapes"
+and seen an empty box. Entity-scoping the model is what made the page fixable at all.

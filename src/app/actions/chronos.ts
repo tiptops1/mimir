@@ -42,7 +42,7 @@ function dateOrNull(raw: string): Date | null {
  * Inline-edit a unit's status from the table or the detail header.
  *
  * Signature matches EnumCell's entity-agnostic `action` prop. Values are
- * validated against UnitStageDefinition (config), not a code enum, and invalid
+ * validated against the INVENTORY_UNIT stage config, not a code enum, and invalid
  * input returns silently — same contract as setCompanyEnum.
  */
 export async function setUnitEnum(

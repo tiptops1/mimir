@@ -20,11 +20,16 @@ import { GripVertical } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { StageDefForm } from "@/components/stage-def-form";
 import { deleteStageDef, reorderStageDefs } from "@/app/actions/stage-config";
-import type { StageDef } from "@/lib/stage-meta";
+import {
+  STAGE_ENTITY_VOCAB,
+  type StageDef,
+  type StageEntity,
+} from "@/lib/stage-meta";
 
 export type StageDefRow = StageDef & { id: string };
 
-function StageRow({ def }: { def: StageDefRow }) {
+function StageRow({ def, entity }: { def: StageDefRow; entity: StageEntity }) {
+  const vocab = STAGE_ENTITY_VOCAB[entity];
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -40,7 +45,7 @@ function StageRow({ def }: { def: StageDefRow }) {
   if (editing) {
     return (
       <div ref={setNodeRef} style={style}>
-        <StageDefForm def={def} onDone={() => setEditing(false)} />
+        <StageDefForm def={def} entity={entity} onDone={() => setEditing(false)} />
       </div>
     );
   }
@@ -67,8 +72,8 @@ function StageRow({ def }: { def: StageDefRow }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">{def.label}</p>
-            {def.isWon && <Badge className="bg-emerald-50 text-emerald-700">Gagné</Badge>}
-            {def.isLost && <Badge className="bg-rose-50 text-rose-700">Perdu</Badge>}
+            {def.isWon && <Badge className="bg-emerald-50 text-emerald-700">{vocab.won}</Badge>}
+            {def.isLost && <Badge className="bg-rose-50 text-rose-700">{vocab.lost}</Badge>}
           </div>
           <p className="truncate text-xs text-muted">clé: {def.value}</p>
           {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
@@ -104,7 +109,13 @@ function StageRow({ def }: { def: StageDefRow }) {
   );
 }
 
-export function StageEditorList({ initial }: { initial: StageDefRow[] }) {
+export function StageEditorList({
+  initial,
+  entity,
+}: {
+  initial: StageDefRow[];
+  entity: StageEntity;
+}) {
   const [stages, setStages] = useState(initial);
   const [adding, setAdding] = useState(false);
   const sensors = useSensors(
@@ -135,14 +146,14 @@ export function StageEditorList({ initial }: { initial: StageDefRow[] }) {
         >
           <div className="space-y-2">
             {stages.map((def) => (
-              <StageRow key={def.id} def={def} />
+              <StageRow key={def.id} def={def} entity={entity} />
             ))}
           </div>
         </SortableContext>
       </DndContext>
 
       {adding ? (
-        <StageDefForm onDone={() => setAdding(false)} />
+        <StageDefForm entity={entity} onDone={() => setAdding(false)} />
       ) : (
         <Button variant="secondary" onClick={() => setAdding(true)}>
           + Ajouter une étape

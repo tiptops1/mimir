@@ -1246,8 +1246,44 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       band when a reference had no sold band — an ask-derived number in an unlabelled column, the
       exact failure this page exists to prevent. Now SOLD-only, header relabelled "Dérive (ventes)".
       Demo comp data left in place deliberately, same precedent as every other module's seed.
-- [ ] **S31 — Platform: entity-scoped `StageDefinition`** · S — the one **non-additive** change in
-      the whole plan; needs a backfill + explicit `dropIndex` (`db push` won't drop the old unique).
+- [x] **S31 — Platform: entity-scoped `StageDefinition`** · S · ✅ 2026-07-31
+      The one **non-additive** change in the whole plan. `StageDefinition` gained
+      `entity String @default("COMPANY")`, `key @unique` became `@@unique([entity, key])`, and the
+      `UnitStageDefinition` twin S27a was forced to ship is **gone** — its rows migrated across as
+      `entity: "INVENTORY_UNIT"` (`isSold → isWon`, `isDead → isLost`).
+      **The roadmap's own premise turned out to be wrong, and this is worth knowing:** it said
+      "`db push` won't drop the old unique". It does — Prisma 6.19 reconciles Mongo indexes
+      including drops, and the push printed `[-] Unique index StageDefinition_key_key` on all three
+      tenants unprompted. What `db push` genuinely cannot do is the part that actually mattered:
+      **backfill `entity` onto rows written before the field existed**. Mongo stores no field until
+      one is written and a Prisma `@default` never applies retroactively, so those 8 rows per CRM
+      tenant would have matched no scoped query and every pipeline would have silently emptied.
+      `scripts/migrate-stage-entity.ts` (`--dry` first, per the standing rule) does the backfill,
+      moves the twin's rows, drops the stale index if still present, and drops the emptied
+      collection. Idempotent — verified by re-running to 0 writes.
+      `isWon`/`isLost` were deliberately **not renamed** to something vertical-neutral: they mean
+      "terminal and successful"/"terminal and unsuccessful", `chronos/unit-stage-config.ts` renames
+      them to `isSold`/`isDead` at the workshop boundary, and renaming a field across live tenant
+      DBs and 46 call sites buys nothing the adapter doesn't. Added `loadStageDefsRaw` because the
+      two verticals need *different* empty-state fallbacks — substituting the CRM's "À qualifier"
+      would render a watch as a sales lead.
+      **Fixed a real defect this exposed:** `/settings/stages` could only ever show COMPANY stages,
+      so a Chronos-only tenant opened "Étapes" and found it **empty** — `seedChronosConfig`
+      withholds the broker pipeline. It is now entity-aware, driven by the tenant's modules (the
+      hardcoded `settings-tabs.tsx` has no module awareness, so the judgement had to live on the
+      page), with per-entity vocabulary: the terminal badges read "Vendue"/"Perte" on watches and
+      "Gagné"/"Perdu" on companies. `StageEntity`/`STAGE_ENTITY_VOCAB` live in the client-safe
+      `stage-meta.ts` so the editor can import them without the DB router. Also dropped a leftover
+      "…de votre CRM" from the settings subtitle.
+      *Exit met:* lint 0 errors · **445 tests** · build clean. Migrated all three dev tenants:
+      `crm_demo` 8 COMPANY, `import_demo` 8 COMPANY, `chronos_demo` 6 INVENTORY_UNIT, **zero
+      orphaned records** on either side (no company or unit points at a key that no longer
+      resolves), terminal flags preserved across the mapping. In-browser: `/chronos` renders all
+      six French workshop labels through the collapsed store, `/settings/stages` shows the
+      workshop lifecycle where it used to show nothing.
+      **Known, pre-existing, not fixed here:** `stage-config.ts` imports the tenant-context router
+      at module level, so its "plain reader for cron/scripts" cannot actually be imported from a
+      `tsx` script. Predates this session; verification queried Prisma directly instead.
 - [ ] **S32 — Kairos sourcing agent** · plan on Opus · M — money category, `maxLevel: 1`, never
       auto-buys. **Precondition:** the HDS classifier gate becomes mandatory here — marketplace
       listing text is untrusted third-party input (prompt injection, not health data).

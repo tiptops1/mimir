@@ -949,9 +949,9 @@ async function seedCrmConfig(prisma: PrismaClient): Promise<void> {
       isLost: s.isLost ?? false,
     };
     await prisma.stageDefinition.upsert({
-      where: { key: s.key },
+      where: { entity_key: { entity: "COMPANY", key: s.key } },
       update: data,
-      create: { key: s.key, ...data },
+      create: { entity: "COMPANY", key: s.key, ...data },
     });
   }
 
@@ -995,9 +995,10 @@ interface UnitStageSeed {
 }
 
 /**
- * The unit lifecycle, seeded as DATA (UnitStageDefinition rows) exactly like
- * the CRM's DEFAULT_STAGES — a tenant renames or reorders these without a
- * deploy. Keys are generic; only the labels are vertical vocabulary.
+ * The unit lifecycle, seeded as DATA into the same entity-scoped
+ * StageDefinition store as the CRM's DEFAULT_STAGES (S31) — a tenant renames or
+ * reorders these without a deploy. Keys are generic; only the labels are
+ * vertical vocabulary.
  */
 export const DEFAULT_UNIT_STAGES: UnitStageSeed[] = [
   { key: "ACQUIRED", label: "Acquise", order: 1, accentClass: "border-t-slate-400", badgeClass: "bg-slate-100 text-slate-700", dotClass: "bg-slate-400" },
@@ -1051,19 +1052,23 @@ const DEFAULT_FEE_MODEL = {
 
 async function seedChronosConfig(prisma: PrismaClient): Promise<void> {
   for (const s of DEFAULT_UNIT_STAGES) {
+    // Same StageDefinition store as the CRM's stages since S31, scoped by
+    // entity. isSold/isDead are workshop vocabulary for the model's
+    // isWon/isLost — "terminal and successful" either way; the reader in
+    // chronos/unit-stage-config.ts renames them back on the way out.
     const data = {
       label: s.label,
       order: s.order,
       accentClass: s.accentClass,
       badgeClass: s.badgeClass,
       dotClass: s.dotClass,
-      isSold: s.isSold ?? false,
-      isDead: s.isDead ?? false,
+      isWon: s.isSold ?? false,
+      isLost: s.isDead ?? false,
     };
-    await prisma.unitStageDefinition.upsert({
-      where: { key: s.key },
+    await prisma.stageDefinition.upsert({
+      where: { entity_key: { entity: "INVENTORY_UNIT", key: s.key } },
       update: data,
-      create: { key: s.key, ...data },
+      create: { entity: "INVENTORY_UNIT", key: s.key, ...data },
     });
   }
 
