@@ -525,12 +525,22 @@ into the next phase on autopilot either.
       deterministic compliant/expiring/expired/missing mix. Verified end-to-end in-browser:
       dashboard tiles/table, inbox approve → Task created, undo → Task deleted.
 
-- [ ] **Checkpoint — Phase 4 wrap / platform retro** · reflection, no code · XS
-  All seven realms exist. Step back further than the per-phase checkpoints: demo the platform
-  end-to-end across modules, review the original memo's D1–D5 against what actually got built and
-  note where reality diverged and why, and decide what's next — harden/polish existing modules,
-  pick up the parallel UI/premium tracks, or scope a genuinely new module. This is also the moment to
-  revisit the permanent-parallel-vs-merge-back question (§0.5) with a full platform to judge it by.
+- [x] **Checkpoint — Phase 4 wrap / platform retro** · reflection, no code · XS · ✅ 2026-07-31
+  Run together with the Phase 5 wrap below — see `decisions.md` 2026-07-31. Headlines:
+  **D1–D5 all held**, but D1 leaked in a specific, repeating way — for most of this project there
+  was one vertical, so "the CRM's" and "the platform's" concerns were indistinguishable, and the
+  difference only surfaces as a bug on tenant #2. Three more instances found this session (S31's
+  COMPANY-only stage editor; S32's autonomy/prompts trapped inside `seedCrmConfig`, which left the
+  paying customer with an inert Heimdallr; and `config:seed` silently ignoring `--slug`).
+  **The D5 boundary is now sharp:** ingestion and observation are not side effects — Kairos's
+  *offer* goes through the ledger, Argus's *drift alert* does not.
+  **§0.5 closed:** permanent-parallel vs merge-back is moot. B1 retired the generic CRM and there
+  is no baseline left to merge back into. Chronos is the product.
+  **Debt named:** `app/actions/heimdallr.ts` carries **24 dispatch conditionals** (8 modules × 3
+  call sites) — the Phase 1 checkpoint's gap #2, now the highest-leverage cleanup in the repo.
+  **Next, in order:** a real go-live pass (incl. a human actually *looking* at the UI — the
+  browser pane has been unable to screenshot since S17), the executor registry, real-account eBay
+  verification, and only then a new module (Hermes).
 
 ### Phase 5 — Odin, the orchestration layer *(committed 2026-07-17, see `decisions.md`)*
 
@@ -609,7 +619,12 @@ not guesses.
   the exact same code path (`approveAction`/`executeDirective`/`undoAction`/
   `revertDirective`) directly instead. All scratch data reverted after.
 
-- [ ] **Checkpoint — Phase 5 wrap** · reflection, no code · XS
+- [x] **Checkpoint — Phase 5 wrap** · reflection, no code · XS · ✅ 2026-07-31
+  Folded into the Phase 4 retro above (`decisions.md` 2026-07-31) rather than run separately —
+  Odin is one module, its S21 exit was already thorough, and splitting the reflection would have
+  produced two thin passes instead of one useful one. Odin's own finding: it proposes directives
+  through the same `proposeAction` as every other module and needed **no exception to D5**, which
+  is the strongest single piece of evidence that the ledger abstraction was the right call.
 
 ### Phase 6 — New realms *(committed 2026-07-17, priority order fixed)*
 

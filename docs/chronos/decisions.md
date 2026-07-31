@@ -947,3 +947,94 @@ may already be sold, and a cascade delete would silently rewrite those margins.
 
 **`SELF` is a first-class person kind.** The owner's own time is real cost even though no invoice
 exists for it, and a tool that lets him omit it would flatter every margin it reports.
+
+## 2026-07-31 — Checkpoint: Phase 4 + Phase 5 wrap / platform retro
+
+Run together, at the point where the build plan is empty except for G1 (a human/business track).
+Every realm exists, Odin sits above them, and Phase 7 has taken the platform from "agentic CRM"
+to a single product with a paying customer.
+
+### D1–D5 against what actually got built
+
+**D1 (config, not code) — held, but the CRM's assumptions kept leaking.** Stages, fields,
+prompts, marketplaces, fee models, autonomy levels and brand are all data. But this session alone
+found **three** places where a platform concern had been written inside the CRM's branch by
+position, each invisible until a non-CRM tenant needed it:
+
+- `upsertAutonomyConfig`/`upsertPromptTemplates` lived inside `seedCrmConfig`, so the paying
+  customer's tenant had an entirely inert Heimdallr (S32).
+- `config:seed` ignored `--slug` and always defaulted to `crm` (S32).
+- `/settings/stages` could only query COMPANY stages, so "Étapes" was an empty box for him (S31).
+
+The pattern is worth naming because it will recur: **for most of this project there was exactly
+one vertical, so "the CRM's" and "the platform's" were indistinguishable, and the difference only
+shows up as a bug on tenant #2.** S26 caught the first instance (the early `return`), S27a the
+second (the unreachable Chronos block), and there were three more waiting. Anything that reads
+"seed / default / config" should now be assumed CRM-biased until checked.
+
+**D2 (per-category autonomy) — held, and the never-graduates floor earned its keep.** Four
+categories now sit at `maxLevel: 1` (`finance.commitment`, `legal.*`, `freyja.budget_change`,
+`chronos.sourcing_offer`). Kairos is the sharpest test: it is the first module whose *entire
+purpose* is to spend money, and the floor made that unremarkable to design.
+
+**D3 (HDS exclusion) — held, and outgrew its original justification.** The classifier gate was
+built to keep health data out of the knowledge base. At S32 the same machinery became
+prompt-injection defence for marketplace text, and correctly got its **own prompt** rather than
+reusing one measured at G2 for a different question. The gate generalised; the *prompt* did not,
+and pretending otherwise would have been the quiet kind of wrong.
+
+**D4/D5 (one bridge for side effects) — held, and the boundary is now sharp.** Eight modules
+propose through `proposeAction`; nothing has its own approval flow. The line that took longest to
+articulate is the one Argus made explicit: **ingestion and observation are not side effects.**
+Mirroring an eBay order, recomputing a price band, logging an hour of work — these write domain
+state directly, exactly as `runGmailSync` always did. Kairos's *offer* goes through the ledger
+because it is a decision; Argus's *drift alert* does not because it is a fact.
+
+**Where reality diverged from the memo:** the memo imagined a horizontal agentic platform sold to
+many tenants. What shipped is **one product for one customer**, with the agent layer as its
+substrate. Every Phase 7 session pushed further that way, and B1 finished it.
+
+### The §0.5 question, closed
+
+**Permanent-parallel vs merge-back is now moot, and should stop being an open question.** B1
+retired the generic CRM, repointed global search at inventory, made `DEFAULT_MODULES = ["chronos"]`
+and de-branded every user-visible surface. There is no baseline to merge back *into* that would
+accept any of this. Chronos is the product; the CRM code that survives does so as retired routes
+kept compiling behind `requireModule` guards. **Recorded as closed.**
+
+### The one architectural debt worth naming
+
+`src/app/actions/heimdallr.ts` now carries **24 dispatch conditionals** — eight
+`isXAction/executeX/revertX` triples repeated across approve, edit-then-approve and undo. This is
+the Phase 1 checkpoint's gap #2 ("no generic executor dispatcher"), deferred at S16 and S18 as
+"by design, for a future session", grown to the point where adding a module means editing three
+functions and forgetting one is silent. A registry keyed by action type — `{ type → {execute,
+revert} }` — would collapse it to three lines and make the omission impossible. **Not urgent, but
+it is now the highest-leverage cleanup in the repo.**
+
+Two smaller ones: `stage-config.ts` imports the tenant-context router at module level, so its
+"plain reader for cron/scripts" cannot actually be imported from a script; and the Gmail
+matching engine still resolves to `Company`/`Contact`, which a Chronos-only tenant does not have,
+so ingestion matches nothing for the real customer (flagged in `INTEGRATIONS.md`, not fixed).
+
+### Verification reality
+
+The browser pane has been unable to composite frames or return screenshots since **S17** — nine
+sessions. Every session since has verified through the accessibility tree, `get_page_text` and
+computed styles instead, and that has caught real bugs (this session: an ask-derived number in an
+unlabelled drift column). It works, but "verified in-browser" in this log means *structurally*
+verified, not *visually*. Nobody has actually looked at Chronos with their eyes in a long time,
+and a human pass before go-live is worth more than another automated one.
+
+### What's next
+
+The build plan is empty. G1 (Google OAuth production/CASA) is the only open item and is a
+human/business track, not a session. The honest next moves, in order:
+
+1. **A real go-live pass** — `ops.md`'s checklist, `mongodump` installed, the prod Atlas/Vercel
+   projects actually created, and a human looking at the UI.
+2. **The executor registry** — collapse the 24 conditionals before a ninth module lands.
+3. **Real-account verification** — eBay OAuth consent and a live order sync have never run
+   against his actual account; the RuName redirect needs public https.
+4. Only then a new module. Hermes (listing drafts from the restoration log) is the obvious one,
+   and S30's comp bands plus S24's true labour cost now make its pricing half honest.
