@@ -911,3 +911,39 @@ modules recorded on it, so the config a tenant gets always matches what it bough
 tenant* and *which vertical* — same shape of mistake, different axis, and neither was covered.
 Any script or seeder that writes tenant data should name its tenant explicitly and derive scope
 from the control plane, never from a default.
+
+## 2026-07-31 — S24 rescoped: the HR realm is workshop labour, not recruitment
+
+**The original scope died with the vertical it was written for.** S24 was "hiring pipeline,
+onboarding docs, policy Q&A over Mímisbrunnr", parked as "least defined, least urgent for the
+broker vertical". B1 retired that vertical. Building a recruitment funnel for an Irish
+buy/restore/resell business with a handful of people would have been speculative work
+disconnected from anything the product actually measures. Confirmed with Nicolas before
+building rather than assumed.
+
+**What replaced it was already half-specified in the schema.** `ChronosConfig` has carried
+`labourRateCentsPerHour` since S27a and **nothing ever read it**; `LABOUR` has been a `UnitCost`
+kind in the `restoration` group and **nothing ever wrote one**. So every margin figure in the
+product — the cockpit, the finance tab, the S32 bid ceiling derived from resale margin — valued
+restoration time at exactly zero. For a business whose whole thesis is *buy cheap, restore,
+resell dear*, that is the most under-counted cost there is. The HR-shaped question that pays for
+itself here is "whose hours went into which watch, at what rate", not "who are we hiring".
+
+**The rate is snapshotted, and that is the load-bearing decision.** `WorkLog` copies
+`rateCentsPerHour` and `costCents` at log time, exactly as `PartConsumption` snapshots a lot's
+unit cost. Giving someone a raise must never retroactively move the margin on a watch sold last
+year — historical margin has to stay explicable against the numbers that produced it, the same
+principle that made `RefPriceStat` a cache in S30 rather than a source of truth.
+
+**Labour books through `addUnitCost` like everything else.** No module gets its own cost-write
+path; `work:<workLogId>` slots into the existing `@@unique([unitId, dedupeKey])`, so re-running
+converges and deleting a log removes precisely its own line. The alternative — a separate labour
+total summed into margin alongside the cost ledger — would have been a second source of truth
+for what a watch cost, and this codebase has now rejected that shape three times (finance tab at
+B1, `RefPriceStat` at S30, here).
+
+**People are deactivated, never deleted.** Their logged hours are historical cost on units that
+may already be sold, and a cascade delete would silently rewrite those margins.
+
+**`SELF` is a first-class person kind.** The owner's own time is real cost even though no invoice
+exists for it, and a tool that lets him omit it would flatter every margin it reports.

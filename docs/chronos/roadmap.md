@@ -709,9 +709,36 @@ not guesses.
       3000 for the draft call — 1500 truncated real contract-review output mid-JSON (same failure
       class Bragi hit pre-S18, `parseLegalOutput` correctly failed closed on the truncated JSON,
       the cap itself was just too tight for multi-point risk findings).
-- [ ] **S24 — HR realm** · plan on Opus · M
-      Hiring pipeline, onboarding docs, policy Q&A over Mímisbrunnr. Last on purpose: least
-      defined, least urgent for the broker vertical. Scope it fresh at the time.
+- [x] **S24 — HR realm → Atelier: people + workshop labour** · M · ✅ 2026-07-31
+      **Rescoped, deliberately.** The original item (hiring pipeline, onboarding docs, policy Q&A)
+      was written for the broker vertical that retired at B1, and a recruitment funnel is not what
+      a small buy/restore/resell business needs. Confirmed with Nicolas before building.
+      The HR-shaped thing that actually touches money here is *whose hours went into which watch,
+      at what rate* — and that closed a real hole: `ChronosConfig.labourRateCentsPerHour` was
+      seeded and read by **nothing**, and `LABOUR` was a `UnitCost` kind **nothing wrote**, so
+      every margin in the product silently valued restoration time at zero.
+      New `Person` (EMPLOYEE/CONTRACTOR/**SELF** — the owner's own time is real cost even with no
+      invoice; `hourlyRateCents` nullable so a one-person shop runs a single house rate) and
+      `WorkLog`. `src/lib/chronos/work.ts` is the write path, a structural twin of `consumePart`:
+      the rate and cost are **snapshotted at log time**, so giving someone a raise can never
+      retroactively move the margin on a watch sold last year — the same protection
+      `PartConsumption.unitCostCents` gives parts. The cost line is booked through `addUnitCost`
+      (never a direct create — still forbidden repo-wide) keyed `work:<workLogId>`, so log and line
+      cannot drift and delete removes exactly its own line.
+      Pure `labour.ts` (15 tests): `labourCostCents` rounds **once at the end** — per-minute
+      rounding drifts cents into a figure he reconciles against his bank; `parseDuration` accepts
+      `90`/`90m`/`1h30`/`1,5h` and **rejects `1h90`** rather than guessing 2h30. `/chronos/atelier`
+      joins the Atelier realm (no `realms.ts` change needed — two-segment lookup falls through to
+      the `chronos` segment). Deactivate, never delete, a person: their hours are historical cost
+      on units that may already be sold.
+      *Exit met:* lint 0 errors · **486 tests** (15 new) · build clean, `/chronos/atelier` compiles.
+      `scripts/chronos/labour-check.ts` (kept): **5/5** — 90 min at 40 €/h = 60 €, a LABOUR line
+      booked via `addUnitCost` with `source: WORK_LOG`, the unit's cost rose by exactly that,
+      raising the rate to 90 €/h left the logged cost at 60 €, and deleting the log restored the
+      original cost to the cent. In-browser: WCH-0001's waterfall shows "Restauration − 60,00 €"
+      and its ledger the `WORK_LOG` line; dark tokens resolve, no 375px overflow, no server errors.
+      **Not built (and not missed):** hiring pipeline, onboarding docs, policy Q&A — see
+      `decisions.md` for why they died with the vertical they were scoped for.
 
 - [x] **S25 — Freyja: paid-marketing realm (ad connectors + autonomous campaign agent)** · Fable · M · ✅ 2026-07-19
       Shipped both halves in one session (real Google Ads/Meta APIs unreachable here — no dev

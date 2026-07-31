@@ -67,6 +67,9 @@ const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
   // listing — the second is what stops a re-scan re-proposing a listing the
   // operator already ruled on.
   { collection: "SourcingWatch", name: "SourcingWatch_refId_key", key: { refId: 1 } },
+  // S24 (Person/WorkLog) adds no unique of its own: a WorkLog's identity IS its
+  // id, and the LABOUR cost line it books is keyed `work:<id>` under the
+  // existing UnitCost unique above.
   { collection: "SourcingCandidate", name: "SourcingCandidate_provider_externalId_key", key: { provider: 1, externalId: 1 } },
 ];
 

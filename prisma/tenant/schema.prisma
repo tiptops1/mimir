@@ -1216,6 +1216,7 @@ model InventoryUnit {
   ref              ProductRef        @relation(fields: [refId], references: [id])
   costs            UnitCost[]
   partConsumptions PartConsumption[]
+  workLogs         WorkLog[]
 
   @@index([status])
   @@index([refId])
@@ -1549,4 +1550,64 @@ model SourcingCandidate {
   @@index([refId, status])
   @@index([verdict])
   @@index([scannedAt])
+}
+
+// ————— S24: people + workshop labour —————
+
+// Someone who does work on units. Deliberately NOT a hiring pipeline: S24 was
+// originally scoped as recruitment + onboarding + policy Q&A for the inherited
+// broker vertical, which died with it. For a small buy/restore/resell business
+// the HR-shaped thing that actually touches money is *whose hours went into
+// which watch, at what rate* — which is also the loop that closes
+// ChronosConfig.labourRateCentsPerHour, a config value nothing consumed before.
+model Person {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+
+  // EMPLOYEE | CONTRACTOR | SELF — open vocab. SELF is the owner's own time,
+  // which is real cost even when no invoice exists for it.
+  kind String @default("EMPLOYEE")
+  // Falls back to ChronosConfig.labourRateCentsPerHour when null, so a tenant
+  // can run a single house rate without filling this in per person.
+  hourlyRateCents Int?
+  active          Boolean @default(true)
+  note            String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workLogs WorkLog[]
+
+  @@index([active])
+}
+
+// Time booked against one unit.
+//
+// `rateCentsPerHour` and `costCents` are SNAPSHOTTED at log time, exactly as
+// PartConsumption snapshots a lot's unit cost: giving someone a raise must
+// never retroactively move the margin on a watch sold last year.
+//
+// Writing one of these books a LABOUR UnitCost through addUnitCost — the single
+// permitted cost write path — keyed `work:<workLogId>`, so the line and the log
+// can never drift apart.
+model WorkLog {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  personId String @db.ObjectId
+  unitId   String @db.ObjectId
+
+  minutes          Int
+  rateCentsPerHour Int
+  costCents        Int
+  performedAt      DateTime @default(now())
+  note             String   @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  unit   InventoryUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@index([personId])
+  @@index([performedAt])
 }

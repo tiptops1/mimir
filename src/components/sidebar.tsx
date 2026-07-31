@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   TrendingUp,
   Crosshair,
+  Wrench,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
@@ -35,6 +36,7 @@ const NAV: Array<{
   module: TenantModule;
 }> = [
   { href: "/chronos", label: "Inventaire", icon: Watch, module: "chronos" },
+  { href: "/chronos/atelier", label: "Atelier", icon: Wrench, module: "chronos" },
   { href: "/chronos/import", label: "Ventes", icon: PackageOpen, module: "chronos" },
   { href: "/chronos/reconciliation", label: "Rapprochement", icon: Scale, module: "chronos" },
   { href: "/chronos/argus", label: "Cote du marché", icon: TrendingUp, module: "chronos" },
