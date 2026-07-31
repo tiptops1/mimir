@@ -1164,9 +1164,11 @@ model ProductRef {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  units       InventoryUnit[]
-  pricePoints PricePoint[]
-  priceStats  RefPriceStat[]
+  units              InventoryUnit[]
+  pricePoints        PricePoint[]
+  priceStats         RefPriceStat[]
+  sourcingWatch      SourcingWatch?
+  sourcingCandidates SourcingCandidate[]
 
   @@unique([brand, reference, variant])
   @@index([brand])
@@ -1465,4 +1467,86 @@ model RefPriceStat {
 
   @@unique([refId, kind])
   @@index([drifted])
+}
+
+// ————— S32: Kairos (sourcing agent) —————
+
+// A reference he wants to be told about when one comes up for sale, plus the
+// buying parameters for it. Config, not code: what he hunts and how hard is his
+// commercial judgement, and it changes weekly.
+model SourcingWatch {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  refId String @db.ObjectId
+
+  active Boolean @default(true)
+  // Hard cap as a share of the reference's SOLD median, applied ON TOP of the
+  // margin arithmetic — whichever is stricter wins (src/lib/chronos/kairos.ts).
+  // Null = no extra cap; the computed ceiling stands alone.
+  maxPricePct Int?
+  // What restoring one of these typically costs him. Feeds the bid ceiling, so
+  // a reference that always needs a service is priced accordingly.
+  refurbCostCents Int @default(0)
+  note            String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ref ProductRef @relation(fields: [refId], references: [id], onDelete: Cascade)
+
+  @@unique([refId])
+  @@index([active])
+}
+
+// A listing Kairos scored, and the record of what was decided about it.
+//
+// Doubles as log and queue, the same shape as MarketplaceOrder: keeping scored-
+// and-rejected listings is what stops the next scan re-proposing the watch he
+// already passed on, and it is the only way he can audit what the agent chose
+// NOT to surface.
+//
+// `status` is the HUMAN's decision, distinct from `verdict`, which is the
+// agent's arithmetic. A human decision always outranks a later scan.
+model SourcingCandidate {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  refId      String @db.ObjectId
+  provider   String // marketplace key
+  externalId String // the marketplace's listing id
+
+  title       String
+  url         String?
+  askPriceCents Int
+  currency    String @default("EUR")
+
+  // candidate | too_expensive | vetoed | no_comp — see kairos.ts SourcingVerdict.
+  verdict String
+  score   Int    @default(0)
+  // [{ key, label, severity }] — the deterministic red flags, kept so the
+  // operator sees WHY something was passed over.
+  flags   Json?
+
+  // The arithmetic at scan time. Snapshotted rather than recomputed on read:
+  // the band moves, and a decision must stay explicable against the numbers
+  // that actually produced it.
+  maxBidCents      Int?
+  expectedResaleCents Int?
+  headroomCents    Int?
+
+  // NEW | PROPOSED | APPROVED | REJECTED | QUARANTINED
+  // QUARANTINED = the HDS/injection gate flagged the listing text; nothing was
+  // drafted from it and the raw text was never stored (S11 posture).
+  status String @default("NEW")
+  // Set when a human approves: the bid ceiling they signed off on. Chronos
+  // never places it — this is a decision record, not an instruction to a
+  // marketplace, and no code path in this repo can bid.
+  approvedBidCents Int?
+
+  scannedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ref ProductRef @relation(fields: [refId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([refId, status])
+  @@index([verdict])
+  @@index([scannedAt])
 }

@@ -848,3 +848,66 @@ original S26 argument for the whole config-driven design.
 nobody had noticed, because the page could only ever query COMPANY stages while
 `seedChronosConfig` deliberately withholds the broker pipeline. He would have opened "Étapes"
 and seen an empty box. Entity-scoping the model is what made the page fixable at all.
+
+## 2026-07-31 — S32: layered money safety, and Kairos gets its own gate prompt
+
+**Kairos never buys, and that is structural rather than a policy.** Approving a sourcing offer
+writes a bid ceiling onto a `SourcingCandidate`. There is no function in this repository that
+places a bid, makes an offer or contacts a seller, and adding one would be a separate decision
+with its own approval design. `chronos.sourcing_offer` is seeded at `maxLevel: 1` — the same
+never-graduates floor as `finance.commitment` and `freyja.budget_change`.
+
+**Five layers, ordered cheapest-and-least-foolable first**, because a single check protecting a
+spending decision is not enough:
+
+1. **Deterministic vetoes** (`VETO_FLAGS`) run before any comp lookup or model call. A "for
+   parts / not running" listing is refused by a regex, not by a model's judgement of text a
+   stranger wrote and can therefore game. Ordering matters: a 1 € parts watch must read as
+   *vetoed*, not as a bargain, and not as "no comparable".
+2. **The ceiling is arithmetic**: resale median − fees − refurb − target margin. `bidCeiling`
+   **returns null for an ASK band**. This is where S30's SOLD/ASK split pays for itself — pricing
+   a purchase off other sellers' asking prices is the single most expensive mistake available
+   here, and it is refused at the type level rather than discouraged in a comment.
+3. **The watchlist cap can only tighten.** `maxPricePct` is applied with `Math.min` against the
+   margin ceiling; a loose cap can never raise it.
+4. **The model can only bid lower.** `applyModelBid` clamps to the computed ceiling and emits a
+   `guardrail_blocked` event when it does. The arithmetic is the authority; the model advises.
+5. **The executor refuses an over-ceiling human edit** — `failAction` with a reason, never a
+   silent clamp. A human who typed a number needs to know it was rejected. Freyja's posture.
+
+**The HDS gate is mandatory here, and got its own prompt.** The roadmap's precondition was right
+that marketplace listing text is untrusted third-party input — this is prompt-injection defence,
+not health-data exclusion. But reusing `getClassifierPrompt` would have been wrong twice: that
+prompt is worded for the inherited broker vertical, and its recall/precision were *measured* at
+G2 against a health-flavoured corpus. Silently repurposing a measured classifier for a different
+question is the quiet kind of wrong. `chronos.listing_gate` asks the actual question —
+instructions aimed at an automated system, attempts to extract internal prompts, off-platform
+payment pushes — and explicitly does **not** flag mere puffery, because the arithmetic downstream
+handles price. Same `classifyBatch`/`partitionByVerdict` machinery and the same fail-closed
+behaviour.
+
+**The candidate table keeps what was passed over.** `SourcingCandidate` stores vetoed, overpriced
+and no-comp listings alongside the proposals, and `/chronos/sourcing` renders them. An agent that
+only ever surfaces its own hits cannot be audited: seeing *why* something was refused is how the
+operator learns whether the parameters are right.
+
+### Two platform defects found while building this
+
+**Autonomy categories and prompts were seeded inside `seedCrmConfig`.** A Chronos-only tenant —
+the actual paying customer — therefore had **zero autonomy categories and zero prompt
+templates**: an entirely inert Heimdallr, and no module able to start. This is the same family
+as the S26 early-`return` that S27a fixed, and it survived because nothing had yet needed an
+agent on a non-CRM tenant. Seeds now carry a `scope` tag and each vertical seeds its own, so
+neither leaks the other's vocabulary.
+
+**`npm run config:seed` silently ignored `--slug`.** It accepted only `--modules`, always wrote
+to `DATABASE_URL`, and always defaulted to `crm`. Running `config:seed -- --slug chronos_demo`
+seeded CRM config into whatever database `DATABASE_URL` named and reported success. I hit this
+live. It is precisely the defect class S28 fixed across eight route handlers and `db:push`, and
+it was missed there. The script now resolves the tenant through the control plane and takes the
+modules recorded on it, so the config a tenant gets always matches what it bought.
+
+**Generalising both:** the guard S28 built is about *which cluster*. These two were about *which
+tenant* and *which vertical* — same shape of mistake, different axis, and neither was covered.
+Any script or seeder that writes tenant data should name its tenant explicitly and derive scope
+from the control plane, never from a default.

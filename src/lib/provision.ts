@@ -63,6 +63,11 @@ const CHRONOS_UNIQUE_INDEXES: UniqueIndex[] = [
   // the band that S32's bid ceiling is derived from.
   { collection: "PricePoint", name: "PricePoint_refId_dedupeKey_key", key: { refId: 1, dedupeKey: 1 } },
   { collection: "RefPriceStat", name: "RefPriceStat_refId_kind_key", key: { refId: 1, kind: 1 } },
+  // S32: one watch per reference, and one candidate row per marketplace
+  // listing — the second is what stops a re-scan re-proposing a listing the
+  // operator already ruled on.
+  { collection: "SourcingWatch", name: "SourcingWatch_refId_key", key: { refId: 1 } },
+  { collection: "SourcingCandidate", name: "SourcingCandidate_provider_externalId_key", key: { provider: 1, externalId: 1 } },
 ];
 
 /**

@@ -28,6 +28,11 @@ import {
   revertLegalDocument,
 } from "@/lib/forseti/legal-executor";
 import {
+  executeSourcingOffer,
+  isSourcingOfferAction,
+  revertSourcingOffer,
+} from "@/lib/chronos/kairos-executor";
+import {
   executeCampaignDecision,
   isCampaignDecisionAction,
   revertCampaignDecision,
@@ -46,6 +51,7 @@ export async function approveActionSA(id: string): Promise<string | null> {
     if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
     if (isLegalDocumentAction(action)) await executeLegalDocument(prisma, action);
     if (isCampaignDecisionAction(action)) await executeCampaignDecision(prisma, action);
+    if (isSourcingOfferAction(action)) await executeSourcingOffer(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -70,6 +76,7 @@ export async function approveEditedActionSA(
     if (isRenewalOutreachAction(action)) await executeRenewalOutreach(prisma, action);
     if (isLegalDocumentAction(action)) await executeLegalDocument(prisma, action);
     if (isCampaignDecisionAction(action)) await executeCampaignDecision(prisma, action);
+    if (isSourcingOfferAction(action)) await executeSourcingOffer(prisma, action);
   } catch (err) {
     if (err instanceof InvalidTransitionError) return err.message;
     throw err;
@@ -115,6 +122,7 @@ export async function undoActionSA(id: string): Promise<string | null> {
     if (isRenewalOutreachAction(undone)) await revertRenewalOutreach(prisma, undone);
     if (isLegalDocumentAction(undone)) await revertLegalDocument(prisma, undone);
     if (isCampaignDecisionAction(undone)) await revertCampaignDecision(prisma, undone);
+    if (isSourcingOfferAction(undone)) await revertSourcingOffer(prisma, undone);
   } catch (err) {
     if (err instanceof Error) return err.message;
     throw err;

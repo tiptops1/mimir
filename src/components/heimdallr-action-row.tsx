@@ -64,6 +64,21 @@ type CampaignPayload = {
   };
 };
 
+type SourcingFlag = { key: string; label: string; severity: string };
+type SourcingPayload = {
+  candidateId?: string;
+  refLabel?: string;
+  listingTitle?: string;
+  listingUrl?: string | null;
+  askPriceCents?: number;
+  /** The bid ceiling. Editable, but the executor re-checks it against the
+      figure computed at scan time and FAILS rather than clamping. */
+  maxBidCents?: number;
+  expectedResaleCents?: number;
+  rationale?: string;
+  flags?: SourcingFlag[];
+};
+
 const CAMPAIGN_KIND_LABEL: Record<string, string> = {
   budget_change: "Modification de budget",
   campaign_pause: "Mise en pause",
@@ -77,6 +92,12 @@ const DIRECTIVE_TYPE = "directive.set";
 const RENEWAL_TYPE = "renewal.outreach_draft";
 const LEGAL_TYPE = "forseti.legal_document_draft";
 const CAMPAIGN_TYPE = "campaign.decision";
+const SOURCING_TYPE = "sourcing.offer";
+
+const eur = (cents?: number) =>
+  typeof cents === "number"
+    ? `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+    : "—";
 
 export function HeimdallrActionRow({
   id,
@@ -116,6 +137,9 @@ export function HeimdallrActionRow({
   const isCampaign = type === CAMPAIGN_TYPE && payload !== null && typeof payload === "object";
   const campaign = isCampaign ? (payload as CampaignPayload) : null;
 
+  const isSourcing = type === SOURCING_TYPE && payload !== null && typeof payload === "object";
+  const sourcing = isSourcing ? (payload as SourcingPayload) : null;
+
   const [editedPayload, setEditedPayload] = useState(() => JSON.stringify(payload, null, 2));
   const [editedSubject, setEditedSubject] = useState(draft?.subject ?? "");
   const [editedBody, setEditedBody] = useState(draft?.body ?? "");
@@ -131,6 +155,9 @@ export function HeimdallrActionRow({
   );
   const [editedBidPct, setEditedBidPct] = useState(
     campaign?.bidAdjustPct !== undefined ? String(campaign.bidAdjustPct) : "",
+  );
+  const [editedBid, setEditedBid] = useState(
+    sourcing?.maxBidCents !== undefined ? String(sourcing.maxBidCents / 100) : "",
   );
   const [editedSections, setEditedSections] = useState<Record<string, string>>(() =>
     Object.fromEntries(rcaSections.map((s) => [s.key, s.content ?? ""])),
@@ -172,6 +199,10 @@ export function HeimdallrActionRow({
                 ? { ...campaign, bidAdjustPct: Number(editedBidPct) }
                 : undefined
               : { ...campaign }
+        : sourcing
+          ? Number.isFinite(Number(editedBid)) && Number(editedBid) >= 0
+            ? { ...sourcing, maxBidCents: Math.round(Number(editedBid) * 100) }
+            : undefined
         : rca
           ? {
               ...rca,
@@ -188,7 +219,7 @@ export function HeimdallrActionRow({
               }
             })();
       if (parsed === undefined) {
-        setError(campaign ? "Valeur numérique invalide." : "JSON invalide.");
+        setError(campaign || sourcing ? "Valeur numérique invalide." : "JSON invalide.");
         return;
       }
       const err = await approveEditedActionSA(id, parsed);
@@ -380,6 +411,62 @@ export function HeimdallrActionRow({
                 </pre>
               </div>
             </div>
+          ) : sourcing ? (
+            <div className="space-y-1.5 rounded-md bg-card p-2 text-[11px] text-muted">
+              <p>
+                <span className="font-medium text-foreground">Référence : </span>
+                {sourcing.refLabel ?? "—"}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Annonce : </span>
+                {sourcing.listingUrl ? (
+                  <a
+                    href={sourcing.listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand hover:underline"
+                  >
+                    {sourcing.listingTitle ?? "—"}
+                  </a>
+                ) : (
+                  (sourcing.listingTitle ?? "—")
+                )}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Prix demandé : </span>
+                {eur(sourcing.askPriceCents)}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Enchère maximale : </span>
+                <span className="font-semibold text-foreground">
+                  {eur(sourcing.maxBidCents)}
+                </span>
+                {" — revente attendue "}
+                {eur(sourcing.expectedResaleCents)}
+                {" (vos ventes réalisées)"}
+              </p>
+              {sourcing.flags && sourcing.flags.length > 0 && (
+                <div>
+                  <span className="font-medium text-foreground">Signaux : </span>
+                  <ul className="mt-1 list-disc pl-4">
+                    {sourcing.flags.map((f) => (
+                      <li key={f.key} className={f.severity === "veto" ? "text-danger" : undefined}>
+                        {f.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-foreground">Justification : </span>
+                <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[11px] text-muted">
+                  {sourcing.rationale ?? "—"}
+                </pre>
+              </div>
+              <p className="text-faint">
+                Approuver enregistre ce plafond. Chronos ne place aucune enchère à votre place.
+              </p>
+            </div>
           ) : rca ? (
             <div className="space-y-2">
               {rcaSections.map((s) => (
@@ -529,6 +616,25 @@ export function HeimdallrActionRow({
                 Une mise en pause n&apos;a pas de paramètre modifiable — approuvez ou rejetez.
               </p>
             )
+          ) : sourcing ? (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted">
+                Enchère maximale (€)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={editedBid}
+                onChange={(e) => setEditedBid(e.target.value)}
+                disabled={pending}
+                placeholder="Plafond d'achat en euros"
+              />
+              <p className="text-[11px] text-faint">
+                Vous pouvez seulement baisser ce montant : au-dessus du plafond calculé
+                ({eur(sourcing.maxBidCents)}), l&apos;approbation est refusée.
+              </p>
+            </div>
           ) : rca ? (
             <>
               {rcaSections.map((s) => (

@@ -15,6 +15,7 @@ const MODULES = [
   { value: "odin", label: "Odin" },
   { value: "thor", label: "Thor" },
   { value: "freyja", label: "Freyja" },
+  { value: "kairos", label: "Kairos" },
   { value: "system", label: "Système" },
 ];
 

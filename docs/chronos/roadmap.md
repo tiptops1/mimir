@@ -1284,9 +1284,50 @@ Chrono24/Vinted/LBC have no public API → manual/CSV connectors. Hence connecto
       **Known, pre-existing, not fixed here:** `stage-config.ts` imports the tenant-context router
       at module level, so its "plain reader for cron/scripts" cannot actually be imported from a
       `tsx` script. Predates this session; verification queried Prisma directly instead.
-- [ ] **S32 — Kairos sourcing agent** · plan on Opus · M — money category, `maxLevel: 1`, never
-      auto-buys. **Precondition:** the HDS classifier gate becomes mandatory here — marketplace
-      listing text is untrusted third-party input (prompt injection, not health data).
+- [x] **S32 — Kairos sourcing agent** · M · ✅ 2026-07-31
+      Watchlist → scan active listings → score against S30's **SOLD** band → propose a maximum bid
+      through the Heimdallr ledger. `chronos.sourcing_offer` at `maxLevel: 1`, the
+      `finance.commitment` never-graduates floor. **Kairos never buys**: approval records a ceiling
+      for a human, and no code path in this repo can place a bid.
+      Money safety is layered deliberately, cheapest and least-foolable first:
+      **(1) deterministic vetoes** (`VETO_FLAGS`, FR+EN regexes — for parts / not running / replica
+      / franken / redial) run *before* any comp lookup or model call, so a 1 € parts watch reads as
+      *vetoed*, not as a bargain. **(2) the ceiling is arithmetic**: resale median − fees − refurb −
+      target margin, and `bidCeiling` **returns null for an ASK band** — pricing a purchase off
+      other people's hopes is the expensive mistake S30 exists to prevent. **(3) the watchlist cap
+      can only tighten**, never loosen. **(4) the model can only bid lower** — `applyModelBid`
+      clamps and emits `guardrail_blocked`. **(5) the executor refuses an over-ceiling human edit**
+      — `failAction`, never a silent clamp (Freyja's posture).
+      **The mandatory gate, re-justified:** listing text is a stranger's prose about to be shown to
+      a model deciding how much to spend, so this is injection defence, not health-data exclusion.
+      It got its **own prompt** (`chronos.listing_gate`) rather than reusing
+      `getClassifierPrompt` — that one is worded for the inherited broker vertical and its
+      recall/precision were measured at G2 against a different corpus; silently repurposing a
+      measured classifier would have been the quiet kind of wrong. Same verdict machinery, same
+      fail-closed partitioning, different question. Verified live: a listing carrying
+      "IGNORE ALL PREVIOUS INSTRUCTIONS…" was quarantined with hash + reason, nothing drafted.
+      New models `SourcingWatch` + `SourcingCandidate` (log *and* queue, MarketplaceOrder's shape —
+      keeping what was passed over is the only way the agent is auditable). `/chronos/sourcing`
+      shows rejected listings too, on purpose. Inngest scan/evaluate (Thor's shape), trigger route,
+      inbox type branch, executor wired into all three dispatch points.
+      **Two real platform defects found and fixed on the way:** (a) `upsertAutonomyConfig` and
+      `upsertPromptTemplates` were called *inside* `seedCrmConfig`, so a Chronos-only tenant — the
+      actual paying customer — had **zero autonomy categories and zero prompts**, i.e. an entirely
+      inert Heimdallr; seeds are now `scope`-tagged and each vertical seeds its own. (b)
+      `npm run config:seed` accepted no `--slug` at all: it always wrote to `DATABASE_URL` and
+      always defaulted to `crm`, so `--slug chronos_demo` was **silently ignored** and CRM config
+      went elsewhere — I tripped it live. It now resolves the tenant through the control plane and
+      uses the modules recorded on it. Same defect class S28 fixed across eight route handlers.
+      *Exit met:* lint 0 errors · **471 tests** (26 new) · build clean, `/chronos/sourcing` +
+      `/api/chronos/kairos/scan` compile. `scripts/chronos/kairos-check.ts` (kept) drives the exact
+      library calls the job makes, with live model calls: **13/13 pass** — veto beats price, no
+      sold comp → no bid, injection quarantined, clamp works both ways, propose→approve→execute→
+      undo round-trips, and an over-ceiling edit is refused. In-browser: `/chronos/sourcing` renders
+      the watchlist and a deliberate mix (2 candidates, 1 vetoed with flag chips, 1 overpriced with
+      negative headroom); the inbox row shows référence/annonce/plafond/justification and the
+      "Chronos ne place aucune enchère à votre place" line; dark tokens resolve, no 375px overflow,
+      no server errors. **Not verified:** the Inngest orchestration itself (dev server not run this
+      session — same posture as S21/S22b); every function it calls is exercised above.
 
 ---
 

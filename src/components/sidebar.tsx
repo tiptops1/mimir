@@ -12,6 +12,7 @@ import {
   PackageOpen,
   SlidersHorizontal,
   TrendingUp,
+  Crosshair,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand";
 import { BrandEgg } from "@/components/brand-egg";
@@ -37,6 +38,7 @@ const NAV: Array<{
   { href: "/chronos/import", label: "Ventes", icon: PackageOpen, module: "chronos" },
   { href: "/chronos/reconciliation", label: "Rapprochement", icon: Scale, module: "chronos" },
   { href: "/chronos/argus", label: "Cote du marché", icon: TrendingUp, module: "chronos" },
+  { href: "/chronos/sourcing", label: "Sourcing", icon: Crosshair, module: "chronos" },
   { href: "/chronos/finance", label: "Finances", icon: Wallet, module: "chronos" },
   { href: "/chronos/settings", label: "Réglages métier", icon: SlidersHorizontal, module: "chronos" },
   { href: "/heimdallr/inbox", label: "Approbations", icon: ShieldCheck, module: "core" },
