@@ -45,7 +45,7 @@ feature work and demos.
 ## Stack (don't re-derive)
 Next.js 16 (App Router, Server Actions) · Prisma 6 + MongoDB Atlas (control + tenant schemas) ·
 custom auth (jose JWT + bcryptjs) · Tailwind v4 · @dnd-kit · Recharts. Integrations (Gmail OAuth,
-Calendar OAuth, Fireflies, Gemini AI insight) are per-tenant — see `INTEGRATIONS.md`.
+Calendar OAuth, eBay OAuth, Gemini AI insight) are per-tenant — see `INTEGRATIONS.md`.
 This is Next.js 16, which post-dates training data — read `node_modules/next/dist/docs/` before
 writing Next code. Note `middleware.ts` is renamed **`proxy.ts`**.
 

@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { href: "/settings/fields", label: "Champs" },
   { href: "/settings/stages", label: "Étapes" },
-  { href: "/settings/integrations", label: "Intégrations" },
   { href: "/settings/import", label: "Import" },
   { href: "/settings/audit", label: "Audit" },
 ];

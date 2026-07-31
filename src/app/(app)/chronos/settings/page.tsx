@@ -5,8 +5,10 @@ import { getTenantDb } from "@/lib/tenant-context";
 import { PageHeader } from "@/components/page-header";
 import { Badge, Card, CardBody, CardHeader, CardTitle, LinkButton } from "@/components/ui";
 import { EbayActions } from "@/components/chronos/ebay-card";
-import { getEbayConnection } from "@/lib/integrations";
+import { GoogleActions } from "@/components/chronos/google-card";
+import { getEbayConnection, getGoogleConnection } from "@/lib/integrations";
 import { ebayConfigured } from "@/lib/ebay-oauth";
+import { googleConfigured } from "@/lib/google-oauth";
 import { readMarketplaces } from "@/lib/chronos/config";
 import { getConnector, isApiConnector } from "@/lib/chronos/connectors";
 import { str } from "@/lib/list-filters";
@@ -23,6 +25,11 @@ import { str } from "@/lib/list-filters";
  * manuelle" for Chrono24 without instantiating a connector, which is the entire
  * reason ConnectorCapabilities is a plain object rather than Freyja's
  * method-presence check.
+ *
+ * Also the home of the Google mailbox connection, moved here when
+ * /settings/integrations retired with the generic CRM. It is not a marketplace,
+ * but it is the only other account a tenant connects, and Huginn is dead
+ * without it.
  */
 export default async function ChronosSettingsPage({
   searchParams,
@@ -33,20 +40,23 @@ export default async function ChronosSettingsPage({
   const prisma = await getTenantDb();
   const sp = await searchParams;
   const flag = str(sp, "ebay");
+  const googleFlag = str(sp, "google");
 
-  const [connection, marketplaces] = await Promise.all([
+  const [connection, googleConn, marketplaces] = await Promise.all([
     getEbayConnection(session.tenantId),
+    getGoogleConnection(session.tenantId),
     readMarketplaces(prisma),
   ]);
 
   const pendingCount = await prisma.marketplaceOrder.count({ where: { status: "PENDING" } });
   const configured = ebayConfigured();
+  const googleReady = googleConfigured();
 
   return (
     <div>
       <PageHeader
         title="Paramètres Chronos"
-        subtitle="Connexions marketplace et synchronisation des ventes"
+        subtitle="Comptes connectés et synchronisation des ventes"
       >
         <LinkButton href="/chronos" variant="secondary" size="sm">
           Retour à l&apos;inventaire
@@ -69,6 +79,16 @@ export default async function ChronosSettingsPage({
           <Notice tone="warning" icon={<AlertTriangle className="h-4 w-4" />}>
             L&apos;intégration eBay n&apos;est pas configurée sur cet environnement
             (EBAY_CLIENT_ID / EBAY_CLIENT_SECRET / EBAY_RUNAME).
+          </Notice>
+        ) : null}
+        {googleFlag === "connected" ? (
+          <Notice tone="success" icon={<CheckCircle2 className="h-4 w-4" />}>
+            Compte Google connecté. La synchronisation démarre au prochain cycle.
+          </Notice>
+        ) : null}
+        {googleFlag === "error" ? (
+          <Notice tone="danger" icon={<AlertTriangle className="h-4 w-4" />}>
+            La connexion Google a échoué. Réessayez de connecter votre compte.
           </Notice>
         ) : null}
 
@@ -138,6 +158,58 @@ export default async function ChronosSettingsPage({
             </CardBody>
           </Card>
         ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Google</CardTitle>
+            {googleConn ? (
+              <Badge tone="success">Connecté</Badge>
+            ) : (
+              <Badge tone="neutral">Non connecté</Badge>
+            )}
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <p className="text-sm text-muted">
+              Rattache votre boîte mail et votre agenda. Les échanges clients deviennent des
+              activités datées sur la montre concernée, et l&apos;agent de support peut proposer
+              des réponses — que vous validez toujours avant envoi.
+            </p>
+
+            {googleConn ? (
+              <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <Field label="Compte" value={googleConn.accountEmail} />
+                <Field
+                  label="Connecté le"
+                  value={googleConn.connectedAt.toLocaleDateString("fr-FR")}
+                />
+                <Field
+                  label="Dernière synchro"
+                  value={
+                    googleConn.lastSyncedAt
+                      ? googleConn.lastSyncedAt.toLocaleString("fr-FR")
+                      : "Jamais"
+                  }
+                />
+              </dl>
+            ) : null}
+
+            {googleReady || googleConn ? (
+              <GoogleActions connected={Boolean(googleConn)} />
+            ) : (
+              <p className="text-xs text-faint">
+                Configurez les variables d&apos;environnement Google avant de connecter un compte.
+              </p>
+            )}
+
+            <p className="flex items-start gap-2 text-xs text-faint">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Chronos n&apos;envoie jamais un e-mail de lui-même : une réponse proposée reste en
+                attente dans les approbations tant que vous ne l&apos;avez pas validée.
+              </span>
+            </p>
+          </CardBody>
+        </Card>
 
         <Card>
           <CardHeader>

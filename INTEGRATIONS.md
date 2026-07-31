@@ -1,19 +1,27 @@
 # Auto-enrichment integrations
 
-Connect a tenant's **Gmail**, **Google Calendar** and **Fireflies** so the CRM
-fills itself in: every email, meeting and call transcript is matched to the right
-company/contact, logged as an activity, and read by the AI pass to extract a
-summary, sentiment, next step and a suggested pipeline stage.
+Connect a tenant's **Gmail** and **Google Calendar** so the record fills itself
+in: every email and meeting is matched to the right counterpart, logged as an
+activity, and read by the AI pass to extract a summary, sentiment and next step.
 
 It all runs **inside this one Next.js app** — no extra service, no Zapier/n8n, no
 per-operation fees. Scheduled cron requests pull every source and run the AI pass,
 once per connected tenant.
 
 ```
-Gmail (OAuth) ─┐
-Google Calendar │→  match to company/contact  →  Activity log  →  AI insight
-Fireflies (API) ┘     (existing engine)            (in CRM)        (summary/next step)
+Gmail (OAuth) ──┐
+                │→  match to counterpart  →  Activity log  →  AI insight
+Google Calendar ┘    (existing engine)                         (summary/next step)
 ```
+
+> **Fireflies retired.** It ingested sales-call transcripts, which has no place in
+> a buy/restore/resell workflow. Removed alongside the generic CRM surface — the
+> provider row, the sync module and the settings card are all gone.
+>
+> **Known gap, not fixed here.** The matching engine below is still CRM-shaped: it
+> resolves email to `Company`/`Contact`. A Chronos-only tenant has neither, so
+> ingestion currently matches nothing for them. Re-pointing it at
+> `InventoryUnit`/`ProductRef` is its own session.
 
 ---
 
@@ -24,9 +32,9 @@ Some of this can only be done by you — accounts and keys. Add platform keys to
 `.env.example` as the reference list.
 
 ### 1. Google (Gmail + Calendar) — one-click **Connect** *(OAuth)*
-Each tenant clicks **Connecter Google** on `/settings/integrations`, approves once,
+Each tenant clicks **Connecter Google** on `/chronos/settings`, approves once,
 and Gmail + Calendar start syncing for that tenant only. Emails/meetings are logged
-against the right contact; unknown senders go to the **Boîte de réception** queue.
+against the right counterpart; unknown senders go to the **Boîte de réception** queue.
 
 This needs a **one-time Google Cloud setup** (platform-level, done once — not per
 tenant):
@@ -43,24 +51,20 @@ tenant):
      verification (CASA) — a separate, weeks-long process.
 3. Create an **OAuth client ID** → type **Web application**. Authorized redirect
    URIs:
-   - `http://localhost:3000/api/integrations/google/callback` (dev)
+   - `http://localhost:3001/api/integrations/google/callback` (dev — Chronos runs
+     on 3001)
    - `https://<app>/api/integrations/google/callback` (prod)
 4. Put the client ID/secret in env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_OAUTH_REDIRECT_URI`. The refresh token is encrypted at rest with the
    existing `ENCRYPTION_KEY`.
 
-Then open `/settings/integrations` and click **Connecter Google**. To switch
+Then open `/chronos/settings` and click **Connecter Google**. To switch
 accounts or revoke access, click **Déconnecter** (revokes the token at Google too).
 
 There is no env-var fallback path — every tenant connects its own OAuth credential;
 a tenant with nothing connected simply has no ingestion running.
 
-### 2. Fireflies — `FIREFLIES_API_KEY`  *(free tier works)*
-Imports call transcripts; uses Fireflies' own AI summary as the raw text.
-- Fireflies → **Settings → Developer settings / Integrations → API** → copy the
-  API key into `FIREFLIES_API_KEY`.
-
-### 3. The "smart" layer — `GEMINI_API_KEY` *(free)* or `ANTHROPIC_API_KEY`
+### 2. The "smart" layer — `GEMINI_API_KEY` *(free)* or `ANTHROPIC_API_KEY`
 Reads each interaction and extracts summary / sentiment / next step / stage.
 The pipeline picks a provider by which key is set: **`GEMINI_API_KEY` wins if
 present**, otherwise it falls back to `ANTHROPIC_API_KEY`.
@@ -103,7 +107,7 @@ routes, each accepting `Authorization: Bearer $CRON_SECRET` or `?key=$CRON_SECRE
 
 | Route | Does | Suggested cadence |
 |---|---|---|
-| `/api/cron` | Gmail/Calendar/Fireflies sync | every 4h |
+| `/api/cron` | Gmail/Calendar sync | every 4h |
 | `/api/cron/enrich` | AI enrichment | hourly |
 | `/api/cron/advance` | sequences + finance alerts + digest | every 4h |
 | `/api/cron/outreach` | cold-email send engine | hourly, business hours |
@@ -126,8 +130,8 @@ Reuses the engine already proven on the email sync:
 2. **Known company** — email domain matches a company's website/generic email →
    auto-create the contact under it and log.
 3. **Unknown** — email senders land in the **review queue** (`/inbox`) for one
-   click to approve; calendar/Fireflies events with no match are skipped (counted
-   as `unmatched`) rather than guessed.
+   click to approve; calendar events with no match are skipped (counted as
+   `unmatched`) rather than guessed.
 
 Free/consumer domains (gmail.com, orange.fr, …) are never treated as a company,
 so personal addresses don't create junk companies. Claude is told to extract only
@@ -135,13 +139,13 @@ what's present and never invent — and the **suggested stage is shown as a
 suggestion**, it does not auto-move cards in your pipeline.
 
 Dedupe is by `Activity.messageId`: RFC Message-ID for email, `cal:<uid>` for
-calendar, `ff:<transcript-id>` for Fireflies — re-running is safe.
+calendar — re-running is safe.
 
 ---
 
 ## Cost (rough)
 
-- Gmail OAuth, Calendar OAuth, Fireflies free tier: **€0**.
+- Gmail OAuth, Calendar OAuth: **€0**.
 - Gemini 2.5 Flash (primary AI provider) at low volume: a few cents to a few dimes
   a month. Claude Haiku is the fallback if `GEMINI_API_KEY` is unset. Set a spend
   limit with whichever provider you use.

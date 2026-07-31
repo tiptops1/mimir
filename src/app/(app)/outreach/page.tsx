@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { verifySession } from "@/lib/dal";
 import { getTenantDb } from "@/lib/tenant-context";
-import { getGoogleConnection } from "@/lib/integrations";
 import { PageHeader } from "@/components/page-header";
 import {
   Badge,
@@ -36,7 +35,7 @@ function iso(d: Date | null): string {
 export default async function OutreachPage() {
   const session = await verifySession();
   const prisma = await getTenantDb();
-  const [stats, config, sequences, recent, outreachConn] = await Promise.all([
+  const [stats, config, sequences, recent] = await Promise.all([
     computeOutreachStats(prisma),
     getOutreachConfig(prisma),
     prisma.sequence.findMany({
@@ -45,7 +44,6 @@ export default async function OutreachPage() {
       select: { id: true, name: true },
     }),
     recentOutreachMessages(prisma, 10),
-    getGoogleConnection(session.tenantId, "OUTREACH"),
   ]);
 
   const bounceOverThreshold =
@@ -98,25 +96,6 @@ export default async function OutreachPage() {
             pausedAt={stats.pausedAt ? formatDate(stats.pausedAt) : null}
             canResume={session.role === "ADMIN"}
           />
-        )}
-
-        {!outreachConn && (
-          <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
-            <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Boîte d&apos;envoi cold email non connectée
-                </p>
-                <p className="text-sm text-muted">
-                  Connectez le compte Google du domaine secondaire pour activer
-                  les envois automatiques.
-                </p>
-              </div>
-              <LinkButton href="/settings/integrations">
-                Ouvrir les intégrations
-              </LinkButton>
-            </CardBody>
-          </Card>
         )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">

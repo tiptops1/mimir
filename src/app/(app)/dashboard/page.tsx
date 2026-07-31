@@ -5,7 +5,6 @@ import { verifySession } from "@/lib/dal";
 import { getTenantProfile } from "@/lib/tenant-profile";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui";
 import { StageBadge } from "@/components/badges";
-import { ConnectGmailCta } from "@/components/connect-gmail-cta";
 import { OutreachPausedBanner } from "@/components/outreach/paused-banner";
 import { TaskList, type TaskRow } from "@/components/task-list";
 import { FinanceKpiStrip } from "@/components/finance-kpi-strip";
@@ -14,7 +13,6 @@ import { companyName } from "@/lib/display";
 import { formatDate } from "@/lib/utils";
 import { ACTIVITY_TYPES } from "@/lib/constants";
 import { getStageDefs } from "@/lib/stage-config";
-import { getGoogleConnection } from "@/lib/integrations";
 import { computeFinanceCockpit } from "@/lib/finance-cockpit";
 import { getNumberSetting, SETTINGS } from "@/lib/settings";
 import { countPendingActions } from "@/lib/heimdallr/queries";
@@ -30,16 +28,11 @@ const eur = (n: number) =>
 const activityLabel = (t: string) =>
   ACTIVITY_TYPES.find((a) => a.value === t)?.label ?? t;
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ google?: string }>;
-}) {
+export default async function DashboardPage() {
   const session = await verifySession();
   const prisma = await getTenantDb();
   const profile = await getTenantProfile();
   const stageDefs = await getStageDefs();
-  const googleStatus = (await searchParams).google;
 
   // Forward-looking windows for the worklist strip.
   const startOfTomorrow = new Date();
@@ -54,7 +47,6 @@ export default async function DashboardPage({
     companies,
     recentCompanies,
     recentActivities,
-    googleConn,
     todayTasksRaw,
     staleCompanies,
     leadsSourced,
@@ -83,7 +75,6 @@ export default async function DashboardPage({
           company: { select: { id: true, nomSociete: true, enseigne: true, siret: true } },
         },
       }),
-      getGoogleConnection(session.tenantId),
       // Open tasks that need attention now (overdue or due today).
       prisma.task.findMany({
         where: { done: false, dueDate: { not: null, lt: startOfTomorrow } },
@@ -226,24 +217,6 @@ export default async function DashboardPage({
             canResume={session.role === "ADMIN"}
           />
         )}
-        {googleStatus === "connected" && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-            Compte Google connecté. La synchronisation démarre au prochain cycle.
-          </div>
-        )}
-        {googleStatus === "error" && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
-            La connexion Google a échoué. Réessayez de connecter votre compte.
-          </div>
-        )}
-        <ConnectGmailCta
-          connected={Boolean(googleConn)}
-          accountEmail={googleConn?.accountEmail ?? null}
-          lastSyncLabel={
-            googleConn?.lastSyncedAt ? formatDate(googleConn.lastSyncedAt) : null
-          }
-        />
-
         {/* Forward-looking worklist — what to act on today, before the reporting. */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

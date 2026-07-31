@@ -2,19 +2,18 @@ import { controlPrisma } from "@/lib/control-db";
 import { decrypt } from "@/lib/crypto";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { authedClientForTenant } from "@/lib/google-oauth";
-import { getFirefliesKey, touchGoogleLastSynced } from "@/lib/integrations";
+import { touchGoogleLastSynced } from "@/lib/integrations";
 import { runGmailSync } from "@/lib/gmail-sync";
 import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
-import { syncFireflies } from "@/lib/fireflies";
 import { enrichActivities, aiEnabled } from "@/lib/ai-extract";
 import { advanceSequences } from "@/lib/sequences";
 import { advanceFinanceAlerts } from "@/lib/finance-alerts";
 import { sendDailyDigest } from "@/lib/digest";
 
 // The per-tenant ingestion loop. For each ACTIVE tenant, resolve its data DB
-// through the control plane, its Google connection (OAuth) and its Fireflies
-// key (encrypted Integration rows), then run every pipeline stage. A tenant
-// with no Google connection simply gets no email/calendar sync this run.
+// through the control plane and its Google connection (OAuth, an encrypted
+// Integration row), then run every pipeline stage. A tenant with no Google
+// connection simply gets no email/calendar sync this run.
 
 export interface SourceOutcome {
   source: string;
@@ -83,18 +82,6 @@ export async function runCronForTenant(
       { source: "calendar", ok: false, error: "Google non connecté" },
     );
   }
-
-  const firefliesKey = await getFirefliesKey(tenant.id);
-  sources.push(
-    firefliesKey
-      ? await settle("fireflies", () =>
-          syncFireflies(prisma, {
-            apiKey: firefliesKey,
-            ownerEmail: google?.accountEmail,
-          }),
-        )
-      : { source: "fireflies", ok: false, error: "Clé Fireflies non configurée" },
-  );
 
   if (google) await touchGoogleLastSynced(tenant.id);
 

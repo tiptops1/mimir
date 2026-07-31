@@ -108,12 +108,12 @@ npm run enrich:websites -- --force   # also re-check companies that already have
 > so running it on a server returns nothing. It only ever fills empty `siteWeb` fields — it never
 > overwrites a site you've entered.
 
-## Email / calendar / call-transcript sync
+## Email / calendar sync
 
-Each tenant connects their own Gmail + Google Calendar (OAuth, one-click) and optionally Fireflies
-(API key) from `/settings/integrations`; every message/meeting/call is matched to the right
-contact/company, logged as an activity, and read by the AI insight pass for a summary, sentiment,
-next step and suggested pipeline stage. Unknown senders queue in the **Boîte de réception** page.
+Each tenant connects their own Gmail + Google Calendar (OAuth, one-click) from `/chronos/settings`;
+every message/meeting is matched to the right counterpart, logged as an activity, and read by the
+AI insight pass for a summary, sentiment and next step. Unknown senders queue in the **Boîte de
+réception** page. (Fireflies call-transcript sync retired with the generic CRM.)
 See `INTEGRATIONS.md` for the full OAuth setup and how matching/dedupe works.
 
 ## Project structure

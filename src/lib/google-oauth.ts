@@ -35,6 +35,15 @@ function env(name: string): string {
   return v;
 }
 
+/** Whether this environment can run the connect flow at all (twin of ebayConfigured). */
+export function googleConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_CLIENT_ID?.trim() &&
+      process.env.GOOGLE_CLIENT_SECRET?.trim() &&
+      process.env.GOOGLE_OAUTH_REDIRECT_URI?.trim(),
+  );
+}
+
 /**
  * A bare OAuth2 client bound to our app credentials + redirect URI.
  *

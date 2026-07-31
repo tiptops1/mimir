@@ -1,27 +1,27 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/dal";
 import { authUrl, STATE_COOKIE } from "@/lib/google-oauth";
-import type { GooglePurpose } from "@/lib/integrations";
 
-// Step 1 of the Google connect flow: from the dashboard, the user follows this
-// link. We require a logged-in (tenant-scoped) session, mint a CSRF `state`,
-// stash it in an httpOnly cookie, and bounce to Google's consent screen.
-// `?purpose=OUTREACH` connects the cold-email sender inbox instead of the main
-// mailbox; the purpose rides inside the state value ("<csrf>:<purpose>") so the
-// callback learns it without trusting a separate query param.
+// Step 1 of the Google connect flow: from /chronos/settings, the user follows
+// this link. We require a logged-in (tenant-scoped) session, mint a CSRF
+// `state`, stash it in an httpOnly cookie, and bounce to Google's consent
+// screen.
+//
+// MAIN only. The route used to accept `?purpose=OUTREACH` to provision the
+// cold-email sender inbox on a secondary domain; that surface retired with the
+// generic CRM, so the branch would be unreachable. `authedClientForOutreach`
+// still resolves an existing OUTREACH row — this only stops new ones being
+// created from the UI.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   await verifySession(); // redirects to /login if not authenticated
 
-  const purpose: GooglePurpose =
-    req.nextUrl.searchParams.get("purpose") === "OUTREACH" ? "OUTREACH" : "MAIN";
-
-  const state = `${randomBytes(16).toString("hex")}:${purpose}`;
+  const state = randomBytes(16).toString("hex");
   const cookieStore = await cookies();
   cookieStore.set(STATE_COOKIE, state, {
     httpOnly: true,
@@ -31,5 +31,5 @@ export async function GET(req: NextRequest) {
     maxAge: 600, // 10 minutes to complete consent
   });
 
-  return NextResponse.redirect(authUrl(state, purpose));
+  return NextResponse.redirect(authUrl(state, "MAIN"));
 }

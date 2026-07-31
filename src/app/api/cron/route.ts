@@ -4,11 +4,10 @@ import { listActiveTenants, settle } from "@/lib/tenant-cron";
 import { getTenantPrisma } from "@/lib/tenant-db";
 import { decrypt } from "@/lib/crypto";
 import { authedClientForTenant } from "@/lib/google-oauth";
-import { getFirefliesKey, touchGoogleLastSynced } from "@/lib/integrations";
+import { touchGoogleLastSynced } from "@/lib/integrations";
 import { runGmailSync } from "@/lib/gmail-sync";
 import { inngest, jobsEnabled } from "@/lib/jobs/client";
 import { runGoogleCalendarSync } from "@/lib/google-calendar-sync";
-import { syncFireflies } from "@/lib/fireflies";
 import type { SourceOutcome } from "@/lib/tenant-cron";
 
 export const runtime = "nodejs";
@@ -57,22 +56,6 @@ async function handle(req: NextRequest) {
         { source: "calendar", ok: false, error: "Google non connecté" },
       );
     }
-
-    const firefliesKey = await getFirefliesKey(tenant.id);
-    sources.push(
-      firefliesKey
-        ? await settle("fireflies", () =>
-            syncFireflies(prisma, {
-              apiKey: firefliesKey,
-              ownerEmail: google?.accountEmail,
-            }),
-          )
-        : {
-            source: "fireflies",
-            ok: false,
-            error: "Clé Fireflies non configurée",
-          },
-    );
 
     if (google) await touchGoogleLastSynced(tenant.id);
 
